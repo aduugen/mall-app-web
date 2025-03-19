@@ -50,6 +50,8 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 		})
 		//401未登录处理
 		if (res.code === 401) {
+			// 清除无效token
+			uni.removeStorageSync('token');
 			uni.showModal({
 				title: '提示',
 				content: '你已被登出，可以取消继续留在该页面，或者重新登录',
@@ -73,10 +75,29 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 }, (response) => {
 	//提示错误信息
 	console.log('response error', response);
-	uni.showToast({
-		title:response.errMsg,
-		duration:1500
-	})
+	// 处理500等服务器错误，可能是由无效token引起的
+	if (response.statusCode === 500) {
+		// 尝试清除token并提示用户重新登录
+		const token = uni.getStorageSync('token');
+		if (token) {
+			uni.removeStorageSync('token');
+			uni.showModal({
+				title: '登录已过期',
+				content: '请重新登录',
+				showCancel: false,
+				success: function() {
+					uni.navigateTo({
+						url: '/pages/public/login'
+					});
+				}
+			});
+		}
+	} else {
+		uni.showToast({
+			title: response.errMsg || '请求失败',
+			duration: 1500
+		});
+	}
 	return Promise.reject(response);
 })
 

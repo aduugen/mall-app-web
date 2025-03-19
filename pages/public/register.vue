@@ -29,6 +29,26 @@
 			navBack() {
 				uni.navigateBack();
 			},
+			async handleRegister() {
+				this.registering = true;
+				memberRegister({
+					username: this.username,
+					password: this.password,
+					telephone: this.mobile,
+					authCode: this.code // 即使没有发送验证码，也允许注册通过
+				}).then(response => {
+					uni.showToast({
+						title: '注册成功'
+					});
+					setTimeout(() => {
+						uni.navigateTo({
+							url: '/pages/public/login'
+						});
+					}, 1000);
+				}).catch(() => {
+					this.registering = false;
+				});
+			}
 		},
 
 	}
