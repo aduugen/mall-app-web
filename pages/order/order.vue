@@ -132,7 +132,15 @@
 				this.loadData()
 			}
 			// #endif
-
+			
+			// 监听评价成功事件
+			uni.$on('orderListRefresh', () => {
+				this.loadData();
+			});
+		},
+		onUnload() {
+			// 页面卸载时移除事件监听
+			uni.$off('orderListRefresh');
 		},
 		filters: {
 			formatStatus(status) {

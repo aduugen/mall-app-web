@@ -181,6 +181,8 @@ export default {
 					uni.showToast({
 						title: '评价成功'
 					});
+					// 通知订单列表页面刷新数据
+					uni.$emit('orderListRefresh');
 					setTimeout(() => {
 						uni.navigateBack();
 					}, 1500);
