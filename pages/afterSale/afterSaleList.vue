@@ -11,17 +11,16 @@
 			<swiper-item class="tab-content" v-for="(tabItem,tabIndex) in navList" :key="tabIndex">
 				<scroll-view class="list-scroll-content" scroll-y @scrolltolower="loadData('add')">
 					<!-- 空白页 -->
-					<empty v-if="orderList==null||orderList.length === 0"></empty>
+					<empty v-if="afterSaleList==null||afterSaleList.length === 0"></empty>
 
-					<!-- 订单列表 -->
-					<view v-for="(item,index) in orderList" :key="index" class="order-item">
+					<!-- 售后列表 -->
+					<view v-for="(item,index) in afterSaleList" :key="index" class="after-sale-item">
 						<view class="i-top b-b">
-							<text class="time" @click="showOrderDetail(item.id)">{{item.createTime | formatDateTime}}</text>
-							<text class="state" :style="{color: '#fa436a'}">{{item.status | formatStatus}}</text>
-							<text v-if="item.status===3||item.status===4" class="del-btn yticon icon-iconfontshanchu1" @click="deleteOrder(item.id)"></text>
+							<text class="time">{{item.createTime | formatDateTime}}</text>
+							<text class="state" :style="{color: item.status === 0 ? '#fa436a' : '#999'}">{{item.status | formatStatus}}</text>
 						</view>
-						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList"
-						 :key="itemIndex">
+						
+						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList" :key="itemIndex">
 							<image class="goods-img" :src="orderItem.productPic" mode="aspectFill"></image>
 							<view class="right">
 								<text class="title clamp">{{orderItem.productName}}</text>
@@ -36,25 +35,14 @@
 							件商品 实付款
 							<text class="price">{{item.payAmount}}</text>
 						</view>
-						<view class="action-box b-t" v-if="item.status == 0">
-							<button class="action-btn" @click="cancelOrder(item.id)">取消订单</button>
-							<button class="action-btn recom" @click="payOrder(item.id)">立即付款</button>
-						</view>
-						<view class="action-box b-t" v-if="item.status == 2">
-							<button class="action-btn" >查看物流</button>
-							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
-						</view>
-						<view class="action-box b-t" v-if="item.status == 4">
-							<button class="action-btn recom" @click="showEvaluation(item)">评价商品</button>
-						</view>
-						<view class="action-box b-t" v-if="item.status == 3">
-							<button class="action-btn" @click="applyAfterSale(item)">申请售后</button>
-							<button class="action-btn recom" >再次购买</button>
+						
+						<view class="action-box b-t">
+							<button class="action-btn" @click="showAfterSaleDetail(item.id)">查看详情</button>
+							<button v-if="item.status === 0" class="action-btn recom" @click="applyAfterSale(item)">申请售后</button>
 						</view>
 					</view>
 
 					<uni-load-more :status="loadingType"></uni-load-more>
-
 				</scroll-view>
 			</swiper-item>
 		</swiper>
@@ -68,11 +56,9 @@
 		formatDate
 	} from '@/utils/date';
 	import {
-		fetchOrderList,
-		cancelUserOrder,
-		confirmReceiveOrder,
-		deleteUserOrder
-	} from '@/api/order.js';
+		fetchAfterSaleList
+	} from '@/api/afterSale.js';
+
 	export default {
 		components: {
 			uniLoadMore,
@@ -81,89 +67,55 @@
 		data() {
 			return {
 				tabCurrentIndex: 0,
-				orderParam: {
+				afterSaleParam: {
 					status: -1,
 					pageNum: 1,
 					pageSize: 5
 				},
-				orderList: [],
-				loadingType:'more',
+				afterSaleList: [],
+				loadingType: 'more',
 				navList: [{
 						state: -1,
 						text: '全部'
 					},
 					{
 						state: 0,
-						text: '待付款'
+						text: '待处理'
 					},
 					{
 						state: 1,
-						text: '待发货'
+						text: '处理中'
 					},
 					{
 						state: 2,
-						text: '待收货'
-					},
-					{
-						state: 4,
-						text: '待评价'
-					},
-					{
-						state: 3,
 						text: '已完成'
 					},
 					{
-						state: 5,
-						text: '已取消'
+						state: 3,
+						text: '已拒绝'
 					}
 				],
 			};
 		},
 		onLoad(options) {
-			/**
-			 * 修复app端点击除全部订单外的按钮进入时不加载数据的问题
-			 * 替换onLoad下代码即可
-			 */
-			this.tabCurrentIndex = +options.state;
-			// #ifndef MP
-			this.loadData()
-			// #endif
-			// #ifdef MP
-			if (options.state == 0) {
-				this.loadData()
-			}
-			// #endif
-			
-			// 监听评价成功事件
-			uni.$on('orderListRefresh', () => {
-				this.loadData();
-			});
-		},
-		onUnload() {
-			// 页面卸载时移除事件监听
-			uni.$off('orderListRefresh');
+			this.tabCurrentIndex = +options.state || 0;
+			this.loadData();
 		},
 		filters: {
 			formatStatus(status) {
 				let statusTip = '';
 				switch (+status) {
 					case 0:
-						statusTip = '等待付款';
+						statusTip = '待处理';
 						break;
 					case 1:
-						statusTip = '等待发货';
+						statusTip = '处理中';
 						break;
 					case 2:
-						statusTip = '等待收货';
+						statusTip = '已完成';
 						break;
 					case 3:
-						statusTip = '交易完成';
-						break;
-					case 4:
-						statusTip = '待评价';
-						break;
-					case 5:
-						statusTip = '已取消';
+						statusTip = '已拒绝';
 						break;
 				}
 				return statusTip;
@@ -188,34 +140,31 @@
 			},
 		},
 		methods: {
-			//获取订单列表
+			//获取售后列表
 			loadData(type='refresh') {
 				if(type=='refresh'){
-					this.orderParam.pageNum=1;
+					this.afterSaleParam.pageNum=1;
 				}else{
-					this.orderParam.pageNum++;
+					this.afterSaleParam.pageNum++;
 				}
-				//这里是将订单挂载到tab列表下
 				let index = this.tabCurrentIndex;
 				let navItem = this.navList[index];
-				let state = navItem.state;
 				if (this.loadingType === 'loading') {
-					//防止重复加载
 					return;
 				}
-				this.orderParam.status = navItem.state;
+				this.afterSaleParam.status = navItem.state;
 				this.loadingType = 'loading';
-				fetchOrderList(this.orderParam).then(response => {
+				fetchAfterSaleList(this.afterSaleParam).then(response => {
 					let list = response.data.list;
 					if(type=='refresh'){
-						this.orderList = list;
+						this.afterSaleList = list;
 						this.loadingType = 'more';
 					}else{
 						if(list!=null&&list.length>0){
-							this.orderList = this.orderList.concat(list);
+							this.afterSaleList = this.afterSaleList.concat(list);
 							this.loadingType = 'more';
 						}else{
-							this.orderParam.pageNum--;
+							this.afterSaleParam.pageNum--;
 							this.loadingType = 'noMore';
 						}
 					}
@@ -230,81 +179,6 @@
 			tabClick(index) {
 				this.tabCurrentIndex = index;
 			},
-			//删除订单
-			deleteOrder(orderId) {
-				let superThis = this;
-				uni.showModal({
-				    title: '提示',
-				    content: '是否要删除该订单？',
-				    success: function (res) {
-				        if (res.confirm) {
-				            uni.showLoading({
-				            	title: '请稍后'
-				            })
-				            deleteUserOrder({orderId:orderId}).then(response=>{
-				            	uni.hideLoading();
-				            	superThis.loadData();
-				            });
-				        } else if (res.cancel) {
-				            console.log('用户点击取消');
-				        }
-				    }
-				});
-			},
-			//取消订单
-			cancelOrder(orderId) {
-				let superThis = this;
-				uni.showModal({
-				    title: '提示',
-				    content: '是否要取消该订单？',
-				    success: function (res) {
-				        if (res.confirm) {
-				            uni.showLoading({
-				            	title: '请稍后'
-				            })
-				            cancelUserOrder({orderId:orderId}).then(response=>{
-				            	uni.hideLoading();
-				            	superThis.loadData();
-				            });
-				        } else if (res.cancel) {
-				            console.log('用户点击取消');
-				        }
-				    }
-				});
-			},
-			//支付订单
-			payOrder(orderId){
-				uni.redirectTo({
-					url: `/pages/money/pay?orderId=${orderId}`
-				});
-			},
-			//确认收货
-			receiveOrder(orderId){
-				let superThis = this;
-				uni.showModal({
-				    title: '提示',
-				    content: '是否要确认收货？',
-				    success: function (res) {
-				        if (res.confirm) {
-				            uni.showLoading({
-				            	title: '请稍后'
-				            })
-				            confirmReceiveOrder({orderId:orderId}).then(response=>{
-				            	uni.hideLoading();
-				            	superThis.loadData();
-				            });
-				        } else if (res.cancel) {
-				            console.log('用户点击取消');
-				        }
-				    }
-				});
-			},
-			//查看订单详情
-			showOrderDetail(orderId){
-				uni.navigateTo({
-					url: `/pages/order/orderDetail?orderId=${orderId}`
-				})
-			},
 			//计算商品总数量
 			calcTotalQuantity(order){
 				let totalQuantity = 0;
@@ -315,39 +189,19 @@
 				}
 				return totalQuantity;
 			},
-			/**
-			 * 页面跳转
-			 */
-			navTo(url) {
+			//查看售后详情
+			showAfterSaleDetail(id) {
 				uni.navigateTo({
-					url
-				})
-			},
-			/**
-			 * 显示评价页面
-			 */
-			showEvaluation(order) {
-				if(order.orderItemList && order.orderItemList.length > 0) {
-					// 如果订单中有多个商品，跳转到订单详情页让用户选择要评价的商品
-					if(order.orderItemList.length > 1) {
-						this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);
-					} else {
-						// 如果只有一个商品，直接跳转到评价页面
-						const orderItem = order.orderItemList[0];
-						this.navTo(`/pages/order/evaluation?orderId=${order.id}&productId=${orderItem.productId}`);
-					}
-				} else {
-					// 如果订单项为空，跳转到订单详情页
-					this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);
-				}
+					url: `/pages/afterSale/afterSaleDetail?id=${id}`
+				});
 			},
 			//申请售后
 			applyAfterSale(order) {
 				uni.navigateTo({
 					url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
 				});
-			},
-		},
+			}
+		}
 	}
 </script>
 
@@ -402,11 +256,7 @@
 		}
 	}
 
-	.uni-swiper-item {
-		height: auto;
-	}
-
-	.order-item {
+	.after-sale-item {
 		display: flex;
 		flex-direction: column;
 		padding-left: 30upx;
@@ -429,47 +279,8 @@
 			.state {
 				color: $base-color;
 			}
-
-			.del-btn {
-				padding: 10upx 0 10upx 36upx;
-				font-size: $font-lg;
-				color: $font-color-light;
-				position: relative;
-
-				&:after {
-					content: '';
-					width: 0;
-					height: 30upx;
-					border-left: 1px solid $border-color-dark;
-					position: absolute;
-					left: 20upx;
-					top: 50%;
-					transform: translateY(-50%);
-				}
-			}
 		}
 
-		/* 多条商品 */
-		.goods-box {
-			height: 160upx;
-			padding: 20upx 0;
-			white-space: nowrap;
-
-			.goods-item {
-				width: 120upx;
-				height: 120upx;
-				display: inline-block;
-				margin-right: 24upx;
-			}
-
-			.goods-img {
-				display: block;
-				width: 100%;
-				height: 100%;
-			}
-		}
-
-		/* 单条商品 */
 		.goods-box-single {
 			display: flex;
 			padding: 20upx 0;
@@ -573,7 +384,6 @@
 			}
 		}
 	}
-
 
 	/* load-more */
 	.uni-load-more {
@@ -706,4 +516,4 @@
 			opacity: .2
 		}
 	}
-</style>
+</style> 
