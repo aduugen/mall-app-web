@@ -102,21 +102,96 @@ export default {
 				return;
 			}
 			
-			// 这里需要先上传图片，获取图片URL
-			// 然后调用评价接口
+			// 先上传图片，再提交评价
+			if(this.uploadList.length > 0) {
+				uni.showLoading({
+					title: '正在上传图片...'
+				});
+				
+				let uploadedImages = [];
+				let uploadPromises = [];
+				
+				// 遍历所有需要上传的图片
+				this.uploadList.forEach(imagePath => {
+					// 创建上传Promise
+					let uploadPromise = new Promise((resolve, reject) => {
+						uni.uploadFile({
+							url: process.env.VUE_APP_BASE_API + '/upload/image', // 后端图片上传接口
+							filePath: imagePath,
+							name: 'file',
+							success: (res) => {
+								try {
+									// 解析结果，获取图片URL
+									let data = JSON.parse(res.data);
+									if(data.code === 200) {
+										uploadedImages.push(data.data);
+										resolve();
+									} else {
+										reject(data.message || '图片上传失败');
+									}
+								} catch(e) {
+									reject('图片上传异常');
+								}
+							},
+							fail: (err) => {
+								reject(err.errMsg || '图片上传网络错误');
+							}
+						});
+					});
+					
+					uploadPromises.push(uploadPromise);
+				});
+				
+				// 所有图片上传完成后，提交评价内容
+				Promise.all(uploadPromises).then(() => {
+					uni.hideLoading();
+					this.submitCommentWithImages(uploadedImages);
+				}).catch(err => {
+					uni.hideLoading();
+					uni.showToast({
+						title: err || '图片上传失败',
+						icon: 'none'
+					});
+				});
+			} else {
+				// 没有图片，直接提交评价
+				this.submitCommentWithImages([]);
+			}
+		},
+		
+		// 提交评价内容
+		submitCommentWithImages(imageUrls) {
+			uni.showLoading({
+				title: '提交评价...'
+			});
+			
 			createProductComment({
 				orderId: this.orderId,
 				productId: this.productId,
 				rating: this.rating,
 				comment: this.comment,
-				pics: this.uploadList // 这里应该是上传后的图片URL数组
+				pics: imageUrls
 			}).then(response => {
+				uni.hideLoading();
+				if(response.code === 200) {
+					uni.showToast({
+						title: '评价成功'
+					});
+					setTimeout(() => {
+						uni.navigateBack();
+					}, 1500);
+				} else {
+					uni.showToast({
+						title: response.message || '评价失败',
+						icon: 'none'
+					});
+				}
+			}).catch(() => {
+				uni.hideLoading();
 				uni.showToast({
-					title: '评价成功'
+					title: '评价失败，请重试',
+					icon: 'none'
 				});
-				setTimeout(() => {
-					uni.navigateBack();
-				}, 1500);
 			});
 		}
 	}

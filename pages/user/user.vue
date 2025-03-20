@@ -53,29 +53,33 @@
 			</view>
 			<!-- 订单 -->
 			<view class="order-section">
-				<view class="order-item" @click="navTo('/pages/order/order?state=0')" hover-class="common-hover"  :hover-stay-time="50">
-					<text class="yticon icon-shouye"></text>
-					<text>全部订单</text>
+				<view class="order-header">
+					<text class="order-title">我的订单</text>
+					<view class="order-all" @click="navTo('/pages/order/order?state=0')" hover-class="common-hover" :hover-stay-time="50">
+						<text>全部订单</text>
+					</view>
 				</view>
-				<view class="order-item" @click="navTo('/pages/order/order?state=1')" hover-class="common-hover" :hover-stay-time="50">
-					<text class="yticon icon-daifahuo"></text>
-					<text>待发货</text>
-				</view>
-				<view class="order-item" @click="navTo('/pages/order/order?state=1')"  hover-class="common-hover" :hover-stay-time="50">
-					<text class="yticon icon-daifukuan"></text>
-					<text>待付款</text>
-				</view>
-				<view class="order-item" @click="navTo('/pages/order/order?state=2')" hover-class="common-hover"  :hover-stay-time="50">
-					<text class="yticon icon-yishouhuo"></text>
-					<text>待收货</text>
-				</view>
-				<view class="order-item" @click="navTo('/pages/order/order?state=4')" hover-class="common-hover" :hover-stay-time="50">
-					<text class="yticon icon-pingjia"></text>
-					<text>待评价</text>
-				</view>
-				<view class="order-item" hover-class="common-hover"  :hover-stay-time="50">
-					<text class="yticon icon-shouhoutuikuan"></text>
-					<text>售后</text>
+				<view class="order-items">
+					<view class="order-item" @click="navTo('/pages/order/order?state=1')" hover-class="common-hover" :hover-stay-time="50">
+						<text class="yticon icon-daifahuo"></text>
+						<text>待发货</text>
+					</view>
+					<view class="order-item" @click="navTo('/pages/order/order?state=1')"  hover-class="common-hover" :hover-stay-time="50">
+						<text class="yticon icon-daifukuan"></text>
+						<text>待付款</text>
+					</view>
+					<view class="order-item" @click="navTo('/pages/order/order?state=2')" hover-class="common-hover"  :hover-stay-time="50">
+						<text class="yticon icon-yishouhuo"></text>
+						<text>待收货</text>
+					</view>
+					<view class="order-item" @click="navTo('/pages/order/order?state=4')" hover-class="common-hover" :hover-stay-time="50">
+						<text class="yticon icon-pingjia"></text>
+						<text>待评价</text>
+					</view>
+					<view class="order-item" hover-class="common-hover"  :hover-stay-time="50">
+						<text class="yticon icon-shouhoutuikuan"></text>
+						<text>售后</text>
+					</view>
 				</view>
 			</view>
 			<!-- 浏览历史 -->
@@ -357,6 +361,33 @@
 		@extend %section;
 		padding: 28upx 0;
 		margin-top: 20upx;
+		flex-direction: column;
+		
+		.order-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			width: 100%;
+			padding: 0 30upx;
+			margin-bottom: 20upx;
+			
+			.order-title {
+				font-size: $font-sm;
+				color: $font-color-dark;
+			}
+			
+			.order-all {
+				font-size: $font-sm;
+				color: $font-color-dark;
+			}
+		}
+		
+		.order-items {
+			display: flex;
+			justify-content: space-around;
+			width: 100%;
+		}
+		
 		.order-item{
 			@extend %flex-center;
 			width: 120upx;
