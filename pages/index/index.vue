@@ -75,11 +75,11 @@
 			<view class="tit-box">
 				<text class="tit2" style="text-align: right;">本场结束剩余：</text>
 				<view style="text-align: right;">
-					<text class="hour timer">{{cutDownTime.endHour}}</text>
+					<text class="hour timer">{{timeRemaining.hours}}</text>
 					<text>:</text>
-					<text class="minute timer">{{cutDownTime.endMinute}}</text>
+					<text class="minute timer">{{timeRemaining.minutes}}</text>
 					<text>:</text>
-					<text class="second timer">{{cutDownTime.endSecond}}</text>
+					<text class="second timer">{{timeRemaining.seconds}}</text>
 				</view>
 			</view>
 			<text class="yticon icon-you" v-show="false"></text>
@@ -181,7 +181,7 @@
 		data() {
 			return {
 				titleNViewBackground: '',
-				titleNViewBackgroundList: ['rgb(203, 87, 60)', 'rgb(205, 215, 218)'],
+				titleNViewBackgroundList: ['rgb(45, 70, 20)', 'rgb(45, 70, 20)'],
 				swiperCurrent: 0,
 				swiperLength: 0,
 				carouselList: [],
@@ -196,11 +196,34 @@
 					pageNum: 1,
 					pageSize: 4
 				},
-				loadingType:'more'
+				loadingType:'more',
+				worker: null,
+				firstFlag: false,
+			    timeRemaining: { hours: 0, minutes: 0, seconds: 0 },
+				searchContent:'',
 			};
 		},
 		onLoad() {
+			console.log('started on load.');
 			this.loadData();
+		},
+		updated() {
+			console.log('Data loaded');
+			if (this.homeFlashPromotion && this.homeFlashPromotion.endTime) {
+				console.log('endtime:', this.homeFlashPromotion.endTime);
+				this.startCountdown();
+				console.log('homeFlashPromotion:', this.homeFlashPromotion);
+			} else {
+				console.warn('Flash promotion data not loaded yet.');
+				console.log('homeFlashPromotion:', this.homeFlashPromotion); // 检查是否有数据
+			}
+		},
+		onUnload () {
+		    // 在组件卸载前终止 Worker
+		    if (this.worker) {
+		      this.worker.terminate();
+			  this.worker = null;
+		    }
 		},
 		//下拉刷新
 		onPullDownRefresh(){
@@ -224,25 +247,7 @@
 			})
 		},
 		computed: {
-			cutDownTime() {
-				let endTime = new Date(this.homeFlashPromotion.endTime);
-				let endDateTime = new Date();
-				let startDateTime = new Date();
-				endDateTime.setHours(endTime.getHours());
-				endDateTime.setMinutes(endTime.getMinutes());
-				endDateTime.setSeconds(endTime.getSeconds());
-				let offsetTime = (endDateTime.getTime() - startDateTime.getTime());
-				let endHour = Math.floor(offsetTime / (60 * 60 * 1000));
-				let offsetMinute = offsetTime % (60 * 60 * 1000);
-				let endMinute = Math.floor(offsetMinute / (60 * 1000));
-				let offsetSecond = offsetTime % (60 * 1000);
-				let endSecond = Math.floor(offsetSecond / 1000);
-				return {
-					endHour: endHour,
-					endMinute: endMinute,
-					endSecond: endSecond
-				}
-			}
+
 		},
 		filters: {
 			formatTime(time) {
@@ -258,20 +263,23 @@
 			 * 加载数据
 			 */
 			async loadData() {
-				fetchContent().then(response => {
-					console.log("onLoad", response.data);
-					this.advertiseList = response.data.advertiseList;
-					this.swiperLength = this.advertiseList.length;
-					this.titleNViewBackground = this.titleNViewBackgroundList[0];
-					this.brandList = response.data.brandList;
-					this.homeFlashPromotion = response.data.homeFlashPromotion;
-					this.newProductList = response.data.newProductList;
-					this.hotProductList = response.data.hotProductList;
-					fetchRecommendProductList(this.recommendParams).then(response => {
-						this.recommendProductList = response.data;
-						uni.stopPullDownRefresh();
-					})
-				});
+			    try {
+			        const response = await fetchContent();
+			        console.log('fetchContent ok');
+			        this.advertiseList = response.data.advertiseList;
+			        this.swiperLength = this.advertiseList.length;
+			        this.titleNViewBackground = this.titleNViewBackgroundList[0];
+			        this.brandList = response.data.brandList;
+			        this.homeFlashPromotion = response.data.homeFlashPromotion;
+			        this.newProductList = response.data.newProductList;
+			        this.hotProductList = response.data.hotProductList;
+			        const recommendResponse = await fetchRecommendProductList(this.recommendParams);
+			        this.recommendProductList = recommendResponse.data;
+			        uni.stopPullDownRefresh();
+					console.log('API response:', response); // 检查API返回的内容
+			    } catch (error) {
+			        console.error('Error in loadData:', error);
+			    }
 			},
 			//轮播图切换修改背景色
 			swiperChange(e) {
@@ -317,17 +325,71 @@
 					url: `/pages/product/hotProductList`
 				})
 			},
+			startCountdown() {
+				if (this.firstFlag == true) {
+					console.log('firstFlag is', this.firstFlag);
+					return;
+				}
+				this.firstFlag = true;
+				let endTime = new Date(this.homeFlashPromotion.endTime);
+				console.log('startCountdown', endTime);
+				// 创建 Worker 实例
+				//if (typeof Worker !== 'undefined') {
+					console.log('worker is', this.worker);
+					this.worker = new Worker('http://localhost:8060/static/countdown.js');
+					console.log('worker is', this.worker);
+					//this.worker = uni.createWorker('../utils/countdown.js'); 	
+					// 监听来自 Worker 的消息
+					this.worker.onmessage = (e) => {
+					    // console.log('worker msg', e.data.endTime, e.data.startTime);
+						
+					 	this.timeRemaining = e.data;
+					 	console.log('onmessage listen',this.timeRemaining);
+					 	if (e.data.seconds === 0 && e.data.minutes === 0 && e.data.hours === 0) {
+					 		handleCountdownEnd();
+						 }
+					};
+					
+					// 倒计时结束的处理
+					const handleCountdownEnd = () => {
+						// 倒计时结束时的操作
+						console.log('Countdown ended');
+						if (this.worker) {
+							this.worker.terminate();
+							this.worker = null;
+						}
+					};
+					
+					// 监听 Worker 错误
+					this.worker.onerror = (error) => {
+						console.error('Worker error:', error);
+						if (this.worker) {
+							this.worker.terminate();
+							this.worker = null;
+						}
+					};
+					
+					// 向 Worker 发送 endTime 数据
+					console.log('post message', endTime.getTime());
+					this.worker.postMessage(endTime.getTime());
+				//}
+			}
 		},
-		// #ifndef MP
 		// 标题栏input搜索框点击
-		onNavigationBarSearchInputClicked: async function(e) {
-			this.$api.msg('点击了搜索框');
+		onNavigationBarSearchInputClicked(e) {
+		 	this.$api.msg('点击了搜索框');
+		    uni.navigateTo({
+		    	url: '/pages/index/search'
+		    })
 		},
 		//点击导航栏 buttons 时触发
 		onNavigationBarButtonTap(e) {
 			const index = e.index;
 			if (index === 0) {
 				this.$api.msg('点击了扫描');
+				uni.navigateTo({
+					url: '/pages/index/search'
+				})
 			} else if (index === 1) {
 				// #ifdef APP-PLUS
 				const pages = getCurrentPages();
@@ -342,7 +404,7 @@
 				})
 			}
 		}
-		// #endif
+	
 	}
 </script>
 

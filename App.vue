@@ -333,6 +333,10 @@
 	.icon-dianzan-ash:before {
 		content: "\e617";
 	}
+	
+	.uni-input-input:disabled {  
+	     pointer-events: none;  
+	}
 
 
 

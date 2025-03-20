@@ -1,4 +1,10 @@
 {
+	"easycom": {
+	  "autoscan": true,
+	  "custom": {
+	    "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+	  }
+	},
 	"pages": [
 
 		{
@@ -14,8 +20,8 @@
 						"type": "transparent",
 						"searchInput": {
 							"backgroundColor": "rgba(231, 231, 231,.7)",
-							"borderRadius": "16px",
-							"placeholder": "请输入商品 如：手机",
+							"borderRadius": "15px",
+							"placeholder": "搜索书籍",
 							"disabled": true,
 							"placeholderColor": "#606266"
 						},
@@ -38,6 +44,12 @@
 						]
 					}
 				}
+			}
+		},
+		{
+			"path": "pages/index/search",
+			"style": {
+				// "navigationBarTitleText": "SearchBar 搜索栏"
 			}
 		},
 		{
@@ -168,10 +180,7 @@
 		}, {
 			"path": "pages/category/category",
 			"style": {
-				"navigationBarTitleText": "分类",
-				"app-plus": {
-					"bounce": "none"
-				}
+				"navigationBarTitleText": "分类"
 			}
 		}, {
 			"path": "pages/product/list",
@@ -264,7 +273,7 @@
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "mall-app-web",
+		"navigationBarTitleText": "长江路图书城",
 		"navigationBarBackgroundColor": "#FFFFFF",
 		"backgroundColor": "#f8f8f8"
 	},
