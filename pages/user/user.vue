@@ -57,8 +57,8 @@
 					<text class="yticon icon-shouye"></text>
 					<text>全部订单</text>
 				</view>
-				<view class="order-item" @click="navTo('/pages/order/order?state=3')" hover-class="common-hover" :hover-stay-time="50">
-					<text class="yticon icon-yifahuo"></text>
+				<view class="order-item" @click="navTo('/pages/order/order?state=1')" hover-class="common-hover" :hover-stay-time="50">
+					<text class="yticon icon-daifahuo"></text>
 					<text>待发货</text>
 				</view>
 				<view class="order-item" @click="navTo('/pages/order/order?state=1')"  hover-class="common-hover" :hover-stay-time="50">
@@ -410,5 +410,12 @@
 		font-size: $font-base;
 		width: 50%;
 		margin: 60upx auto 20upx;
+	}
+	
+	.icon-container {
+		position: relative;
+		width: 48upx;
+		height: 48upx;
+		margin-bottom: 18upx;
 	}
 </style>

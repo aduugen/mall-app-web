@@ -49,7 +49,7 @@
 		font-family: yticon;
 		font-weight: normal;
 		font-style: normal;
-		src: url('https://at.alicdn.com/t/font_1078604_w4kpxh0rafi.ttf') format('truetype');
+		src: url('/static/fonts/yticon-unify.ttf') format('truetype');
 	}
 
 	.yticon {
@@ -340,8 +340,8 @@
 		content: "\e71a";
 	}
 
-	.icon-yifahuo:before {
-		content: "\e702";
+	.icon-daifahuo:before {
+		content: "\e699";
 	}
 
 	.icon-dianzan-ash:before {
