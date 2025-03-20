@@ -120,6 +120,9 @@ export default {
 							url: API_BASE_URL + '/upload/image', // 后端图片上传接口
 							filePath: imagePath,
 							name: 'file',
+							header: {
+								'Authorization': uni.getStorageSync('token')
+							},
 							success: (res) => {
 								try {
 									// 解析结果，获取图片URL
