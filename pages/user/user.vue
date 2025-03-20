@@ -8,7 +8,7 @@
 					<image class="portrait" :src="userInfo.icon || '/static/missing-face.png'"></image>
 				</view>
 				<view class="info-box">
-					<text class="username">{{userInfo.nickname || '游客'}}</text>
+					<text class="username">{{userInfo.nickname || userInfo.username || '游客'}}</text>
 				</view>
 			</view>
 			<view class="vip-card-box">
@@ -78,6 +78,8 @@
 				<list-cell icon="icon-shoucang_xuanzhongzhuangtai" iconColor="#54b4ef" title="我的收藏" @eventClick="navTo('/pages/user/productCollection')"></list-cell>
 				<list-cell icon="icon-pingjia" iconColor="#ee883b" title="我的评价"></list-cell>
 				<list-cell icon="icon-shezhi1" iconColor="#e07472" title="设置" border="" @eventClick="navTo('/pages/set/set')"></list-cell>
+				
+				<button class="logout-btn" @click="logout" v-if="hasLogin">退出登录</button>
 			</view>
 		</view>
 			
@@ -90,7 +92,8 @@
 		fetchMemberCouponList
 	} from '@/api/coupon.js';
     import {  
-        mapState 
+        mapState,
+		mapMutations
     } from 'vuex';  
 	let startY = 0, moveY = 0, pageAtTop = true;
     export default {
@@ -142,7 +145,28 @@
 			...mapState(['hasLogin','userInfo'])
 		},
         methods: {
-
+			...mapMutations(['login', 'logout']),
+			
+			/**
+			 * 退出登录
+			 */
+			logout(){
+				uni.showModal({
+					title: '提示',
+					content: '确定要退出登录吗？',
+					success: (res) => {
+						if (res.confirm) {
+							this.logout();
+							uni.showToast({
+								title: '退出成功'
+							});
+							setTimeout(() => {
+								this.navTo('/pages/public/login');
+							}, 1500);
+						}
+					}
+				});
+			},
 			/**
 			 * 统一跳转接口,拦截未登录路由
 			 * navigator标签现在默认没有转场动画，所以用view
@@ -373,5 +397,14 @@
 			}
 		}
 	}
-	
+	.logout-btn {
+		height: 66upx;
+		line-height: 66upx;
+		border-radius: 100upx;
+		background-color: #f04c41;
+		color: #fff;
+		font-size: $font-base;
+		width: 50%;
+		margin: 60upx auto 20upx;
+	}
 </style>

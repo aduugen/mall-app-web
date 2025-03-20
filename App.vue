@@ -5,22 +5,32 @@
 	import {
 		mapMutations
 	} from 'vuex';
+	import { memberInfo } from '@/api/member.js';
+
 	export default {
 		methods: {
 			...mapMutations(['login'])
 		},
 		onLaunch: function() {
 			let userInfo = uni.getStorageSync('userInfo') || '';
-			if(userInfo.id){
-				//更新登陆状态
-				uni.getStorage({
-					key: 'userInfo',
-					success: (res) => {
-						this.login(res.data);
-					}
-				});
-			}
+			let token = uni.getStorageSync('token') || '';
 			
+			if(token) {
+				// 如果有token但没有用户信息或用户信息不完整，重新获取用户信息
+				if(!userInfo.id || !userInfo.nickname) {
+					memberInfo().then(response => {
+						if(response.data) {
+							this.login(response.data);
+							console.log('用户信息已更新');
+						}
+					}).catch(err => {
+						console.log('获取用户信息失败', err);
+					});
+				} else {
+					// 使用缓存中的用户信息
+					this.login(userInfo);
+				}
+			}
 		},
 		onShow: function() {
 			console.log('App Show')
