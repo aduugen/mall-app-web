@@ -269,6 +269,11 @@
 					}
 				}
 			}
+		}, {
+			"path": "pages/order/evaluation",
+			"style": {
+				"navigationBarTitleText": "商品评价"
+			}
 		}
 	],
 	"globalStyle": {

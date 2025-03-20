@@ -37,6 +37,9 @@
 						<text class="number">x {{item.productQuantity}}</text>
 					</view>
 				</view>
+				<view class="evaluation-box" v-if="order.status === 4">
+					<button class="evaluation-btn" @click="navTo('/pages/order/evaluation?orderId='+order.id+'&productId='+item.productId)">评价</button>
+				</view>
 			</view>
 		</view>
 
@@ -264,6 +267,11 @@
 						}
 						break;
 				};
+			},
+			navTo(url) {
+				uni.navigateTo({
+					url
+				})
 			}
 		}
 	}
@@ -770,6 +778,20 @@
 			&:after {
 				border-color: #f7bcc8;
 			}
+		}
+	}
+
+	.evaluation-box {
+		position: absolute;
+		right: 20rpx;
+		bottom: 20rpx;
+		.evaluation-btn {
+			font-size: 24rpx;
+			color: #fa436a;
+			background: #fff;
+			border: 1px solid #fa436a;
+			padding: 4rpx 20rpx;
+			border-radius: 30rpx;
 		}
 	}
 </style>

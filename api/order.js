@@ -82,3 +82,20 @@ export function fetchAliapyStatus(params) {
 		params: params
 	})
 }
+
+/**
+ * 创建商品评价
+ * @param {Object} data
+ * @param {number} data.orderId - 订单ID
+ * @param {number} data.productId - 商品ID
+ * @param {number} data.rating - 评分(1-5)
+ * @param {string} data.comment - 评价内容
+ * @param {Array} data.pics - 评价图片URL数组
+ */
+export function createProductComment(data) {
+	return request({
+		url: '/order/comment/create',
+		method: 'post',
+		data: data
+	});
+}
