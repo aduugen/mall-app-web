@@ -340,6 +340,10 @@
 		content: "\e71a";
 	}
 
+	.icon-yifahuo:before {
+		content: "\e702";
+	}
+
 	.icon-dianzan-ash:before {
 		content: "\e617";
 	}

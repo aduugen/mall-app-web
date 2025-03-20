@@ -57,6 +57,10 @@
 					<text class="yticon icon-shouye"></text>
 					<text>全部订单</text>
 				</view>
+				<view class="order-item" @click="navTo('/pages/order/order?state=3')" hover-class="common-hover" :hover-stay-time="50">
+					<text class="yticon icon-yifahuo"></text>
+					<text>待发货</text>
+				</view>
 				<view class="order-item" @click="navTo('/pages/order/order?state=1')"  hover-class="common-hover" :hover-stay-time="50">
 					<text class="yticon icon-daifukuan"></text>
 					<text>待付款</text>
