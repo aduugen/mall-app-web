@@ -45,7 +45,7 @@
 							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 4">
-							<button class="action-btn recom" @click="navTo('/pages/order/orderDetail?id='+item.id)">评价商品</button>
+							<button class="action-btn recom" @click="showEvaluation(item)">评价商品</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
 							<button class="action-btn recom" >再次购买</button>
@@ -305,6 +305,32 @@
 					}
 				}
 				return totalQuantity;
+			},
+			/**
+			 * 页面跳转
+			 */
+			navTo(url) {
+				uni.navigateTo({
+					url
+				})
+			},
+			/**
+			 * 显示评价页面
+			 */
+			showEvaluation(order) {
+				if(order.orderItemList && order.orderItemList.length > 0) {
+					// 如果订单中有多个商品，跳转到订单详情页让用户选择要评价的商品
+					if(order.orderItemList.length > 1) {
+						this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);
+					} else {
+						// 如果只有一个商品，直接跳转到评价页面
+						const orderItem = order.orderItemList[0];
+						this.navTo(`/pages/order/evaluation?orderId=${order.id}&productId=${orderItem.productId}`);
+					}
+				} else {
+					// 如果订单项为空，跳转到订单详情页
+					this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);
+				}
 			},
 		},
 	}

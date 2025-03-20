@@ -262,8 +262,8 @@
 						break;
 					case 4:
 						this.orderStatus = {
-							text: '交易关闭',
-							image: '/static/icon_close.png'
+							text: '待评价',
+							image: '/static/icon_comment.png'
 						}
 						break;
 				};

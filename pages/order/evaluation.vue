@@ -54,6 +54,7 @@
 <script>
 import { fetchProductDetail } from '@/api/product.js';
 import { createProductComment } from '@/api/order.js';
+import { API_BASE_URL } from '@/utils/appConfig.js';
 
 export default {
 	data() {
@@ -116,7 +117,7 @@ export default {
 					// 创建上传Promise
 					let uploadPromise = new Promise((resolve, reject) => {
 						uni.uploadFile({
-							url: process.env.VUE_APP_BASE_API + '/upload/image', // 后端图片上传接口
+							url: API_BASE_URL + '/upload/image', // 后端图片上传接口
 							filePath: imagePath,
 							name: 'file',
 							success: (res) => {
