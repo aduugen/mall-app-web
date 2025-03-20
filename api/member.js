@@ -17,3 +17,14 @@ export function memberInfo() {
 		url: '/sso/info'
 	})
 }
+
+export function memberRegister(data) {
+	return request({
+		method: 'POST',
+		url: '/sso/register',
+		header: {
+			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+		},
+		data: data
+	})
+}
