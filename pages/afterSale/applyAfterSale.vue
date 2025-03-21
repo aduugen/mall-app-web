@@ -152,7 +152,8 @@ export default {
 				let uploadedImages = [];
 				let uploadPromises = [];
 				
-				this.uploadList.forEach(imagePath => {
+				this.uploadList.forEach((imagePath, index) => {
+					console.log('开始上传图片', index, imagePath);
 					let uploadPromise = new Promise((resolve, reject) => {
 						uni.uploadFile({
 							url: API_BASE_URL + '/upload/image',
@@ -162,19 +163,29 @@ export default {
 								'Authorization': uni.getStorageSync('token')
 							},
 							success: (res) => {
+								console.log('图片上传成功', res);
 								try {
-									let data = JSON.parse(res.data);
-									if(data.code === 200) {
-										uploadedImages.push(data.data);
+									// 对返回数据进行处理
+									let responseData;
+									if (typeof res.data === 'string') {
+										responseData = JSON.parse(res.data);
+									} else {
+										responseData = res.data;
+									}
+									
+									if(responseData.code === 200) {
+										uploadedImages.push(responseData.data);
 										resolve();
 									} else {
-										reject(data.message || '图片上传失败');
+										reject(responseData.message || '图片上传失败');
 									}
 								} catch(e) {
-									reject('图片上传异常');
+									console.error('解析上传结果失败', e);
+									reject('图片上传异常: ' + e.message);
 								}
 							},
 							fail: (err) => {
+								console.error('图片上传失败', err);
 								reject(err.errMsg || '图片上传网络错误');
 							}
 						});
@@ -185,9 +196,11 @@ export default {
 				
 				Promise.all(uploadPromises).then(() => {
 					uni.hideLoading();
+					console.log('所有图片上传完成', uploadedImages);
 					this.submitAfterSaleWithImages(uploadedImages);
 				}).catch(err => {
 					uni.hideLoading();
+					console.error('图片上传异常', err);
 					uni.showToast({
 						title: err || '图片上传失败',
 						icon: 'none'
@@ -203,12 +216,16 @@ export default {
 				title: '提交申请...'
 			});
 			
-			createAfterSale({
+			const afterSaleData = {
 				orderId: this.orderId,
-				orderItemIds: this.selectedItems,
+				orderItemIds: this.selectedItems.join(','), // 将数组转为逗号分隔的字符串
 				reason: this.selectedReason === '其他原因' ? this.customReason : this.selectedReason,
-				pics: imageUrls
-			}).then(response => {
+				pics: imageUrls.length > 0 ? imageUrls.join(',') : null // 将数组转为逗号分隔的字符串
+			};
+			
+			console.log('提交售后申请数据', afterSaleData);
+			
+			createAfterSale(afterSaleData).then(response => {
 				uni.hideLoading();
 				if(response.code === 200) {
 					uni.showToast({
@@ -225,7 +242,8 @@ export default {
 						icon: 'none'
 					});
 				}
-			}).catch(() => {
+			}).catch(error => {
+				console.error('提交售后申请失败', error);
 				uni.hideLoading();
 				uni.showToast({
 					title: '申请提交失败，请重试',
