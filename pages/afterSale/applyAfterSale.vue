@@ -155,12 +155,16 @@ export default {
 				this.uploadList.forEach((imagePath, index) => {
 					console.log('开始上传图片', index, imagePath);
 					let uploadPromise = new Promise((resolve, reject) => {
+						// 获取token
+						const token = uni.getStorageSync('token');
+						console.log('当前token:', token);
+						
 						uni.uploadFile({
 							url: API_BASE_URL + '/upload/image',
 							filePath: imagePath,
 							name: 'file',
 							header: {
-								'Authorization': uni.getStorageSync('token')
+								'Authorization': 'Bearer ' + token
 							},
 							success: (res) => {
 								console.log('图片上传成功', res);
