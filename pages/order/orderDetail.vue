@@ -41,6 +41,11 @@
 					<button class="evaluation-btn" @click="navTo('/pages/order/evaluation?orderId='+order.id+'&productId='+item.productId)">评价</button>
 				</view>
 			</view>
+			
+			<!-- 批量评价按钮 -->
+			<view class="batch-evaluation" v-if="order.status === 4 && order.orderItemList && order.orderItemList.length > 1">
+				<button class="batch-evaluation-btn" @click="navTo('/pages/order/batchEvaluation?orderId='+order.id)">批量评价</button>
+			</view>
 		</view>
 
 		<!-- 金额明细 -->
@@ -785,6 +790,20 @@
 			background: #fff;
 			border: 1px solid #fa436a;
 			padding: 4rpx 20rpx;
+			border-radius: 30rpx;
+		}
+	}
+	
+	.batch-evaluation {
+		display: flex;
+		justify-content: flex-end;
+		padding: 20rpx 30rpx;
+		
+		.batch-evaluation-btn {
+			font-size: 26rpx;
+			color: #fff;
+			background: #fa436a;
+			padding: 10rpx 30rpx;
 			border-radius: 30rpx;
 		}
 	}

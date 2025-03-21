@@ -99,3 +99,32 @@ export function createProductComment(data) {
 		data: data
 	});
 }
+
+/**
+ * 批量创建商品评价
+ * @param {Object} data
+ * @param {number} data.orderId - 订单ID
+ * @param {Array} data.commentItems - 评价项数组
+ * @param {number} data.commentItems[].productId - 商品ID
+ * @param {number} data.commentItems[].rating - 评分(1-5)
+ * @param {string} data.commentItems[].comment - 评价内容
+ * @param {Array} data.commentItems[].pics - 评价图片URL数组
+ */
+export function createBatchProductComment(data) {
+	return request({
+		url: '/order/comment/batch/create',
+		method: 'post',
+		data: data
+	});
+}
+
+/**
+ * 获取订单中待评价商品列表
+ * @param {number} orderId - 订单ID
+ */
+export function getOrderProductsForComment(orderId) {
+	return request({
+		url: `/order/comment/products/${orderId}`,
+		method: 'get'
+	});
+}

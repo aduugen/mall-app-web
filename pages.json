@@ -274,7 +274,14 @@
 			"style": {
 				"navigationBarTitleText": "商品评价"
 			}
-		}, {
+		},
+		{
+			"path": "pages/order/batchEvaluation",
+			"style": {
+				"navigationBarTitleText": "批量评价商品"
+			}
+		},
+		{
 			"path": "pages/afterSale/afterSaleList",
 			"style": {
 				"navigationBarTitleText": "我的售后"

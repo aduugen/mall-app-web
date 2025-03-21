@@ -46,7 +46,7 @@
 						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
 							<button class="action-btn" @click="applyAfterSale(item)">申请售后</button>
-							<button class="action-btn recom" @click="showEvaluation(item)">评价商品</button>
+							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
 						</view>
 					</view>
@@ -317,13 +317,13 @@
 			/**
 			 * 显示评价页面
 			 */
-			showEvaluation(order) {
+			evaluateOrder(order) {
 				if(order.orderItemList && order.orderItemList.length > 0) {
-					// 如果订单中有多个商品，跳转到订单详情页让用户选择要评价的商品
 					if(order.orderItemList.length > 1) {
-						this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);
+						// 如果订单中有多个商品，跳转到批量评价页面
+						this.navTo(`/pages/order/batchEvaluation?orderId=${order.id}`);
 					} else {
-						// 如果只有一个商品，直接跳转到评价页面
+						// 如果只有一个商品，评价页面自动选中该商品进行评价
 						const orderItem = order.orderItemList[0];
 						this.navTo(`/pages/order/evaluation?orderId=${order.id}&productId=${orderItem.productId}`);
 					}
