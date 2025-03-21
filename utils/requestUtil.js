@@ -24,7 +24,7 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 	const token = uni.getStorageSync('token');
 	if(token){
 		config.header = {
-			'Authorization':token,
+			'Authorization': token,
 			...config.header
 		}
 	}else{

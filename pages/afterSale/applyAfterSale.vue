@@ -164,7 +164,7 @@ export default {
 							filePath: imagePath,
 							name: 'file',
 							header: {
-								'Authorization': 'Bearer ' + token
+								'Authorization': token
 							},
 							success: (res) => {
 								console.log('图片上传成功', res);
