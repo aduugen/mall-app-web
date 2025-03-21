@@ -260,12 +260,6 @@
 							image: '/static/icon_finish.png'
 						}
 						break;
-					case 4:
-						this.orderStatus = {
-							text: '待评价',
-							image: '/static/icon_comment.png'
-						}
-						break;
 				};
 			},
 			navTo(url) {

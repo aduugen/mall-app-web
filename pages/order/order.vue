@@ -44,11 +44,9 @@
 							<button class="action-btn" >查看物流</button>
 							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
 						</view>
-						<view class="action-box b-t" v-if="item.status == 4">
-							<button class="action-btn recom" @click="showEvaluation(item)">评价商品</button>
-						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
 							<button class="action-btn" @click="applyAfterSale(item)">申请售后</button>
+							<button class="action-btn recom" @click="showEvaluation(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
 						</view>
 					</view>
@@ -105,10 +103,6 @@
 						text: '待收货'
 					},
 					{
-						state: 4,
-						text: '待评价'
-					},
-					{
 						state: 3,
 						text: '已完成'
 					},
@@ -158,9 +152,6 @@
 						break;
 					case 3:
 						statusTip = '交易完成';
-						break;
-					case 4:
-						statusTip = '待评价';
 						break;
 					case 5:
 						statusTip = '已取消';

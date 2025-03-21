@@ -159,12 +159,16 @@ export default {
 						const token = uni.getStorageSync('token');
 						console.log('当前token:', token);
 						
+						// 确保token不包含Bearer前缀
+						const authToken = token.startsWith('Bearer ') ? token.substring(7) : token;
+						console.log('处理后token:', authToken);
+						
 						uni.uploadFile({
 							url: API_BASE_URL + '/upload/image',
 							filePath: imagePath,
 							name: 'file',
 							header: {
-								'Authorization': token
+								'Authorization': authToken
 							},
 							success: (res) => {
 								console.log('图片上传成功', res);
