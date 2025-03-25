@@ -638,22 +638,51 @@
 			font-size: $font-sm+2upx;
 			color: $font-color-dark;
 			line-height: 1.8;
+			background-color: #fff;
+			border-radius: 12upx;
+			box-shadow: 0 5upx 25upx rgba(0, 0, 0, 0.1);
+			padding: 15upx;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
 
 			image {
-				width: 300upx;
-				height: 300upx;
-				border-radius: 6upx;
+				width: 270upx;
+				height: 270upx;
+				border-radius: 8upx;
+				margin-bottom: 10upx;
+			}
+
+			.title {
+				width: 100%;
+				font-size: $font-lg;
+				color: $font-color-dark;
+				line-height: 40upx;
+				padding: 0 8upx;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				overflow: hidden;
+				height: 40upx;
+			}
+
+			.title2 {
+				width: 100%;
+				font-size: $font-sm;
+				color: $font-color-light;
+				line-height: 36upx;
+				padding: 0 8upx;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				overflow: hidden;
+				height: 36upx;
 			}
 
 			.price {
+				width: 100%;
 				color: $uni-color-primary;
+				padding: 10upx 8upx;
+				margin-top: 5upx;
 			}
-		}
-
-		.title2 {
-			font-size: $font-sm;
-			color: $font-color-light;
-			line-height: 40upx;
 		}
 	}
 
@@ -679,7 +708,7 @@
 
 		.tit {
 			font-size: $font-lg +2upx;
-			color: #font-color-dark;
+			color: $font-color-dark;
 			line-height: 1.3;
 		}
 
@@ -708,150 +737,6 @@
 	}
 
 	/* 分类推荐楼层 */
-	.hot-floor {
-		width: 100%;
-		overflow: hidden;
-		margin-bottom: 20upx;
-
-		.floor-img-box {
-			width: 100%;
-			height: 320upx;
-			position: relative;
-
-			&:after {
-				content: '';
-				position: absolute;
-				left: 0;
-				top: 0;
-				width: 100%;
-				height: 100%;
-				background: linear-gradient(rgba(255, 255, 255, .06) 30%, #f8f8f8);
-			}
-		}
-
-		.floor-img {
-			width: 100%;
-			height: 100%;
-		}
-
-		.floor-list {
-			white-space: nowrap;
-			padding: 20upx;
-			padding-right: 50upx;
-			border-radius: 6upx;
-			margin-top: -140upx;
-			margin-left: 30upx;
-			background: #fff;
-			box-shadow: 1px 1px 5px rgba(0, 0, 0, .2);
-			position: relative;
-			z-index: 1;
-		}
-
-		.scoll-wrapper {
-			display: flex;
-			align-items: flex-start;
-		}
-
-		.floor-item {
-			width: 180upx;
-			margin-right: 20upx;
-			font-size: $font-sm+2upx;
-			color: $font-color-dark;
-			line-height: 1.8;
-
-			image {
-				width: 180upx;
-				height: 180upx;
-				border-radius: 6upx;
-			}
-
-			.price {
-				color: $uni-color-primary;
-			}
-		}
-
-		.more {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-direction: column;
-			flex-shrink: 0;
-			width: 180upx;
-			height: 180upx;
-			border-radius: 6upx;
-			background: #f3f3f3;
-			font-size: $font-base;
-			color: $font-color-light;
-
-			text:first-child {
-				margin-bottom: 4upx;
-			}
-		}
-	}
-
-	/* 猜你喜欢 */
-	.guess-section {
-		display: flex;
-		flex-wrap: wrap;
-		padding: 0 30upx;
-		background: #fff;
-
-		.guess-item {
-			display: flex;
-			flex-direction: column;
-			width: 48%;
-			padding-bottom: 40upx;
-
-			&:nth-child(2n+1) {
-				margin-right: 4%;
-			}
-		}
-
-		.image-wrapper {
-			width: 100%;
-			height: 330upx;
-			border-radius: 3px;
-			overflow: hidden;
-
-			image {
-				width: 100%;
-				height: 100%;
-				opacity: 1;
-			}
-		}
-		
-		.image-wrapper-brand {
-			width: 100%;
-			height: 150upx;
-			border-radius: 3px;
-			overflow: hidden;
-		
-			image {
-				width: 100%;
-				height: 100%;
-				opacity: 1;
-			}
-		}
-
-		.title {
-			font-size: $font-lg;
-			color: $font-color-dark;
-			line-height: 80upx;
-		}
-
-		.title2 {
-			font-size: $font-sm;
-			color: $font-color-light;
-			line-height: 40upx;
-		}
-
-		.price {
-			font-size: $font-lg;
-			color: $uni-color-primary;
-			line-height: 1;
-		}
-	}
-
 	.hot-section {
 		display: flex;
 		flex-wrap: wrap;
@@ -862,13 +747,17 @@
 			display: flex;
 			flex-direction: row;
 			width: 100%;
-			padding-bottom: 40upx;
+			padding: 15upx;
+			margin-bottom: 20upx;
+			border-radius: 12upx;
+			background-color: #fff;
+			box-shadow: 0 5upx 25upx rgba(0, 0, 0, 0.1);
 		}
 
 		.image-wrapper {
 			width: 30%;
 			height: 250upx;
-			border-radius: 3px;
+			border-radius: 8upx;
 			overflow: hidden;
 
 			image {
@@ -881,7 +770,11 @@
 		.title {
 			font-size: $font-lg;
 			color: $font-color-dark;
-			line-height: 80upx;
+			line-height: 60upx;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			overflow: hidden;
+			height: 60upx;
 		}
 
 		.title2 {
@@ -891,20 +784,94 @@
 			height: 80upx;
 			overflow: hidden;
 			text-overflow: ellipsis;
-			display: block;
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
 		}
 
 		.price {
 			font-size: $font-lg;
 			color: $uni-color-primary;
-			line-height: 80upx;
+			line-height: 60upx;
 		}
 
 		.txt {
 			width: 70%;
 			display: flex;
 			flex-direction: column;
-			padding-left: 40upx;
+			padding-left: 30upx;
+			justify-content: space-between;
 		}
+	}
+
+	/* 猜你喜欢 */
+	.guess-section {
+		display: flex;
+		flex-wrap: wrap;
+		padding: 0 30upx;
+		background: #fff;
+	}
+	
+	.guess-section .guess-item {
+		display: flex;
+		flex-direction: column;
+		width: 48%;
+		padding: 15upx;
+		margin-bottom: 20upx;
+		border-radius: 12upx;
+		background-color: #fff;
+		box-shadow: 0 5upx 25upx rgba(0, 0, 0, 0.1);
+	}
+	
+	.guess-section .guess-item:nth-child(2n+1) {
+		margin-right: 4%;
+	}
+	
+	.guess-section .image-wrapper {
+		width: 100%;
+		height: 330upx;
+		border-radius: 8upx;
+		overflow: hidden;
+		margin-bottom: 10upx;
+	}
+	
+	.guess-section .image-wrapper image {
+		width: 100%;
+		height: 100%;
+		opacity: 1;
+	}
+	
+	.guess-section .image-wrapper-brand {
+		width: 100%;
+		height: 150upx;
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	
+	.guess-section .image-wrapper-brand image {
+		width: 100%;
+		height: 100%;
+		opacity: 1;
+	}
+	
+	.guess-section .title {
+		font-size: $font-lg;
+		color: $font-color-dark;
+		line-height: 80upx;
+		padding: 0 8upx;
+	}
+	
+	.guess-section .title2 {
+		font-size: $font-sm;
+		color: $font-color-light;
+		line-height: 40upx;
+		padding: 0 8upx;
+	}
+	
+	.guess-section .price {
+		font-size: $font-lg;
+		color: $uni-color-primary;
+		line-height: 1;
+		padding: 10upx 8upx;
 	}
 </style>

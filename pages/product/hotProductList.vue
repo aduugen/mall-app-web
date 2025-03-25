@@ -133,7 +133,11 @@
 			display: flex;
 			flex-direction: column;
 			width: 48%;
-			padding-bottom: 40upx;
+			padding: 15upx;
+			margin-bottom: 20upx;
+			border-radius: 12upx;
+			background-color: #fff;
+			box-shadow: 0 5upx 25upx rgba(0, 0, 0, 0.1);
 
 			&:nth-child(2n+1) {
 				margin-right: 4%;
@@ -143,7 +147,7 @@
 		.image-wrapper {
 			width: 100%;
 			height: 330upx;
-			border-radius: 3px;
+			border-radius: 8upx;
 			overflow: hidden;
 			background-color: #fff;
 
@@ -157,7 +161,11 @@
 		.title {
 			font-size: $font-lg;
 			color: $font-color-dark;
-			line-height: 80upx;
+			line-height: 60upx;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			overflow: hidden;
+			height: 60upx;
 		}
 
 		.title2 {
@@ -167,7 +175,9 @@
 			height: 80upx;
 			overflow: hidden;
 			text-overflow: ellipsis;
-			display: block;
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
 		}
 
 		.price-box {
@@ -177,6 +187,7 @@
 			padding-right: 10upx;
 			font-size: 24upx;
 			color: $font-color-light;
+			margin-top: 5upx;
 		}
 
 		.price {
