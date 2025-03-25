@@ -2,13 +2,13 @@
 	<view class="container">
 		<!-- 空白页 -->
 		<view v-if="!hasLogin || empty===true" class="empty">
-			<image src="/static/emptyCart.jpg" mode="aspectFit"></image>
+			<image src="/static/empty-cart.png" mode="aspectFit" @click="navToIndex"></image>
 			<view v-if="hasLogin" class="empty-tips">
-				空空如也
-				<navigator class="navigator" v-if="hasLogin" url="../index/index" open-type="switchTab">随便逛逛></navigator>
+				购物车是空的
+				<navigator class="navigator" v-if="hasLogin" url="../index/index" open-type="switchTab">点这里去逛逛></navigator>
 			</view>
 			<view v-else class="empty-tips">
-				空空如也
+				购物车是空的
 				<view class="navigator" @click="navToLogin">去登陆></view>
 			</view>
 		</view>
@@ -128,6 +128,12 @@
 			navToLogin() {
 				uni.navigateTo({
 					url: '/pages/public/login'
+				})
+			},
+			// 导航到首页
+			navToIndex() {
+				uni.switchTab({
+					url: '/pages/index/index'
 				})
 			},
 			//选中状态处理
