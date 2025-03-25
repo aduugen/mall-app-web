@@ -319,14 +319,15 @@
 			 */
 			evaluateOrder(order) {
 				if(order.orderItemList && order.orderItemList.length > 0) {
-					if(order.orderItemList.length > 1) {
+					// if(order.orderItemList.length >= 1) {
 						// 如果订单中有多个商品，跳转到批量评价页面
 						this.navTo(`/pages/order/batchEvaluation?orderId=${order.id}`);
-					} else {
+					// } else {
 						// 如果只有一个商品，评价页面自动选中该商品进行评价
-						const orderItem = order.orderItemList[0];
-						this.navTo(`/pages/order/evaluation?orderId=${order.id}&productId=${orderItem.productId}`);
-					}
+						// const orderItem = order.orderItemList[0];
+						// this.navTo(`/pages/order/evaluation?orderId=${order.id}&productId=${orderItem.productId}`);
+					    // this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);
+					// }
 				} else {
 					// 如果订单项为空，跳转到订单详情页
 					this.navTo(`/pages/order/orderDetail?orderId=${order.id}`);

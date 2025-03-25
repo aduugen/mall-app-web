@@ -347,7 +347,15 @@
 	.icon-dianzan-ash:before {
 		content: "\e617";
 	}
-	
+
+	.icon-checkboxchecked:before {
+		content: "\e801";
+	}
+
+	.icon-checkboxunchecked:before {
+		content: "\e802";
+	}
+
 	.uni-input-input:disabled {  
 	     pointer-events: none;  
 	}

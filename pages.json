@@ -278,7 +278,7 @@
 		{
 			"path": "pages/order/batchEvaluation",
 			"style": {
-				"navigationBarTitleText": "批量评价商品"
+				"navigationBarTitleText": "评价商品"
 			}
 		},
 		{

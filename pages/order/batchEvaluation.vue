@@ -7,11 +7,8 @@
 		
 		<!-- 商品列表 -->
 		<view class="products-section">
-			<view class="product-item" v-for="(item, index) in productList" :key="item.productId">
-				<view class="product-header">
-					<view class="checkbox" @click="toggleProduct(item)">
-						<text class="yticon" :class="{'icon-xuanzhong2': item.selected, 'icon-yuan': !item.selected}"></text>
-					</view>
+			<view class="product-item" v-for="item in productList" :key="item.productId">
+				<view class="product-header" @click="toggleProduct(item)">
 					<view class="product-info">
 						<image class="product-img" :src="item.productPic" mode="aspectFill"></image>
 						<view class="product-detail">
@@ -63,10 +60,6 @@
 		
 		<!-- 操作栏 -->
 		<view class="footer">
-			<view class="select-all" @click="toggleSelectAll">
-				<text class="yticon" :class="{'icon-xuanzhong2': isAllSelected, 'icon-yuan': !isAllSelected}"></text>
-				<text class="text">全选</text>
-			</view>
 			<view class="action-btns">
 				<button class="submit-btn" :disabled="selectedCount === 0" @click="submitEvaluation">评价商品 ({{selectedCount}})</button>
 			</view>
@@ -111,12 +104,17 @@ export default {
 			});
 			getOrderProductsForComment(this.orderId).then(response => {
 				uni.hideLoading();
+				console.log('获取评价商品列表响应:', JSON.stringify(response));
+				
 				if(response.code === 200 && response.data) {
+					console.log('原始商品数据:', JSON.stringify(response.data));
+					
 					// 为每个商品添加评价相关属性
 					this.productList = response.data.map(item => {
+						console.log('处理商品:', item.productName, item.productId);
 						return {
 							...item,
-							selected: false,  // 是否选中
+							selected: true,  // 默认选中所有商品
 							rating: 5,        // 默认5星评价
 							comment: '',      // 评价内容
 							pics: []          // 图片列表
@@ -134,7 +132,17 @@ export default {
 		
 		// 切换商品选中状态
 		toggleProduct(item) {
+			// 切换当前商品的选中状态
 			item.selected = !item.selected;
+			
+			// 如果是选中状态，确保有内容填写提示
+			if(item.selected) {
+				// 如果是首次展开，可以添加一些默认内容或提示
+				if(!item.comment) {
+					// 这里可以设置一些默认评价内容或提示，也可以留空
+					console.log('商品已选中，请填写评价内容');
+				}
+			}
 		},
 		
 		// 全选/取消全选
@@ -316,6 +324,15 @@ export default {
 					icon: 'none'
 				});
 			});
+		},
+		
+		// 处理复选框点击
+		handleCheckboxClick(item, event) {
+			// 阻止事件冒泡，避免触发整个商品条目的点击
+			event.stopPropagation();
+			
+			// 这里只更新复选框状态，不展开/收起评价表单
+			item.selected = !item.selected;
 		}
 	},
 	filters: {
@@ -364,10 +381,30 @@ export default {
 .product-item {
 	background: #fff;
 	margin-bottom: 20rpx;
+	border-radius: 8rpx;
+	box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+	overflow: hidden;
 	
 	.product-header {
 		display: flex;
 		padding: 30rpx;
+		position: relative;
+		transition: background-color 0.2s;
+		
+		&:active {
+			background-color: #f9f9f9;
+		}
+		
+		&::after {
+			content: '\e606';  /* 右箭头图标 */
+			font-family: "yticon";
+			position: absolute;
+			right: 30rpx;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #ccc;
+			font-size: 30rpx;
+		}
 		
 		.checkbox {
 			display: flex;
@@ -412,6 +449,18 @@ export default {
 	.evaluation-form {
 		padding: 0 30rpx 30rpx;
 		border-top: 1px solid #f5f5f5;
+		animation: slideDown 0.3s ease-out;
+		
+		@keyframes slideDown {
+			from {
+				opacity: 0;
+				transform: translateY(-10px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
 		
 		.section-title {
 			font-size: 28rpx;
@@ -503,26 +552,10 @@ export default {
 	height: 100rpx;
 	background: #fff;
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
 	padding: 0 30rpx;
 	box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
-	
-	.select-all {
-		display: flex;
-		align-items: center;
-		
-		.yticon {
-			font-size: 40rpx;
-			color: #fa436a;
-			margin-right: 10rpx;
-		}
-		
-		.text {
-			font-size: 28rpx;
-			color: #333;
-		}
-	}
 	
 	.action-btns {
 		.submit-btn {
@@ -542,4 +575,21 @@ export default {
 		}
 	}
 }
+
+.icon-checkboxchecked {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 60upx;
+			height: 60upx;
+			font-size: 40upx;
+			color: $base-color;
+		}
+.icon-checkboxunchecked {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 60upx;
+			height: 60upx;
+		}
 </style> 
