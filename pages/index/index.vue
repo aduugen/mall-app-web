@@ -25,46 +25,7 @@
 				<text class="num">{{swiperLength}}</text>
 			</view>
 		</view>
-		<!-- 头部功能区 -->
-		<view class="cate-section">
-			<view class="cate-item">
-				<image src="/static/temp/c3.png"></image>
-				<text>专题</text>
-			</view>
-			<view class="cate-item">
-				<image src="/static/temp/c5.png"></image>
-				<text>话题</text>
-			</view>
-			<view class="cate-item">
-				<image src="/static/temp/c6.png"></image>
-				<text>优选</text>
-			</view>
-			<view class="cate-item">
-				<image src="/static/temp/c7.png"></image>
-				<text>特惠</text>
-			</view>
-		</view>
-
-		<!-- 品牌制造商直供 -->
-		<view class="f-header m-t" @click="navToRecommendBrandPage()">
-			<image src="/static/icon_home_brand.png"></image>
-			<view class="tit-box">
-				<text class="tit">品牌制造商直供</text>
-				<text class="tit2">工厂直达消费者，剔除品牌溢价</text>
-			</view>
-			<text class="yticon icon-you"></text>
-		</view>
-
-		<view class="guess-section">
-			<view v-for="(item, index) in brandList" :key="index" class="guess-item" @click="navToBrandDetailPage(item)">
-				<view class="image-wrapper-brand">
-					<image :src="item.logo" mode="aspectFit"></image>
-				</view>
-				<text class="title clamp">{{item.name}}</text>
-				<text class="title2">商品数量：{{item.productCount}}</text>
-			</view>
-		</view>
-
+		
 		<!-- 秒杀专区 -->
 		<view class="f-header m-t" v-if="homeFlashPromotion!==null">
 			<image src="/static/icon_flash_promotion.png"></image>
@@ -93,6 +54,26 @@
 				<text class="title clamp">{{item.name}}</text>
 				<text class="title2 clamp">{{item.subTitle}}</text>
 				<text class="price">￥{{item.price}}</text>
+			</view>
+		</view>
+		
+		<!-- 品牌制造商直供 -->
+		<view class="f-header m-t" @click="navToRecommendBrandPage()">
+			<image src="/static/icon_home_brand.png"></image>
+			<view class="tit-box">
+				<text class="tit">品牌制造商直供</text>
+				<text class="tit2">工厂直达消费者，剔除品牌溢价</text>
+			</view>
+			<text class="yticon icon-you"></text>
+		</view>
+
+		<view class="guess-section">
+			<view v-for="(item, index) in brandList" :key="index" class="guess-item" @click="navToBrandDetailPage(item)">
+				<view class="image-wrapper-brand">
+					<image :src="item.logo" mode="aspectFit"></image>
+				</view>
+				<text class="title clamp">{{item.name}}</text>
+				<text class="title2">商品数量：{{item.productCount}}</text>
 			</view>
 		</view>
 
@@ -181,7 +162,7 @@
 		data() {
 			return {
 				titleNViewBackground: '',
-				titleNViewBackgroundList: ['rgb(45, 70, 20)', 'rgb(45, 70, 20)'],
+				titleNViewBackgroundList: ['rgba(40, 96, 144, 0.76)', 'rgba(40, 96, 144, 0.76)'],
 				swiperCurrent: 0,
 				swiperLength: 0,
 				carouselList: [],
@@ -431,13 +412,6 @@
 	}
 
 	page {
-		.cate-section {
-			position: relative;
-			z-index: 5;
-			border-radius: 16upx 16upx 0 0;
-			margin-top: -20upx;
-		}
-
 		.carousel-section {
 			padding: 0;
 
@@ -488,24 +462,29 @@
 			width: 100%;
 			height: 426upx;
 			transition: .4s;
+			box-shadow: 0 8upx 20upx rgba(0, 0, 0, 0.2);
 		}
 	}
 
 	.carousel {
 		width: 100%;
 		height: 350upx;
+		margin-bottom: 20upx;
 
 		.carousel-item {
 			width: 100%;
 			height: 100%;
-			padding: 0 28upx;
+			padding: 0;
 			overflow: hidden;
 		}
 
 		image {
 			width: 100%;
 			height: 100%;
-			border-radius: 10upx;
+			border-radius: 0;
+			box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.15);
+			object-fit: cover;
+			transform: translateY(0);
 		}
 	}
 
@@ -537,34 +516,6 @@
 			font-size: 12upx;
 			color: #fff;
 			transform: translateX(-50%);
-		}
-	}
-
-	/* 分类 */
-	.cate-section {
-		display: flex;
-		justify-content: space-around;
-		align-items: center;
-		flex-wrap: wrap;
-		padding: 30upx 22upx;
-		background: #fff;
-
-		.cate-item {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			font-size: $font-sm + 2upx;
-			color: $font-color-dark;
-		}
-
-		/* 原图标颜色太深,不想改图了,所以加了透明度 */
-		image {
-			width: 88upx;
-			height: 88upx;
-			margin-bottom: 14upx;
-			border-radius: 50%;
-			opacity: .7;
-			box-shadow: 4upx 4upx 20upx rgba(250, 67, 106, 0.3);
 		}
 	}
 
