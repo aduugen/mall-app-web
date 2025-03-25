@@ -291,6 +291,12 @@
 			"style": {
 				"navigationBarTitleText": "申请售后"
 			}
+		},
+		{
+			"path": "pages/order/invoice",
+			"style": {
+				"navigationBarTitleText": "开具发票"
+			}
 		}
 	],
 	"globalStyle": {

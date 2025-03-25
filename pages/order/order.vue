@@ -45,6 +45,7 @@
 							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
+							<button class="action-btn" @click="invoiceOrder(item)">开具发票</button>
 							<button class="action-btn" @click="applyAfterSale(item)">申请售后</button>
 							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
@@ -337,6 +338,12 @@
 			applyAfterSale(order) {
 				uni.navigateTo({
 					url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
+				});
+			},
+			//开具发票
+			invoiceOrder(order) {
+				uni.navigateTo({
+					url: `/pages/order/invoice?orderId=${order.id}`
 				});
 			},
 		},
