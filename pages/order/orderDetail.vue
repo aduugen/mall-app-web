@@ -284,7 +284,7 @@
 
 	.status-section {
 		height: 200upx;
-		background-color: $base-color;
+		background-color: #286090;
 		display: flex;
 		align-items: center;
 		padding: 30upx;

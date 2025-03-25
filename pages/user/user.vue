@@ -80,12 +80,12 @@
 			</view>
 			<!-- 浏览历史 -->
 			<view class="history-section icon">
-				<list-cell icon="icon-dizhi" iconColor="#5fcda2" title="地址管理" @eventClick="navTo('/pages/address/address')"></list-cell>
-				<list-cell icon="icon-lishijilu" iconColor="#e07472" title="我的足迹" @eventClick="navTo('/pages/user/readHistory')"></list-cell>
-				<list-cell icon="icon-shoucang" iconColor="#5fcda2" title="我的关注" @eventClick="navTo('/pages/user/brandAttention')"></list-cell>
-				<list-cell icon="icon-shoucang_xuanzhongzhuangtai" iconColor="#54b4ef" title="我的收藏" @eventClick="navTo('/pages/user/productCollection')"></list-cell>
-				<list-cell icon="icon-pingjia" iconColor="#ee883b" title="我的评价"></list-cell>
-				<list-cell icon="icon-shezhi1" iconColor="#e07472" title="设置" border="" @eventClick="navTo('/pages/set/set')"></list-cell>
+				<list-cell icon="icon-dizhi" iconColor="#286090" title="地址管理" @eventClick="navTo('/pages/address/address')"></list-cell>
+				<list-cell icon="icon-lishijilu" iconColor="#286090" title="我的足迹" @eventClick="navTo('/pages/user/readHistory')"></list-cell>
+				<list-cell icon="icon-shoucang" iconColor="#286090" title="我的关注" @eventClick="navTo('/pages/user/brandAttention')"></list-cell>
+				<list-cell icon="icon-shoucang_xuanzhongzhuangtai" iconColor="#286090" title="我的收藏" @eventClick="navTo('/pages/user/productCollection')"></list-cell>
+				<list-cell icon="icon-pingjia" iconColor="#286090" title="我的评价"></list-cell>
+				<list-cell icon="icon-shezhi1" iconColor="#286090" title="设置" border="" @eventClick="navTo('/pages/set/set')"></list-cell>
 				
 				<button class="logout-btn" @click="logout" v-if="hasLogin">退出登录</button>
 			</view>
@@ -395,7 +395,7 @@
 		.yticon{
 			font-size: 48upx;
 			margin-bottom: 18upx;
-			color: #fa436a;
+			color: #286090;
 		}
 		.icon-shouhoutuikuan{
 			font-size:44upx;
@@ -436,7 +436,7 @@
 		height: 66upx;
 		line-height: 66upx;
 		border-radius: 100upx;
-		background-color: #f04c41;
+		background-color: #286090;
 		color: #fff;
 		font-size: $font-base;
 		width: 50%;
