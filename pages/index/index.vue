@@ -13,7 +13,7 @@
 			<view class="titleNview-placing"></view>
 			<!-- 背景色区域 -->
 			<view class="titleNview-background" :style="{backgroundColor:titleNViewBackground}"></view>
-			<swiper class="carousel" circular @change="swiperChange">
+			<swiper class="carousel" circular @change="swiperChange" autoplay interval="2000" duration="500">
 				<swiper-item v-for="(item, index) in advertiseList" :key="index" class="carousel-item" @click="navToAdvertisePage(item)">
 					<image :src="item.pic" />
 				</swiper-item>
