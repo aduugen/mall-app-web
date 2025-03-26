@@ -17,12 +17,12 @@
 			<view class="cart-list">
 				<block v-for="(item, index) in cartList" :key="item.id">
 					<view class="cart-item" :class="{'b-b': index!==cartList.length-1}">
-						<view class="image-wrapper">
+						<view class="image-wrapper" @click="navToDetailPage(item)">
 							<image :src="item.productPic" :class="[item.loaded]" mode="aspectFill" lazy-load @load="onImageLoad('cartList', index)"
 							 @error="onImageError('cartList', index)"></image>
-							<view class="yticon icon-xuanzhong2 checkbox" :class="{checked: item.checked}" @click="check('item', index)"></view>
+							<view class="yticon icon-xuanzhong2 checkbox" :class="{checked: item.checked}" @click.stop="check('item', index)"></view>
 						</view>
-						<view class="item-right">
+						<view class="item-right" @click="navToDetailPage(item)">
 							<text class="clamp title">{{item.productName}}</text>
 							<text class="attr">{{item.spDataStr}}</text>
 							<text class="price">¥{{item.price}}</text>
@@ -222,6 +222,12 @@
 				}
 				uni.navigateTo({
 					url: `/pages/order/createOrder?cartIds=${JSON.stringify(cartIds)}`
+				})
+			},
+			//跳转到商品详情页
+			navToDetailPage(item) {
+				uni.navigateTo({
+					url: `/pages/product/product?id=${item.productId}`
 				})
 			},
 			// 处理滑块移动
