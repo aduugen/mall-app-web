@@ -252,7 +252,12 @@
 
 <style lang='scss'>
 	.container {
-		padding-bottom: 134upx;
+		/* #ifdef APP-PLUS || MP */
+		padding-bottom: calc(100upx + env(safe-area-inset-bottom));
+		/* #endif */
+		/* #ifdef H5 */
+		padding-bottom: 150upx;
+		/* #endif */
 
 		/* 空白页 */
 		.empty {
@@ -357,21 +362,27 @@
 	/* 底部栏 */
 	.action-section {
 		/* #ifdef H5 */
-		margin-bottom: 100upx;
+		margin-bottom: 55upx;
 		/* #endif */
 		position: fixed;
-		left: 30upx;
-		bottom: 30upx;
+		left: 0;
+		/* #ifdef APP-PLUS || MP */
+		bottom: var(--window-bottom);
+		padding-bottom: env(safe-area-inset-bottom);
+		/* #endif */
+		/* #ifdef H5 */
+		bottom: 1px; /* H5环境下tabbar的高度为50px */
+		/* #endif */
 		z-index: 95;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		width: 690upx;
+		width: 100%;
 		height: 100upx;
-		padding: 0 20upx;
-		background: rgba(255, 255, 255, .9);
-		box-shadow: 0 0 20upx 0 rgba(0, 0, 0, .5);
-		border-radius: 16upx;
+		padding-left: 30upx;
+		padding-right: 30upx;
+		background: rgba(255, 255, 255, .7);
+		box-shadow: 0 -2upx 10upx 0 rgba(0, 0, 0, .2);
 
 		.left-area {
 			display: flex;
@@ -429,7 +440,7 @@
 			line-height: 76upx;
 			font-size: $font-base + 2upx;
 			background: $uni-color-primary;
-			box-shadow: 1px 2px 5px rgba(88, 88, 88, 0.72)
+			box-shadow: 1px 2px 5px rgba(40, 96, 144, 0.4);
 		}
 	}
 
