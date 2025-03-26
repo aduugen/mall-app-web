@@ -252,7 +252,7 @@
 			position: relative;
 
 			&.current {
-				color: $base-color;
+				color: $uni-color-primary;
 
 				&:after {
 					content: '';
@@ -262,7 +262,7 @@
 					transform: translateX(-50%);
 					width: 120upx;
 					height: 0;
-					border-bottom: 4upx solid $base-color;
+					border-bottom: 4upx solid $uni-color-primary;
 				}
 			}
 		}
@@ -283,7 +283,7 @@
 				color: #888;
 
 				&.active {
-					color: $base-color;
+					color: $uni-color-primary;
 				}
 			}
 
@@ -370,7 +370,7 @@
 		}
 
 		.active {
-			color: $base-color;
+			color: $uni-color-primary;
 		}
 	}
 
