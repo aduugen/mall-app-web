@@ -53,7 +53,11 @@
 				</view>
 				<text class="title clamp">{{item.name}}</text>
 				<text class="title2 clamp">{{item.subTitle}}</text>
-				<text class="price">￥{{item.price}}</text>
+				<view class="price-box">
+					<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
+					<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
+					<text class="price" v-else>￥{{item.price}}</text>
+				</view>
 			</view>
 		</view>
 		
@@ -93,7 +97,11 @@
 						<image :src="item.pic" mode="aspectFill"></image>
 						<text class="title clamp">{{item.name}}</text>
 						<text class="title2 clamp">{{item.subTitle}}</text>
-						<text class="price">￥{{item.price}}</text>
+						<view class="price-box">
+							<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
+							<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
+							<text class="price" v-else>￥{{item.price}}</text>
+						</view>
 					</view>
 				</view>
 			</scroll-view>
@@ -117,7 +125,11 @@
 				<view class="txt">
 					<text class="title clamp">{{item.name}}</text>
 					<text class="title2">{{item.subTitle}}</text>
-					<text class="price">￥{{item.price}}</text>
+					<view class="price-box">
+						<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
+						<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
+						<text class="price" v-else>￥{{item.price}}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -139,7 +151,11 @@
 				</view>
 				<text class="title clamp">{{item.name}}</text>
 				<text class="title2 clamp">{{item.subTitle}}</text>
-				<text class="price">￥{{item.price}}</text>
+				<view class="price-box">
+					<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
+					<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
+					<text class="price" v-else>￥{{item.price}}</text>
+				</view>
 			</view>
 		</view>
 		<uni-load-more :status="loadingType"></uni-load-more>
@@ -628,6 +644,28 @@
 				height: 36upx;
 			}
 
+			.price-box {
+				width: 100%;
+				padding: 10upx 8upx;
+				margin-top: 5upx;
+				display: flex;
+				align-items: center;
+				justify-content: flex-end;
+				
+				.price {
+					color: #f04c41;
+					font-size: $font-lg;
+					line-height: 1;
+					margin-right: 8upx;
+				}
+				
+				.price-original {
+					color: $uni-color-primary;
+					font-size: $font-sm + 2upx;
+					text-decoration: line-through;
+				}
+			}
+
 			.price {
 				width: 100%;
 				color: $uni-color-primary;
@@ -740,10 +778,24 @@
 			-webkit-box-orient: vertical;
 		}
 
-		.price {
-			font-size: $font-lg;
-			color: $uni-color-primary;
+		.price-box {
 			line-height: 60upx;
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			
+			.price {
+				color: #f04c41;
+				font-size: $font-lg;
+				line-height: 60upx;
+				margin-right: 8upx;
+			}
+			
+			.price-original {
+				color: $uni-color-primary;
+				font-size: $font-sm + 2upx;
+				text-decoration: line-through;
+			}
 		}
 
 		.txt {
@@ -819,10 +871,25 @@
 		padding: 0 8upx;
 	}
 	
-	.guess-section .price {
-		font-size: $font-lg;
-		color: $uni-color-primary;
-		line-height: 1;
+	.guess-section .price-box {
+		width: 100%;
 		padding: 10upx 8upx;
+		margin-top: 5upx;
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		
+		.price {
+			color: #f04c41;
+			font-size: $font-lg;
+			line-height: 1;
+			margin-right: 8upx;
+		}
+		
+		.price-original {
+			color: $uni-color-primary;
+			font-size: $font-sm + 2upx;
+			text-decoration: line-through;
+		}
 	}
 </style>
