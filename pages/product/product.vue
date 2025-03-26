@@ -15,7 +15,7 @@
 			<text class="title2">{{product.subTitle}}</text>
 			<view class="price-box">
 				<text class="price" v-if="product.promotionPrice">￥{{product.promotionPrice}}</text>
-				<text class="price-original" v-if="product.promotionPrice">￥{{product.price}}</text>
+				<text class="price-original" v-if="product.promotionPrice">￥{{product.originalPrice}}</text>
 				<text class="price" v-else>￥{{product.price}}</text>
 			</view>
 			<view class="bot-row">
@@ -152,7 +152,7 @@
 					<view class="right">
 						<view class="price-box">
 							<text class="price" v-if="product.promotionPrice">¥{{product.promotionPrice}}</text>
-							<text class="price-original" v-if="product.promotionPrice">¥{{product.price}}</text>
+							<text class="price-original" v-if="product.promotionPrice">¥{{product.originalPrice}}</text>
 							<text class="price" v-else>¥{{product.price}}</text>
 						</view>
 						<text class="stock">库存：{{product.stock}}件</text>
