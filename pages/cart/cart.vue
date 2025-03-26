@@ -34,16 +34,18 @@
 			</view>
 			<!-- 底部菜单栏 -->
 			<view class="action-section">
-				<view class="checkbox">
-					<image :src="allChecked?'/static/selected.png':'/static/select.png'" mode="aspectFit" @click="check('all')"></image>
-					<view class="clear-btn" :class="{show: allChecked}" @click="clearCart">
-						清空
+				<view class="left-area">
+					<view class="checkbox">
+						<image :src="allChecked?'/static/selected.png':'/static/select.png'" mode="aspectFit" @click="check('all')"></image>
+						<text class="checkbox-text">全选</text>
+					</view>
+					<view class="clear-btn" @click="clearCart">
+						<text class="yticon icon-iconfontshanchu1"></text>
+						<text class="clear-btn-text">清空</text>
 					</view>
 				</view>
-				<view class="total-box">
-					<text class="price">¥{{total}}元</text>
-				</view>
-				<button type="primary" class="no-border confirm-btn" @click="createOrder">去结算</button>
+				<view class="spacer"></view>
+				<button type="primary" class="no-border confirm-btn" @click="createOrder">结算(共{{selectedCount}}件)</button>
 			</view>
 		</view>
 	</view>
@@ -70,6 +72,8 @@
 				allChecked: false, //全选状态  true|false
 				empty: false, //空白页现实  true|false
 				cartList: [],
+				sliderX: 0, // 滑块初始位置
+				slideThreshold: 100 // 触发清空的阈值
 			};
 		},
 		onLoad() {
@@ -89,7 +93,19 @@
 			}
 		},
 		computed: {
-			...mapState(['hasLogin'])
+			...mapState(['hasLogin']),
+			selectedCount() {
+				if (!this.cartList.length) {
+					return 0;
+				}
+				let count = 0;
+				this.cartList.forEach(item => {
+					if (item.checked) {
+						count += item.quantity;
+					}
+				});
+				return count;
+			}
 		},
 		methods: {
 			//请求数据
@@ -169,19 +185,6 @@
 					uni.hideLoading();
 				});
 			},
-			//清空
-			clearCart() {
-				clearCartList().then(response=>{
-					uni.showModal({
-						content: '清空购物车？',
-						success: (e) => {
-							if (e.confirm) {
-								this.cartList = [];
-							}
-						}
-					})
-				});
-			},
 			//计算总价
 			calcTotal() {
 				let list = this.cartList;
@@ -220,6 +223,28 @@
 				uni.navigateTo({
 					url: `/pages/order/createOrder?cartIds=${JSON.stringify(cartIds)}`
 				})
+			},
+			// 处理滑块移动
+			onSliderChange(e) {
+				let x = e.detail.x;
+				if (x > this.slideThreshold) {
+					// 触发清空操作
+					this.sliderX = 0; // 重置滑块位置
+					this.clearCart();
+				}
+			},
+			//清空
+			clearCart() {
+				uni.showModal({
+					content: '清空购物车？',
+					success: (e) => {
+						if (e.confirm) {
+							clearCartList().then(response => {
+								this.cartList = [];
+							});
+						}
+					}
+				});
 			}
 		}
 	}
@@ -340,16 +365,24 @@
 		z-index: 95;
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		width: 690upx;
 		height: 100upx;
-		padding: 0 30upx;
+		padding: 0 20upx;
 		background: rgba(255, 255, 255, .9);
 		box-shadow: 0 0 20upx 0 rgba(0, 0, 0, .5);
 		border-radius: 16upx;
 
+		.left-area {
+			display: flex;
+			align-items: center;
+		}
+
 		.checkbox {
 			height: 52upx;
 			position: relative;
+			display: flex;
+			align-items: center;
 
 			image {
 				width: 52upx;
@@ -357,52 +390,37 @@
 				position: relative;
 				z-index: 5;
 			}
+			
+			.checkbox-text {
+				font-size: 28upx;
+				margin-left: 10upx;
+				color: $font-color-dark;
+			}
 		}
 
 		.clear-btn {
-			position: absolute;
-			left: 26upx;
-			top: 0;
-			z-index: 4;
-			width: 0;
 			height: 52upx;
-			line-height: 52upx;
-			padding-left: 38upx;
-			font-size: $font-base;
-			color: #fff;
-			background: $font-color-disabled;
-			border-radius: 0 50px 50px 0;
-			opacity: 0;
-			transition: .2s;
-
-			&.show {
-				opacity: 1;
-				width: 120upx;
-			}
-		}
-
-		.total-box {
-			flex: 1;
+			position: relative;
 			display: flex;
-			flex-direction: column;
-			text-align: right;
-			padding-right: 40upx;
+			align-items: center;
+			margin-left: 25upx;
 
-			.price {
-				font-size: $font-lg;
-				color: $font-color-dark;
+			.yticon {
+				font-size: 38upx;
+				color: #286090;
 			}
-
-			.coupon {
-				font-size: $font-sm;
-				color: $font-color-light;
-
-				text {
-					color: $font-color-dark;
-				}
+			
+			.clear-btn-text {
+				font-size: 28upx;
+				color: $font-color-dark;
+				margin-left: 8upx;
 			}
 		}
 
+		.spacer {
+			flex: 1;
+		}
+		
 		.confirm-btn {
 			padding: 0 38upx;
 			margin: 0;

@@ -616,10 +616,11 @@
 			align-items: center;
 			justify-content: center;
 			width: 280upx;
-			height: 100%;
+			height: 80%;
 			color: #fff;
-			font-size: 32upx;
-			background-color: $base-color;
+			font-size: 28upx;
+			background-color: #286090;
+			border-radius: 45upx;
 		}
 	}
 
