@@ -14,10 +14,9 @@
 			<text class="title">{{product.name}}</text><br>
 			<text class="title2">{{product.subTitle}}</text>
 			<view class="price-box">
-				<text class="price-tip">¥</text>
-				<text class="price">{{product.price}}</text>
-				<text class="m-price">¥{{product.originalPrice}}</text>
-				<!-- <text class="coupon-tip">7折</text> -->
+				<text class="price" v-if="product.promotionPrice">￥{{product.promotionPrice}}</text>
+				<text class="price-original" v-if="product.promotionPrice">￥{{product.price}}</text>
+				<text class="price" v-else>￥{{product.price}}</text>
 			</view>
 			<view class="bot-row">
 				<text>销量: {{product.sale}}</text>
@@ -151,7 +150,11 @@
 				<view class="a-t">
 					<image :src="product.pic"></image>
 					<view class="right">
-						<text class="price">¥{{product.price}}</text>
+						<view class="price-box">
+							<text class="price" v-if="product.promotionPrice">¥{{product.promotionPrice}}</text>
+							<text class="price-original" v-if="product.promotionPrice">¥{{product.price}}</text>
+							<text class="price" v-else>¥{{product.price}}</text>
+						</view>
 						<text class="stock">库存：{{product.stock}}件</text>
 						<view class="selected">
 							已选：
@@ -777,12 +780,14 @@
 
 		.price {
 			font-size: $font-lg + 2upx;
+			color: #f04c41;
 		}
 
-		.m-price {
+		.price-original {
 			margin: 0 12upx;
-			color: $font-color-light;
+			color: $uni-color-primary;
 			text-decoration: line-through;
+			font-size: $font-base;
 		}
 
 		.coupon-tip {
@@ -1055,10 +1060,26 @@
 				color: $font-color-base;
 				line-height: 42upx;
 
+				.price-box {
+					display: flex;
+					align-items: baseline;
+					height: 64upx;
+					padding: 10upx 0;
+					font-size: 26upx;
+					color: $uni-color-primary;
+				}
+
 				.price {
 					font-size: $font-lg;
 					color: $uni-color-primary;
 					margin-bottom: 10upx;
+				}
+
+				.price-original {
+					margin: 0 12upx;
+					color: $uni-color-primary;
+					text-decoration: line-through;
+					font-size: $font-base;
 				}
 
 				.selected-text {
