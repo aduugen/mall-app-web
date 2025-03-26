@@ -34,8 +34,12 @@
 				<text class="title clamp">{{item.name}}</text>
 				<text class="title2">{{item.subTitle}}</text>
 				<view class="price-box">
-					<text class="price">{{item.price}}</text>
-					<text>已售 {{item.sale}}</text>
+					<view class="price-wrapper">
+						<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
+						<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
+						<text class="price" v-else>￥{{item.price}}</text>
+					</view>
+					<text class="sales">已售 {{item.sale}}</text>
 				</view>
 			</view>
 		</view>
@@ -379,15 +383,32 @@
 			color: $font-color-light;
 		}
 	
+		.price-wrapper {
+			display: flex;
+			align-items: center;
+		}
+	
 		.price {
 			font-size: $font-lg;
-			color: $uni-color-primary;
+			color: #f04c41;
 			line-height: 1;
 	
 			&:before {
-				content: '￥';
+				content: '';
 				font-size: 26upx;
 			}
+		}
+	
+		.price-original {
+			font-size: $font-sm + 2upx;
+			color: $uni-color-primary;
+			margin-left: 8upx;
+			text-decoration: line-through;
+		}
+	
+		.sales {
+			font-size: $font-sm;
+			color: $font-color-light;
 		}
 	}
 </style>
