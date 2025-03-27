@@ -284,11 +284,16 @@
 <style lang='scss'>
 	.container {
 		/* #ifdef APP-PLUS || MP */
-		padding-bottom: calc(100upx + env(safe-area-inset-bottom));
+		padding-bottom: calc(200upx + env(safe-area-inset-bottom)); /* 100upx(操作栏) + 100upx(tabbar) + 安全区域 */
 		/* #endif */
 		/* #ifdef H5 */
-		padding-bottom: 150upx;
+		padding-bottom: 200upx; /* 100upx(操作栏) + 100upx(tabbar) */
 		/* #endif */
+		box-shadow: 0 -2upx 10upx 0 rgba(0, 0, 0, .1);
+		background: #f8f8f8;
+		min-height: 100vh;
+		position: relative;
+		z-index: 1;
 
 		/* 空白页 */
 		.empty {
@@ -297,12 +302,13 @@
 			top: 0;
 			width: 100%;
 			height: 100vh;
-			padding-bottom: 100upx;
+			padding-bottom: 200upx;
 			display: flex;
 			justify-content: center;
 			flex-direction: column;
 			align-items: center;
 			background: #fff;
+			box-shadow: 0 -2upx 10upx 0 rgba(0, 0, 0, .1);
 
 			image {
 				width: 240upx;
@@ -418,18 +424,9 @@
 
 	/* 底部栏 */
 	.action-section {
-		/* #ifdef H5 */
-		margin-bottom: 55upx;
-		/* #endif */
 		position: fixed;
 		left: 0;
-		/* #ifdef APP-PLUS || MP */
-		bottom: var(--window-bottom);
-		padding-bottom: env(safe-area-inset-bottom);
-		/* #endif */
-		/* #ifdef H5 */
-		bottom: 1px; /* H5环境下tabbar的高度为50px */
-		/* #endif */
+		right: 0;
 		z-index: 95;
 		display: flex;
 		align-items: center;
@@ -440,6 +437,15 @@
 		padding-right: 30upx;
 		background: rgba(255, 255, 255, .7);
 		box-shadow: 0 -2upx 10upx 0 rgba(0, 0, 0, .2);
+		
+		/* #ifdef APP-PLUS || MP */
+		bottom: 100upx; /* tabbar高度 */
+		padding-bottom: env(safe-area-inset-bottom);
+		/* #endif */
+		
+		/* #ifdef H5 */
+		bottom: 100upx; /* tabbar高度 */
+		/* #endif */
 
 		.left-area {
 			display: flex;
