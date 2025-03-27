@@ -1090,14 +1090,19 @@
 					
 					.cart-badge {
 						position: absolute;
-						top: -10upx;
-						right: -10upx;
+						top: -8upx;  /* 调整位置，使其更贴近购物车图标 */
+						right: -8upx;
 						background-color: #f04c41;
 						color: #fff;
 						font-size: 20upx;
 						line-height: 1;
 						padding: 4upx 8upx;
 						border-radius: 10upx;
+						min-width: 30upx;  /* 确保徽标有最小宽度 */
+						height: 30upx;  /* 统一高度 */
+						display: flex;  /* 使用flex布局 */
+						align-items: center;  /* 垂直居中 */
+						justify-content: center;  /* 水平居中 */
 					}
 				}
 			}
@@ -1244,14 +1249,19 @@
 				
 				.cart-badge {
 					position: absolute;
-					top: -10upx;
-					right: -10upx;
+					top: -8upx;  /* 调整位置，使其更贴近购物车图标 */
+					right: -8upx;
 					background-color: #f04c41;
 					color: #fff;
 					font-size: 20upx;
 					line-height: 1;
 					padding: 4upx 8upx;
 					border-radius: 10upx;
+					min-width: 30upx;  /* 确保徽标有最小宽度 */
+					height: 30upx;  /* 统一高度 */
+					display: flex;  /* 使用flex布局 */
+					align-items: center;  /* 垂直居中 */
+					justify-content: center;  /* 水平居中 */
 				}
 			}
 		}
@@ -1361,15 +1371,40 @@
 			
 			.cart-badge {
 				position: absolute;
-				top: -10upx;
-				right: -10upx;
+				top: -8upx;  /* 调整位置，使其更贴近购物车图标 */
+				right: -8upx;
 				background-color: #f04c41;
 				color: #fff;
 				font-size: 20upx;
 				line-height: 1;
 				padding: 4upx 8upx;
 				border-radius: 10upx;
+				min-width: 30upx;  /* 确保徽标有最小宽度 */
+				height: 30upx;  /* 统一高度 */
+				display: flex;  /* 使用flex布局 */
+				align-items: center;  /* 垂直居中 */
+				justify-content: center;  /* 水平居中 */
 			}
 		}
+	}
+
+	/* 统一所有区域的购物车徽标样式 */
+	.seckill-section .cart-badge,
+	.hot-section .cart-badge,
+	.guess-section .cart-badge {
+		position: absolute;
+		top: -8upx;
+		right: -8upx;
+		background-color: #f04c41;
+		color: #fff;
+		font-size: 20upx;
+		line-height: 1;
+		padding: 4upx 8upx;
+		border-radius: 10upx;
+		min-width: 30upx;
+		height: 30upx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 </style>
