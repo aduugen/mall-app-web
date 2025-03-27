@@ -660,8 +660,19 @@
 					return;
 				}
 				let productSkuStock = this.getSkuStock();
+				
+				// 确定最终价格：优先使用促销价，如果没有促销价则使用原价
+				let finalPrice = this.product.promotionPrice && this.product.promotionPrice > 0 
+					? this.product.promotionPrice 
+					: this.product.price;
+				
+				// 如果SKU有促销价，优先使用SKU的促销价
+				if (productSkuStock && productSkuStock.promotionPrice && productSkuStock.promotionPrice > 0) {
+					finalPrice = productSkuStock.promotionPrice;
+				}
+				
 				let cartItem = {
-					price: this.product.price,
+					price: finalPrice,
 					productAttr: productSkuStock.spData,
 					productBrand: this.product.brandName,
 					productCategoryId: this.product.productCategoryId,
@@ -674,6 +685,18 @@
 					productSubTitle: this.product.subTitle,
 					quantity: 1
 				};
+				
+				// 记录价格信息用于调试
+				console.info("加入购物车价格信息", {
+					商品ID: this.product.id,
+					商品名称: this.product.name,
+					原价: this.product.price,
+					促销价: this.product.promotionPrice,
+					SKU原价: productSkuStock ? productSkuStock.price : '无',
+					SKU促销价: productSkuStock ? productSkuStock.promotionPrice : '无',
+					最终价格: finalPrice
+				});
+				
 				addCartItem(cartItem).then(response => {
 					uni.showToast({
 						title: response.message,
