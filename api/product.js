@@ -21,3 +21,4 @@ export function fetchProductDetail(id) {
 		url: '/product/detail/'+id
 	})
 }
+

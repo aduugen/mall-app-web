@@ -15,7 +15,7 @@
 			<text class="title2">{{product.subTitle}}</text>
 			<view class="price-box">
 				<text class="price" v-if="product.promotionPrice">￥{{product.promotionPrice}}</text>
-				<text class="price-original" v-if="product.promotionPrice">￥{{product.originalPrice}}</text>
+				<text class="price-original" v-if="product.promotionPrice">￥{{product.price}}</text>
 				<text class="price" v-else>￥{{product.price}}</text>
 			</view>
 			<view class="bot-row">
@@ -156,7 +156,7 @@
 					<view class="right">
 						<view class="price-box">
 							<text class="price" v-if="product.promotionPrice">¥{{product.promotionPrice}}</text>
-							<text class="price-original" v-if="product.promotionPrice">¥{{product.originalPrice}}</text>
+							<text class="price-original" v-if="product.promotionPrice">¥{{product.price}}</text>
 							<text class="price" v-else>¥{{product.price}}</text>
 						</view>
 						<text class="stock">库存：{{product.stock}}件</text>
@@ -620,13 +620,16 @@
 			changeSpecInfo() {
 				let skuStock = this.getSkuStock();
 				if (skuStock != null) {
-					this.product.originalPrice = skuStock.price;
-					if (this.product.promotionType == 1) {
-						//单品优惠使用促销价
-						this.product.price = skuStock.promotionPrice;
+					// 设置原价
+					this.product.price = skuStock.price;
+					
+					// 如果有促销价，设置促销价
+					if (skuStock.promotionPrice && skuStock.promotionPrice > 0) {
+						this.product.promotionPrice = skuStock.promotionPrice;
 					} else {
-						this.product.price = skuStock.price;
+						this.product.promotionPrice = null;
 					}
+					
 					this.product.stock = skuStock.stock;
 				}
 			},

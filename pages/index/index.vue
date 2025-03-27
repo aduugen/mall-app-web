@@ -194,6 +194,8 @@
 		addCartItem,
 		fetchCartList
 	} from '@/api/cart.js';
+	import { API_BASE_URL } from '@/utils/appConfig.js';
+
 	export default {
 		components: {
 			uniLoadMore	
@@ -347,8 +349,8 @@
 			// 更新单个商品的价格
 			async updateProductPrice(product) {
 				// 检查商品是否缺少价格信息
-				if ((product.price === undefined || product.price === null) && 
-					(product.promotionPrice === undefined || product.promotionPrice === null)) {
+				if ((product.price === undefined || product.price === null || product.price === 0) || 
+					(product.promotionPrice === undefined || product.promotionPrice === null || product.promotionPrice === 0)) {
 					
 					console.log(`商品[${product.id}]缺少价格信息，尝试从SKU获取`);
 					
@@ -360,11 +362,25 @@
 						const defaultSku = skuList[0]; // 使用第一个SKU
 						
 						// 使用SKU的价格
-						product.price = defaultSku.price;
+						if (defaultSku.price && defaultSku.price > 0) {
+							product.price = defaultSku.price;
+							console.info('价格信息', {
+								操作: '从SKU获取价格',
+								价格: product.price,
+								商品ID: product.id,
+								商品名称: product.name
+							});
+						}
 						
-						// 如果SKU有促销价格，也使用它
-						if (defaultSku.promotionPrice !== undefined && defaultSku.promotionPrice !== null) {
+						// 如果SKU有促销价格且大于0，使用促销价格
+						if (defaultSku.promotionPrice && defaultSku.promotionPrice > 0) {
 							product.promotionPrice = defaultSku.promotionPrice;
+							console.info('价格信息', {
+								操作: '从SKU获取促销价',
+								价格: product.promotionPrice,
+								商品ID: product.id,
+								商品名称: product.name
+							});
 						}
 						
 						console.log(`已更新商品[${product.id}]价格: ${product.price}, 促销价: ${product.promotionPrice}`);
@@ -378,7 +394,7 @@
 			fetchProductSku(productId) {
 				return new Promise((resolve, reject) => {
 					// 使用uni.request直接请求商品详情API
-					const url = this.$baseUrl + '/product/detail/' + productId;
+					const url = API_BASE_URL + '/product/detail/' + productId;
 					console.log(`请求商品[${productId}]SKU，URL: ${url}`);
 					
 					uni.request({
@@ -610,12 +626,13 @@
 				}
 				
 				// 记录原始价格信息，用于调试
-                console.log("商品加入购物车价格信息:", {
-                    productId: item.id,
-                    productName: item.name,
-                    price: item.price,
-                    promotionPrice: item.promotionPrice
-                });
+				console.info("商品价格信息", {
+					操作: '加入购物车',
+					商品ID: item.id,
+					商品名称: item.name,
+					原价: item.price || '无',
+					促销价: item.promotionPrice || '无'
+				});
 				
 				// 首先向后端请求商品详情，获取SKU库存信息
 				uni.showLoading({
@@ -654,17 +671,33 @@
 								// 使用SKU的价格
 								if (defaultSku.price && defaultSku.price > 0) {
 								    finalPrice = defaultSku.price;
+									console.info('价格信息', {
+										操作: '从SKU获取价格',
+										价格: finalPrice,
+										商品ID: item.id,
+										商品名称: item.name
+									});
 								}
 								
 								// 如果SKU有促销价格且大于0，使用促销价格
 								if (defaultSku.promotionPrice && defaultSku.promotionPrice > 0) {
 									finalPrice = defaultSku.promotionPrice;
+									console.info('价格信息', {
+										操作: '从SKU获取促销价',
+										价格: finalPrice,
+										商品ID: item.id,
+										商品名称: item.name
+									});
 								}
+							} else {
+								console.warn(`商品[${item.id}]没有找到SKU数据，使用默认价格`);
 							}
 						} else {
 							// 商品价格不为空，优先使用商品促销价（如果有且大于0）
 							if (item.promotionPrice && item.promotionPrice > 0) {
 								finalPrice = item.promotionPrice;
+							} else if (item.price && item.price > 0) {
+								finalPrice = item.price;
 							}
 							
 							// 设置SKU ID
@@ -680,15 +713,15 @@
 						}
 						
 						// 调试信息
-						console.log("最终价格计算:", {
-							productId: item.id,
-							productName: item.name,
-							originalPrice: item.price || '无',
-							productPromotionPrice: item.promotionPrice || '无',
-							skuPrice: skuData && skuData.length > 0 ? skuData[0].price : '无',
-							skuPromotionPrice: skuData && skuData.length > 0 ? skuData[0].promotionPrice : '无',
-							finalPrice: finalPrice,
-							skuId: skuId
+						console.info("最终价格", {
+							商品ID: item.id,
+							商品名称: item.name,
+							原价: item.price || '无',
+							商品促销价: item.promotionPrice || '无',
+							SKU价格: skuData && skuData.length > 0 ? skuData[0].price : '无',
+							SKU促销价: skuData && skuData.length > 0 ? skuData[0].promotionPrice : '无',
+							最终价格: finalPrice,
+							SKU_ID: skuId
 						});
 						
 						// 调用添加购物车API
