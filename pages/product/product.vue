@@ -127,8 +127,11 @@
 					<text class="yticon icon-xiatubiao--copy"></text>
 					<text>首页</text>
 				</navigator>
-				<navigator url="/pages/cart/cart" open-type="switchTab" class="p-b-btn">
-					<text class="yticon icon-gouwuche"></text>
+				<navigator url="/pages/cart/cart" open-type="switchTab" class="p-b-btn" :class="{'active-cart': cartCount > 0}">
+					<view style="position: relative;">
+						<text class="yticon icon-gouwuche"></text>
+						<view v-if="cartCount > 0" class="cart-count">{{cartCount}}</view>
+					</view>
 					<text>购物车</text>
 				</navigator>
 				<view class="p-b-btn" :class="{active: favorite}" @click="toFavorite">
@@ -245,6 +248,9 @@
 	import {
 		formatDate
 	} from '@/utils/date';
+	import {
+		fetchCartList
+	} from '@/api/cart.js';
 	const defaultServiceList = [{
 		id: 1,
 		name: "无忧退货"
@@ -298,13 +304,18 @@
 				attrList: [],
 				promotionTipList: [],
 				couponState: 0,
-				couponList: []
+				couponList: [],
+				cartCount: 0
 			};
 		},
 		async onLoad(options) {
 			let id = options.id;
 			this.shareList = defaultShareList;
 			this.loadData(id);
+			this.getCartCount();
+		},
+		onShow() {
+			this.getCartCount();
 		},
 		computed: {
 			...mapState(['hasLogin'])
@@ -665,6 +676,8 @@
 						title: response.message,
 						duration: 1500
 					})
+					// 添加商品到购物车后更新购物车数量
+					this.getCartCount();
 				});
 			},
 			//检查登录状态并弹出登录框
@@ -717,6 +730,23 @@
 					return false;
 				});
 			},
+			getCartCount() {
+				// 调用购物车API获取购物车数量
+				fetchCartList().then(response => {
+					if (response && response.data) {
+						// 计算总数量（考虑每个商品的quantity字段）
+						let totalCount = 0;
+						response.data.forEach(item => {
+							totalCount += (item.quantity || 1);
+						});
+						this.cartCount = totalCount;
+					} else {
+						this.cartCount = 0;
+					}
+				}).catch(() => {
+					this.cartCount = 0;
+				});
+			},
 		},
 
 	}
@@ -731,6 +761,32 @@
 	.icon-you {
 		font-size: $font-base + 2upx;
 		color: #888;
+	}
+
+	/* 购物车数量徽章 */
+	.cart-count {
+		position: absolute;
+		top: -10upx;
+		right: -10upx;
+		font-size: 20upx;
+		background: #fa436a;
+		color: #fff;
+		border-radius: 50%;
+		width: 30upx;
+		height: 30upx;
+		line-height: 30upx;
+		text-align: center;
+		z-index: 10;
+	}
+	
+	.active-cart {
+		.yticon {
+			color: $uni-color-primary;
+		}
+		
+		text {
+			color: $uni-color-primary;
+		}
 	}
 
 	.carousel {
