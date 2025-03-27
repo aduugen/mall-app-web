@@ -25,7 +25,11 @@
 						<view class="item-right" @click="navToDetailPage(item)">
 							<text class="clamp title">{{item.productName}}</text>
 							<text class="attr">{{item.spDataStr}}</text>
-							<text class="price">¥{{item.price}}</text>
+							<view class="price-box">
+								<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
+								<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
+								<text class="price" v-else>￥{{item.price}}</text>
+							</view>
 							<uni-number-box class="step" :min="1" :max="100" :value="item.quantity" :index="index" @eventChange="numberChange"></uni-number-box>
 						</view>
 						<text class="del-btn yticon icon-fork" @click="handleDeleteCartItem(index)"></text>
@@ -329,31 +333,57 @@
 		}
 
 		.item-right {
+			flex: 1;
 			display: flex;
 			flex-direction: column;
-			flex: 1;
-			overflow: hidden;
+			padding-left: 20upx;
 			position: relative;
-			padding-left: 30upx;
-
-			.title,
-			.price {
-				font-size: $font-base + 2upx;
+			
+			.title {
+				font-size: 28upx;
 				color: $font-color-dark;
-				height: 40upx;
 				line-height: 40upx;
+				height: 40upx;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
-
+			
 			.attr {
-				font-size: $font-sm + 2upx;
+				font-size: 24upx;
 				color: $font-color-light;
-				height: 50upx;
-				line-height: 50upx;
+				line-height: 40upx;
+				height: 40upx;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
-
-			.price {
-				height: 50upx;
-				line-height: 50upx;
+			
+			.price-box {
+				display: flex;
+				align-items: baseline;
+				height: 64upx;
+				padding: 10upx 0;
+				font-size: 26upx;
+				color: $uni-color-primary;
+				
+				.price {
+					font-size: $font-lg + 2upx;
+					color: #f04c41;
+				}
+				
+				.price-original {
+					margin: 0 12upx;
+					color: $uni-color-primary;
+					text-decoration: line-through;
+					font-size: $font-base;
+				}
+			}
+			
+			.step {
+				position: absolute;
+				right: 0;
+				bottom: 0;
 			}
 		}
 
