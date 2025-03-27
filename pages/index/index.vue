@@ -57,6 +57,10 @@
 					<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 					<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 					<text class="price" v-else>￥{{item.price}}</text>
+					<view class="cart-icon-wrapper">
+						<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
+						<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -101,6 +105,10 @@
 							<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 							<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 							<text class="price" v-else>￥{{item.price}}</text>
+							<view class="cart-icon-wrapper">
+								<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
+								<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
+							</view>
 						</view>
 					</view>
 				</view>
@@ -129,6 +137,10 @@
 						<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 						<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 						<text class="price" v-else>￥{{item.price}}</text>
+						<view class="cart-icon-wrapper">
+							<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
+							<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -155,6 +167,10 @@
 					<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 					<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 					<text class="price" v-else>￥{{item.price}}</text>
+					<view class="cart-icon-wrapper">
+						<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
+						<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -171,6 +187,13 @@
 		formatDate
 	} from '@/utils/date';
 	import uniLoadMore from '@/components/uni-load-more/uni-load-more.vue';
+	import {
+		mapState
+	} from 'vuex';
+	import {
+		addCartItem,
+		fetchCartList
+	} from '@/api/cart.js';
 	export default {
 		components: {
 			uniLoadMore	
@@ -198,11 +221,18 @@
 				firstFlag: false,
 			    timeRemaining: { hours: 0, minutes: 0, seconds: 0 },
 				searchContent:'',
+				cartItemsMap: {}, // 存储购物车中每个商品的数量
 			};
 		},
 		onLoad() {
 			console.log('started on load.');
 			this.loadData();
+			// 加载购物车数据
+			this.loadCartItems();
+		},
+		onShow() {
+			// 页面每次显示时都重新获取购物车数据
+			this.loadCartItems();
 		},
 		updated() {
 			console.log('Data loaded');
@@ -244,7 +274,7 @@
 			})
 		},
 		computed: {
-
+			...mapState(['hasLogin'])
 		},
 		filters: {
 			formatTime(time) {
@@ -272,11 +302,143 @@
 			        this.hotProductList = response.data.hotProductList;
 			        const recommendResponse = await fetchRecommendProductList(this.recommendParams);
 			        this.recommendProductList = recommendResponse.data;
+			        
+			        // 处理商品价格逻辑
+			        await this.processProductPrices();
+			        
 			        uni.stopPullDownRefresh();
 					console.log('API response:', response); // 检查API返回的内容
 			    } catch (error) {
 			        console.error('Error in loadData:', error);
 			    }
+			},
+			
+			// 处理所有商品列表的价格逻辑
+			async processProductPrices() {
+				try {
+					// 处理秒杀商品
+					if (this.homeFlashPromotion && this.homeFlashPromotion.productList) {
+						for (const product of this.homeFlashPromotion.productList) {
+							await this.updateProductPrice(product);
+						}
+					}
+					
+					// 处理新品
+					for (const product of this.newProductList) {
+						await this.updateProductPrice(product);
+					}
+					
+					// 处理热门商品
+					for (const product of this.hotProductList) {
+						await this.updateProductPrice(product);
+					}
+					
+					// 处理推荐商品
+					for (const product of this.recommendProductList) {
+						await this.updateProductPrice(product);
+					}
+					
+					console.log('所有商品价格处理完成');
+				} catch (error) {
+					console.error('处理商品价格错误:', error);
+				}
+			},
+			
+			// 更新单个商品的价格
+			async updateProductPrice(product) {
+				// 检查商品是否缺少价格信息
+				if ((product.price === undefined || product.price === null) && 
+					(product.promotionPrice === undefined || product.promotionPrice === null)) {
+					
+					console.log(`商品[${product.id}]缺少价格信息，尝试从SKU获取`);
+					
+					// 从API获取SKU信息
+					const skuList = await this.fetchProductSku(product.id);
+					
+					// 如果有SKU数据
+					if (skuList && skuList.length > 0) {
+						const defaultSku = skuList[0]; // 使用第一个SKU
+						
+						// 使用SKU的价格
+						product.price = defaultSku.price;
+						
+						// 如果SKU有促销价格，也使用它
+						if (defaultSku.promotionPrice !== undefined && defaultSku.promotionPrice !== null) {
+							product.promotionPrice = defaultSku.promotionPrice;
+						}
+						
+						console.log(`已更新商品[${product.id}]价格: ${product.price}, 促销价: ${product.promotionPrice}`);
+					} else {
+						console.warn(`商品[${product.id}]没有找到SKU数据`);
+					}
+				}
+			},
+			
+			// 获取商品SKU信息
+			fetchProductSku(productId) {
+				return new Promise((resolve, reject) => {
+					// 使用uni.request直接请求商品详情API
+					const url = this.$baseUrl + '/product/detail/' + productId;
+					console.log(`请求商品[${productId}]SKU，URL: ${url}`);
+					
+					uni.request({
+						url: url,
+						method: 'GET',
+						header: {
+							'Content-Type': 'application/json',
+							'Authorization': uni.getStorageSync('token') || '' // 确保携带token
+						},
+						success: (res) => {
+							// 记录返回状态码，帮助诊断问题
+							console.log(`商品[${productId}]SKU请求响应状态码: ${res.statusCode}`);
+							
+							// 添加更全面的检查，确保返回的数据是JSON而不是HTML
+							if (typeof res.data === 'string') {
+								console.error(`商品[${productId}]SKU获取失败: 服务器返回了字符串而不是JSON数据`);
+								// 查看返回的部分内容，帮助诊断问题
+								console.error('返回内容片段:', res.data.substring(0, 100));
+								
+								// 如果返回的是登录页面，提示可能是登录失效
+								if (res.data.includes('<!DOCTYPE html>') && res.data.includes('login')) {
+									console.error('可能是登录已过期，请尝试重新登录');
+								}
+								
+								// 返回空数组，避免中断处理流程
+								resolve([]);
+								return;
+							}
+							
+							if (res.statusCode === 200 && res.data && res.data.code === 200) {
+								// 返回SKU库存信息
+								const skuList = res.data.data && res.data.data.skuStockList ? res.data.data.skuStockList : [];
+								console.log(`商品[${productId}]获取到${skuList.length}个SKU`);
+								
+								// 如果列表为空但返回了其他数据，记录一下帮助调试
+								if (skuList.length === 0 && res.data.data) {
+									console.log('返回的商品数据结构:', Object.keys(res.data.data));
+								}
+								
+								resolve(skuList);
+							} else {
+								// 记录更详细的错误信息
+								console.error(`商品[${productId}]SKU获取失败:`, {
+									statusCode: res.statusCode,
+									code: res.data ? res.data.code : 'unknown',
+									message: res.data ? res.data.message : 'No message'
+								});
+								
+								// 如果API调用成功但返回错误，返回空数组而不是拒绝Promise
+								// 这样可以继续处理而不中断流程
+								resolve([]);
+							}
+						},
+						fail: (err) => {
+							console.error(`商品[${productId}]SKU请求失败:`, err);
+							// 发生网络错误时，同样返回空数组
+							resolve([]);
+						}
+					});
+				});
 			},
 			//轮播图切换修改背景色
 			swiperChange(e) {
@@ -370,6 +532,225 @@
 					console.log('post message', endTime.getTime());
 					this.worker.postMessage(endTime.getTime());
 				//}
+			},
+			// 加载购物车数据
+			async loadCartItems() {
+				// 只有登录用户才能获取购物车数据
+				if (!this.hasLogin) {
+					this.cartItemsMap = {};
+					return;
+				}
+				
+				try {
+					const response = await fetchCartList();
+					if (response && response.data) {
+						// 将购物车数据转为商品ID到数量的映射
+						const cartMap = {};
+						response.data.forEach(item => {
+							// 确保productId是字符串类型
+							const productId = String(item.productId);
+							// 确保quantity是数字类型
+							const quantity = parseInt(item.quantity) || 0;
+							
+							// 如果已存在该商品，累加数量
+							if (cartMap[productId]) {
+								cartMap[productId] += quantity;
+							} else {
+								cartMap[productId] = quantity;
+							}
+						});
+						
+						this.cartItemsMap = cartMap;
+						console.log('购物车数据映射:', this.cartItemsMap);
+					}
+				} catch (error) {
+					console.error('获取购物车数据失败:', error);
+				}
+			},
+			quickAddToCart(item) {
+				// 检查登录状态
+				if (!this.hasLogin) {
+					uni.showModal({
+						title: '提示',
+						content: '你还没登录，是否要登录？',
+						confirmText: '去登录',
+						cancelText: '取消',
+						success: function(res) {
+							if (res.confirm) {
+								uni.navigateTo({
+									url: '/pages/public/login'
+								})
+							}
+						}
+					});
+					return;
+				}
+				
+				// 检查商品数据完整性
+				if (!item || !item.id) {
+					uni.showToast({
+						title: '商品数据不完整',
+						icon: 'none',
+						duration: 2000
+					});
+					return;
+				}
+				
+				// 如果商品有多个规格，提示用户进入详情页选择
+				if (item.specType === 1) {
+					uni.showToast({
+						title: '该商品有多种规格，请进入详情页选择',
+						icon: 'none',
+						duration: 2000
+					});
+					setTimeout(() => {
+						this.navToDetailPage(item);
+					}, 2000);
+					return;
+				}
+				
+				// 记录原始价格信息，用于调试
+                console.log("商品加入购物车价格信息:", {
+                    productId: item.id,
+                    productName: item.name,
+                    price: item.price,
+                    promotionPrice: item.promotionPrice
+                });
+				
+				// 首先向后端请求商品详情，获取SKU库存信息
+				uni.showLoading({
+					title: '正在处理...'
+				});
+				
+				// 设置超时处理
+				const timeout = setTimeout(() => {
+					uni.hideLoading();
+					uni.showToast({
+						title: '请求超时，请稍后再试',
+						icon: 'none',
+						duration: 2000
+					});
+				}, 10000); // 10秒超时
+				
+				this.fetchProductSku(item.id).then(skuData => {
+					// 清除超时
+					clearTimeout(timeout);
+					uni.hideLoading();
+					
+					// 默认使用商品自身价格
+					let finalPrice = item.price || 0; 
+					let skuId = 0; // 默认SKU ID
+					
+					try {
+						// 判断商品价格和促销价格是否都为null或0
+						if ((item.price === null || item.price === undefined || item.price === 0) && 
+				            (item.promotionPrice === null || item.promotionPrice === undefined || item.promotionPrice === 0)) {
+							
+							// 如果商品本身价格为空或0，且有SKU数据，使用SKU中的价格
+							if (skuData && skuData.length > 0) {
+								const defaultSku = skuData[0];
+								skuId = defaultSku.id || 0;
+								
+								// 使用SKU的价格
+								if (defaultSku.price && defaultSku.price > 0) {
+								    finalPrice = defaultSku.price;
+								}
+								
+								// 如果SKU有促销价格且大于0，使用促销价格
+								if (defaultSku.promotionPrice && defaultSku.promotionPrice > 0) {
+									finalPrice = defaultSku.promotionPrice;
+								}
+							}
+						} else {
+							// 商品价格不为空，优先使用商品促销价（如果有且大于0）
+							if (item.promotionPrice && item.promotionPrice > 0) {
+								finalPrice = item.promotionPrice;
+							}
+							
+							// 设置SKU ID
+							if (skuData && skuData.length > 0) {
+								skuId = skuData[0].id || 0;
+							}
+						}
+						
+						// 确保价格是有效值
+						if (finalPrice === null || finalPrice === undefined || isNaN(finalPrice) || finalPrice <= 0) {
+							console.warn(`商品[${item.id}]的最终价格无效，使用默认价格1`);
+							finalPrice = 1; // 至少为1，避免加入购物车失败
+						}
+						
+						// 调试信息
+						console.log("最终价格计算:", {
+							productId: item.id,
+							productName: item.name,
+							originalPrice: item.price || '无',
+							productPromotionPrice: item.promotionPrice || '无',
+							skuPrice: skuData && skuData.length > 0 ? skuData[0].price : '无',
+							skuPromotionPrice: skuData && skuData.length > 0 ? skuData[0].promotionPrice : '无',
+							finalPrice: finalPrice,
+							skuId: skuId
+						});
+						
+						// 调用添加购物车API
+						let cartItem = {
+							price: finalPrice,
+							productAttr: "[]",
+							productBrand: item.brandName || "",
+							productCategoryId: item.productCategoryId || 0,
+							productId: item.id,
+							productName: item.name || "商品",
+							productPic: item.pic || "",
+							productSkuId: skuId,
+							productSn: item.productSn || "",
+							productSubTitle: item.subTitle || "",
+							quantity: 1
+						};
+						
+						addCartItem(cartItem).then(response => {
+							uni.showToast({
+								title: response.message || '添加成功',
+								icon: 'success',
+								duration: 1500
+							});
+							
+							// 添加成功后重新获取购物车数据
+							this.loadCartItems();
+						}).catch(error => {
+							console.error('添加购物车失败:', error);
+							uni.showToast({
+								title: '添加失败，请到详情页选择规格',
+								icon: 'none',
+								duration: 1500
+							});
+							setTimeout(() => {
+								this.navToDetailPage(item);
+							}, 1500);
+						});
+					} catch (error) {
+						console.error('处理价格时出错:', error);
+						uni.showToast({
+							title: '处理商品数据出错，请到详情页重试',
+							icon: 'none',
+							duration: 1500
+						});
+						setTimeout(() => {
+							this.navToDetailPage(item);
+						}, 1500);
+					}
+				}).catch(error => {
+					// 清除超时
+					clearTimeout(timeout);
+					uni.hideLoading();
+					console.error('获取SKU信息失败:', error);
+					uni.showToast({
+						title: '获取商品规格失败，请到详情页重试',
+						icon: 'none',
+						duration: 1500
+					});
+					setTimeout(() => {
+						this.navToDetailPage(item);
+					}, 1500);
+				});
 			}
 		},
 		// 标题栏input搜索框点击
@@ -664,6 +1045,28 @@
 					font-size: $font-sm + 2upx;
 					text-decoration: line-through;
 				}
+				
+				.cart-icon-wrapper {
+					margin-left: auto;
+					position: relative;
+					
+					.cart-icon {
+						font-size: 40upx;  /* 统一购物车图标大小 */
+						color: $uni-color-primary;
+					}
+					
+					.cart-badge {
+						position: absolute;
+						top: -10upx;
+						right: -10upx;
+						background-color: #f04c41;
+						color: #fff;
+						font-size: 20upx;
+						line-height: 1;
+						padding: 4upx 8upx;
+						border-radius: 10upx;
+					}
+				}
 			}
 
 			.price {
@@ -779,7 +1182,7 @@
 		}
 
 		.price-box {
-			line-height: 60upx;
+			width: 100%;
 			display: flex;
 			align-items: center;
 			justify-content: flex-end;
@@ -787,7 +1190,7 @@
 			.price {
 				color: #f04c41;
 				font-size: $font-lg;
-				line-height: 60upx;
+				line-height: 1;
 				margin-right: 8upx;
 			}
 			
@@ -795,6 +1198,28 @@
 				color: $uni-color-primary;
 				font-size: $font-sm + 2upx;
 				text-decoration: line-through;
+			}
+			
+			.cart-icon-wrapper {
+				margin-left: auto;
+				position: relative;
+				
+				.cart-icon {
+					font-size: 40upx;  /* 统一购物车图标大小 */
+					color: $uni-color-primary;
+				}
+				
+				.cart-badge {
+					position: absolute;
+					top: -10upx;
+					right: -10upx;
+					background-color: #f04c41;
+					color: #fff;
+					font-size: 20upx;
+					line-height: 1;
+					padding: 4upx 8upx;
+					border-radius: 10upx;
+				}
 			}
 		}
 
@@ -890,6 +1315,28 @@
 			color: $uni-color-primary;
 			font-size: $font-sm + 2upx;
 			text-decoration: line-through;
+		}
+		
+		.cart-icon-wrapper {
+			margin-left: auto;
+			position: relative;
+			
+			.cart-icon {
+				font-size: 40upx;
+				color: $uni-color-primary;
+			}
+			
+			.cart-badge {
+				position: absolute;
+				top: -10upx;
+				right: -10upx;
+				background-color: #f04c41;
+				color: #fff;
+				font-size: 20upx;
+				line-height: 1;
+				padding: 4upx 8upx;
+				border-radius: 10upx;
+			}
 		}
 	}
 </style>
