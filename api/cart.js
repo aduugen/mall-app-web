@@ -11,7 +11,7 @@ export function addCartItem(data) {
 export function fetchCartList() {
 	return request({
 		method: 'GET',
-		url: '/cart/list'
+		url: '/cart/list/promotion'
 	})
 }
 

@@ -131,6 +131,25 @@
 							spDataStr += ";";
 						}
 						item.spDataStr = spDataStr;
+						
+						// 计算促销价格
+						if (item.reduceAmount && item.reduceAmount > 0) {
+							item.promotionPrice = Number(item.price) - Number(item.reduceAmount);
+						} else {
+							item.promotionPrice = null;
+						}
+						
+						// 记录价格信息用于调试
+						console.info("购物车商品价格信息", {
+							商品ID: item.productId,
+							商品名称: item.productName,
+							原价: item.price,
+							优惠金额: item.reduceAmount,
+							促销价: item.promotionPrice,
+							促销信息: item.promotionMessage,
+							最终价格: item.promotionPrice || item.price
+						});
+						
 						return item;
 					});
 					this.cartList = cartList;
@@ -200,7 +219,9 @@
 				let checked = true;
 				list.forEach(item => {
 					if (item.checked === true) {
-						total += item.price * item.quantity;
+						// 使用促销价格计算总价
+						let price = item.promotionPrice && item.promotionPrice > 0 ? item.promotionPrice : item.price;
+						total += price * item.quantity;
 					} else if (checked === true) {
 						checked = false;
 					}
