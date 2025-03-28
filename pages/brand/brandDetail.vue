@@ -107,10 +107,6 @@
 					deleteBrandAttention({
 						brandId: this.brand.id
 					}).then(response => {
-						uni.showToast({
-							title: "取消收藏成功！",
-							icon: 'none'
-						});
 						this.favoriteStatus = !this.favoriteStatus;
 					});
 				} else {
@@ -122,10 +118,6 @@
 						brandCity : ""
 					}
 					createBrandAttention(brandAttention).then(response=>{
-						uni.showToast({
-							title: "收藏成功！",
-							icon: 'none'
-						});
 						this.favoriteStatus = !this.favoriteStatus;
 					});
 				}

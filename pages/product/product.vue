@@ -124,7 +124,7 @@
 		<view class="page-bottom">
 			<view class="left-btns">
 				<navigator url="/pages/index/index" open-type="switchTab" class="p-b-btn">
-					<text class="yticon icon-xiatubiao--copy"></text>
+					<text class="yticon icon-xiatubiaocopy"></text>
 					<text>首页</text>
 				</navigator>
 				<navigator url="/pages/cart/cart" open-type="switchTab" class="p-b-btn" :class="{'active-cart': cartCount > 0}">
@@ -135,7 +135,7 @@
 					<text>购物车</text>
 				</navigator>
 				<view class="p-b-btn" :class="{active: favorite}" @click="toFavorite">
-					<text class="yticon icon-shoucang"></text>
+					<text class="yticon icon-xingxing"></text>
 					<text>收藏</text>
 				</view>
 			</view>

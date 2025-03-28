@@ -46,7 +46,13 @@
 		全局公共样式和字体图标
 	*/
 	@font-face {
-		font-family: yticon;
+		font-family: "yticon";
+		font-weight: normal;
+		font-style: normal;
+		src: url('/static/fonts/yticon.ttf');
+	}
+	@font-face {
+		font-family: yticon_unify;
 		font-weight: normal;
 		font-style: normal;
 		src: url('/static/fonts/yticon-unify.ttf') format('truetype');
@@ -180,7 +186,7 @@
 		content: "\e64a";
 	}
 
-	.icon-xiatubiao--copy:before {
+	.icon-xiatubiaocopy:before {
 		content: "\e608";
 	}
 
@@ -313,7 +319,7 @@
 	}
 
 	.icon-xingxing:before {
-		content: "\e70b";
+		content: "\e62E";
 	}
 
 	.icon-tuandui:before {

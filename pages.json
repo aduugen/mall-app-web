@@ -26,7 +26,7 @@
 							"placeholderColor": "#606266"
 						},
 						"buttons": [{
-								"fontSrc": "/static/yticon.ttf",
+								"fontSrc": "/static/fonts/yticon.ttf",
 								"text": "\ue60d",
 								"fontSize": "26",
 								"color": "#303133",
@@ -34,7 +34,7 @@
 								"background": "rgba(0,0,0,0)"
 							},
 							{
-								"fontSrc": "/static/yticon.ttf",
+								"fontSrc": "/static/fonts/yticon.ttf",
 								"text": "\ue744",
 								"fontSize": "27",
 								"color": "#303133",
@@ -111,7 +111,7 @@
 					"titleNView": {
 						"type": "transparent",
 						"buttons": [{
-								"fontSrc": "/static/yticon.ttf",
+								"fontSrc": "/static/fonts/yticon.ttf",
 								"text": "\ue60f",
 								"fontSize": "24",
 								"color": "#303133",
@@ -119,7 +119,7 @@
 								"background": "rgba(0,0,0,0)"
 							},
 							{
-								"fontSrc": "/static/yticon.ttf",
+								"fontSrc": "/static/fonts/yticon.ttf",
 								"text": "\ue744",
 								"fontSize": "28",
 								"color": "#303133",
