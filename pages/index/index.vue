@@ -57,10 +57,9 @@
 					<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 					<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 					<text class="price" v-else>￥{{item.price}}</text>
-					<view class="cart-icon-wrapper">
-						<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
-						<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
-					</view>
+				</view>
+				<view class="cart-box" v-if="item.price > 0 || item.promotionPrice > 0">
+					<text class="iconfont icon-cart" @click.stop="quickAddToCart(item)"></text>
 				</view>
 			</view>
 		</view>
@@ -105,10 +104,9 @@
 							<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 							<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 							<text class="price" v-else>￥{{item.price}}</text>
-							<view class="cart-icon-wrapper">
-								<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
-								<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
-							</view>
+						</view>
+						<view class="cart-box" v-if="item.price > 0 || item.promotionPrice > 0">
+							<text class="iconfont icon-cart" @click.stop="quickAddToCart(item)"></text>
 						</view>
 					</view>
 				</view>
@@ -137,10 +135,9 @@
 						<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 						<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 						<text class="price" v-else>￥{{item.price}}</text>
-						<view class="cart-icon-wrapper">
-							<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
-							<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
-						</view>
+					</view>
+					<view class="cart-box" v-if="item.price > 0 || item.promotionPrice > 0">
+						<text class="iconfont icon-cart" @click.stop="quickAddToCart(item)"></text>
 					</view>
 				</view>
 			</view>
@@ -167,10 +164,9 @@
 					<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 					<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
 					<text class="price" v-else>￥{{item.price}}</text>
-					<view class="cart-icon-wrapper">
-						<text class="yticon icon-gouwuche cart-icon" @click.stop="quickAddToCart(item)"></text>
-						<text v-if="cartItemsMap[item.id]" class="cart-badge">{{cartItemsMap[item.id]}}</text>
-					</view>
+				</view>
+				<view class="cart-box" v-if="item.price > 0 || item.promotionPrice > 0">
+					<text class="iconfont icon-cart" @click.stop="quickAddToCart(item)"></text>
 				</view>
 			</view>
 		</view>
@@ -1079,30 +1075,13 @@
 					text-decoration: line-through;
 				}
 				
-				.cart-icon-wrapper {
+				.cart-box {
 					margin-left: auto;
 					position: relative;
 					
-					.cart-icon {
+					.iconfont {
 						font-size: 40upx;  /* 统一购物车图标大小 */
 						color: $uni-color-primary;
-					}
-					
-					.cart-badge {
-						position: absolute;
-						top: -8upx;  /* 调整位置，使其更贴近购物车图标 */
-						right: -8upx;
-						background-color: #f04c41;
-						color: #fff;
-						font-size: 20upx;
-						line-height: 1;
-						padding: 4upx 8upx;
-						border-radius: 10upx;
-						min-width: 30upx;  /* 确保徽标有最小宽度 */
-						height: 30upx;  /* 统一高度 */
-						display: flex;  /* 使用flex布局 */
-						align-items: center;  /* 垂直居中 */
-						justify-content: center;  /* 水平居中 */
 					}
 				}
 			}
@@ -1238,30 +1217,13 @@
 				text-decoration: line-through;
 			}
 			
-			.cart-icon-wrapper {
+			.cart-box {
 				margin-left: auto;
 				position: relative;
 				
-				.cart-icon {
+				.iconfont {
 					font-size: 40upx;  /* 统一购物车图标大小 */
 					color: $uni-color-primary;
-				}
-				
-				.cart-badge {
-					position: absolute;
-					top: -8upx;  /* 调整位置，使其更贴近购物车图标 */
-					right: -8upx;
-					background-color: #f04c41;
-					color: #fff;
-					font-size: 20upx;
-					line-height: 1;
-					padding: 4upx 8upx;
-					border-radius: 10upx;
-					min-width: 30upx;  /* 确保徽标有最小宽度 */
-					height: 30upx;  /* 统一高度 */
-					display: flex;  /* 使用flex布局 */
-					align-items: center;  /* 垂直居中 */
-					justify-content: center;  /* 水平居中 */
 				}
 			}
 		}
@@ -1360,38 +1322,21 @@
 			text-decoration: line-through;
 		}
 		
-		.cart-icon-wrapper {
+		.cart-box {
 			margin-left: auto;
 			position: relative;
 			
-			.cart-icon {
+			.iconfont {
 				font-size: 40upx;
 				color: $uni-color-primary;
-			}
-			
-			.cart-badge {
-				position: absolute;
-				top: -8upx;  /* 调整位置，使其更贴近购物车图标 */
-				right: -8upx;
-				background-color: #f04c41;
-				color: #fff;
-				font-size: 20upx;
-				line-height: 1;
-				padding: 4upx 8upx;
-				border-radius: 10upx;
-				min-width: 30upx;  /* 确保徽标有最小宽度 */
-				height: 30upx;  /* 统一高度 */
-				display: flex;  /* 使用flex布局 */
-				align-items: center;  /* 垂直居中 */
-				justify-content: center;  /* 水平居中 */
 			}
 		}
 	}
 
 	/* 统一所有区域的购物车徽标样式 */
-	.seckill-section .cart-badge,
-	.hot-section .cart-badge,
-	.guess-section .cart-badge {
+	.seckill-section .cart-box,
+	.hot-section .cart-box,
+	.guess-section .cart-box {
 		position: absolute;
 		top: -8upx;
 		right: -8upx;
