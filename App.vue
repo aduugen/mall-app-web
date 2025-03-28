@@ -46,16 +46,10 @@
 		全局公共样式和字体图标
 	*/
 	@font-face {
-		font-family: "yticon";
+		font-family: yticon;
 		font-weight: normal;
 		font-style: normal;
-		src: url('/static/fonts/yticon.ttf');
-	}
-	@font-face {
-		font-family: yticon_unify;
-		font-weight: normal;
-		font-style: normal;
-		src: url('/static/fonts/yticon-unify.ttf') format('truetype');
+		src: url('/static/fonts/yticon-all.ttf') format('truetype');
 	}
 
 	.yticon {

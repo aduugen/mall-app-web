@@ -138,6 +138,10 @@
 					<text class="yticon icon-xingxing"></text>
 					<text>收藏</text>
 				</view>
+				<view class="p-b-btn" @click="goBack">
+					<text class="yticon icon-zuo"></text>
+					<text>返回</text>
+				</view>
 			</view>
 
 			<view class="action-btn-group">
@@ -773,6 +777,9 @@
 					this.cartCount = 0;
 				});
 			},
+			goBack() {
+				uni.navigateBack();
+			},
 		},
 
 	}
@@ -1333,75 +1340,86 @@
 		bottom: 0;
 		z-index: 95;
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
 		width: 100%;
-		height: 100upx;
-		background: rgba(255, 255, 255, .7);
-		box-shadow: 0 -2upx 10upx 0 rgba(0, 0, 0, .2);
+		height: 90upx;
+		background-color: rgba(255, 255, 255, .9);
+		box-shadow: 0 0 20upx 0 rgba(0, 0, 0, .5);
+		padding-bottom: env(safe-area-inset-bottom);
 
 		.left-btns {
 			display: flex;
-			justify-content: flex-start;
+			flex: 1;
+			height: 100%;
+		}
+
+		.p-b-btn {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
 			align-items: center;
-			margin-left: 30upx;
+			width: 22%; /* 调整宽度以容纳四个按钮 */
+			height: 100%;
+			font-size: $font-sm;
+			color: $font-color-base;
+			text-align: center;
+			position: relative;
 			
-			.p-b-btn {
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				justify-content: center;
-				font-size: $font-sm;
-				color: $font-color-base;
-				width: 80upx;
-				height: 80upx;
-				margin-right: 20upx;
-	
-				.yticon {
-					font-size: 40upx;
-					line-height: 48upx;
-					color: $font-color-light;
-				}
-	
-				&.active,
-				&.active .yticon {
-					color: $uni-color-primary;
-				}
-	
-				.icon-fenxiang2 {
-					font-size: 42upx;
-					transform: translateY(-2upx);
-				}
-	
-				.icon-shoucang {
-					font-size: 46upx;
-				}
+			.yticon {
+				font-size: 40upx;
+				line-height: 48upx;
+				color: $font-color-light;
+			}
+			
+			&.active,
+			&.active .yticon {
+				color: $uni-color-primary;
+			}
+			
+			.icon-fenxiang2 {
+				font-size: 42upx;
+				transform: translateY(-2upx);
+			}
+			
+			.icon-shoucang {
+				font-size: 46upx;
+			}
+			
+			.cart-count {
+				position: absolute;
+				top: 0;
+				right: 5upx;
+				width: 32upx;
+				height: 32upx;
+				line-height: 32upx;
+				background: #f04c41;
+				color: #fff;
+				border-radius: 50%;
+				font-size: 22upx;
+				text-align: center;
 			}
 		}
 
 		.action-btn-group {
-			display: flex;
 			flex: 1;
-			height: 76upx;
-			border-radius: 100px;
-			overflow: hidden;
-			box-shadow: 0 20upx 40upx -16upx $uni-color-primary;
-			box-shadow: 1px 2px 5px rgba(40, 96, 144, 0.4);
-			background: $uni-color-primary;
-			margin-right: 30upx;
-			margin-left: 20upx;
-			position: relative;
-
+			display: flex;
+			height: 100%;
+			padding-right: 10upx;
+			justify-content: flex-end;
+			
 			.action-btn {
 				display: flex;
 				align-items: center;
 				justify-content: center;
 				width: 100%;
-				height: 100%;
+				height: 76upx;
+				margin-right: 20upx;
 				font-size: $font-base;
 				padding: 0;
-				border-radius: 0;
-				background: transparent;
+				border-radius: 38upx;
+				box-shadow: 1px 2px 5px rgba(40, 96, 144, 0.4);
+				background: $uni-color-primary;
+				color: #fff;
 			}
 		}
 	}
