@@ -500,8 +500,8 @@
 
 				.price {
 					font-size: $font-base + 2upx;
-					color: $font-color-dark;
-
+					color: #f04c41;
+					
 					&:before {
 						content: '￥';
 						font-size: $font-sm;
@@ -526,8 +526,8 @@
 
 			.price {
 				font-size: $font-lg;
-				color: $font-color-dark;
-
+				color: #f04c41;
+				
 				&:before {
 					content: '￥';
 					font-size: $font-sm;
