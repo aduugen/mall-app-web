@@ -59,7 +59,7 @@
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
-
+	
 	.icon-yiguoqi1:before {
 		content: "\e700";
 	}
@@ -354,6 +354,10 @@
 
 	.icon-checkboxunchecked:before {
 		content: "\e802";
+	}
+
+	.icon-fapiaodayin:before {
+		content: "\e696";
 	}
 
 	.uni-input-input:disabled {  

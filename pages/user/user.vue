@@ -119,6 +119,12 @@
 						</view>
 						<text class="service-text">我的评价</text>
 					</view>
+					<view class="service-item" @click="navTo('/pages/user/invoiceHistory')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-fapiaodayin"></text>
+						</view>
+						<text class="service-text">开票历史</text>
+					</view>
 					<view class="service-item" @click="navTo('/pages/set/set')">
 						<view class="icon-wrapper">
 							<text class="yticon icon-shezhi1"></text>
