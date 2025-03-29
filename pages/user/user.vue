@@ -79,10 +79,12 @@
 				</view>
 			</view>
 			<!-- 浏览历史 -->
-			<view class="history-section icon">
-				<view class="sec-header">
-					<text class="yticon icon-caidan"></text>
-					<text>我的服务</text>
+			<view class="order-section">
+				<view class="order-header">
+					<text class="order-title">我的服务</text>
+					<view class="order-all" style="visibility: hidden">
+						<text>全部</text>
+					</view>
 				</view>
 				<view class="service-grid">
 					<view class="service-item" @click="navTo('/pages/address/address')">
@@ -525,7 +527,7 @@
 			margin-bottom: 8upx;
 		}
 	}
-	.order-section{
+	.order-section {
 		@extend %section;
 		padding: 28upx 0;
 		margin-top: 20upx;
@@ -556,7 +558,14 @@
 			width: 100%;
 		}
 		
-		.order-item{
+		.service-grid {
+			display: flex;
+			flex-wrap: wrap;
+			width: 100%;
+			padding: 0 30upx;
+		}
+		
+		.order-item {
 			@extend %flex-center;
 			width: 120upx;
 			height: 120upx;
@@ -564,6 +573,25 @@
 			font-size: $font-sm;
 			color: $font-color-dark;
 		}
+		
+		.service-item {
+			@extend %flex-center;
+			width: 33.33%;
+			height: 130upx;
+			font-size: $font-sm;
+			color: $font-color-dark;
+			margin-bottom: 10upx;
+
+			.icon-wrapper {
+				display: contents;
+			}
+			
+			.service-text {
+				font-size: $font-sm;
+				color: $font-color-dark;
+			}
+		}
+		
 		.yticon{
 			font-size: 48upx;
 			margin-bottom: 18upx;
@@ -581,7 +609,7 @@
 		.sec-header{
 			display:flex;
 			align-items: center;
-			font-size: $font-base;
+			font-size: $font-sm;
 			color: $font-color-dark;
 			line-height: 40upx;
 			margin-left: 30upx;
@@ -591,46 +619,6 @@
 				color: #286090;
 				margin-right: 16upx;
 				line-height: 40upx;
-			}
-		}
-		.service-grid {
-			display: flex;
-			flex-wrap: wrap;
-			padding: 15upx 10upx;
-			
-			.service-item {
-				width: 33.33%;
-				padding: 24upx 10upx;
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				justify-content: center;
-				position: relative;
-				
-				&:active {
-					opacity: 0.7;
-				}
-				
-				.icon-wrapper {
-					margin-bottom: 16upx;
-					background-color: rgba(40, 96, 144, 0.1);
-					border-radius: 50%;
-					width: 90upx;
-					height: 90upx;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-				}
-				
-				.yticon {
-					font-size: 48upx;
-					color: #286090;
-				}
-				
-				.service-text {
-					font-size: 26upx;
-					color: #303133;
-				}
 			}
 		}
 	}
