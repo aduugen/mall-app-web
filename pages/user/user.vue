@@ -11,9 +11,15 @@
 			@touchend="coverTouchend"
 		>	
 		<view class="user-section">
-			<!-- 会员ID显示 -->
-			<view class="member-id">
-				<text>会员ID: {{userInfo.id || '未登录'}}</text>
+			<!-- 会员ID和二维码显示 -->
+			<view class="member-id-box">
+				<view class="member-id">
+					<text>会员ID: {{userInfo.id || '未登录'}}</text>
+				</view>
+				<view class="qrcode-box" v-if="userInfo.id && qrCodeUrl">
+					<image class="qrcode" :src="qrCodeUrl"></image>
+					<text class="qrcode-tip">扫码查看会员</text>
+				</view>
 			</view>
 			
 			<view class="user-info-box">
@@ -107,7 +113,8 @@
 				coverTransform: 'translateY(0px)',
 				coverTransition: '0s',
 				moving: false,
-				couponCount:null
+				couponCount: null,
+				qrCodeUrl: '' // 存储二维码图片URL
 			}
 		},
 		onLoad(){
@@ -119,8 +126,12 @@
 						this.couponCount = response.data.length;
 					}
 				});
+				
+				// 生成会员ID二维码
+				this.generateQRCode();
 			}else{
 				this.couponCount=null;
+				this.qrCodeUrl = '';
 			}
 		},
 		// #ifndef MP
@@ -148,6 +159,53 @@
 		},
         methods: {
 			...mapMutations(['login', 'logout']),
+			
+			/**
+			 * 生成会员ID二维码
+			 */
+			generateQRCode() {
+				if(!this.userInfo.id) return;
+				
+				// 生成二维码内容，包含会员ID
+				const qrContent = `MALL_USER_ID:${this.userInfo.id}`;
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: '生成二维码中'
+				});
+				
+				// 对不同平台采用不同的二维码生成方式
+				// APP和小程序使用uni.createQRCode
+				// #ifdef APP-PLUS || MP-WEIXIN || MP-ALIPAY
+				uni.createQRCode({
+					text: qrContent,
+					size: 150,
+					success: (res) => {
+						this.qrCodeUrl = res.path;
+						uni.hideLoading();
+					},
+					fail: (err) => {
+						console.error('生成二维码失败:', err);
+						this.useDefaultQRCode();
+						uni.hideLoading();
+					}
+				});
+				// #endif
+				
+				// H5和其他平台使用默认二维码或在线API
+				// #ifdef H5 || MP-BAIDU || MP-TOUTIAO || MP-QQ
+				this.useDefaultQRCode();
+				// #endif
+			},
+			
+			/**
+			 * 使用默认二维码图片（当动态生成失败时）
+			 */
+			useDefaultQRCode() {
+				// 使用静态二维码图片
+				this.qrCodeUrl = '/static/qrcode_for_macrozheng_258.jpg';
+				uni.hideLoading();
+			},
 			
 			/**
 			 * 退出登录
@@ -239,26 +297,56 @@
 	}
 
 	.user-section{
-    height: 350upx;
-    padding: 30upx 30upx 30upx; /* 减小顶部内边距 */
+    height: 380upx; /* 增加高度 */
+    padding: 30upx 30upx 30upx;
     position:relative;
-    background: linear-gradient(to top, #f8faf9, #286090); /* 渐变深蓝色背景 */
-    border-radius: 15upx; /* 四周圆角 */
-    box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.2); /* 添加阴影 */
-    margin: 0 0 20upx 0; /* 只保留底部边距 */
+    background: linear-gradient(to top, #f8faf9, #286090);
+    border-radius: 15upx;
+    box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.2);
+    margin: 0 0 20upx 0;
 	}
 	
-	.member-id {
+	.member-id-box {
 		position: absolute;
 		top: 15upx;
 		right: 20upx;
+		z-index: 3;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.member-id {
 		font-size: 24upx;
 		color: rgba(255, 255, 255, 0.8);
 		background-color: rgba(0, 0, 0, 0.2);
 		padding: 6upx 15upx;
 		border-radius: 30upx;
-		z-index: 3;
+		margin-bottom: 10upx;
 	}
+	
+	.qrcode-box {
+		background-color: #FFFFFF;
+		padding: 8upx;
+		border-radius: 8upx;
+		box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.2);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.qrcode {
+		width: 120upx;
+		height: 120upx;
+		display: block;
+	}
+	
+	.qrcode-tip {
+		font-size: 24upx;
+		color: rgba(0, 0, 0, 0.8);
+		margin-top: 4upx;
+	}
+	
 	.user-stats-box {
 		position: absolute;
 		top: 70%;
