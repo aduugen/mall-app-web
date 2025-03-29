@@ -840,6 +840,7 @@
 	page {
 		.carousel-section {
 			padding: 0;
+			width: 100%;
 
 			.titleNview-placing {
 				padding-top: 0;
@@ -864,6 +865,13 @@
 
 	page {
 		background: #f5f5f5;
+		width: 100%;
+		overflow-x: hidden;
+	}
+	
+	.container {
+		width: 100%;
+		overflow-x: hidden;
 	}
 
 	.m-t {
@@ -873,7 +881,9 @@
 	/* 头部 轮播图 */
 	.carousel-section {
 		position: relative;
-		padding-top: 10px;
+		padding: 0;
+		width: 100%;
+		overflow: hidden;
 
 		.titleNview-placing {
 			height: var(--status-bar-height);
@@ -895,7 +905,7 @@
 	.carousel {
 		width: 100%;
 		height: 350upx;
-		margin-bottom: 20upx;
+		margin-bottom: 0;
 
 		.carousel-item {
 			width: 100%;
@@ -961,6 +971,8 @@
 	.seckill-section {
 		padding: 4upx 30upx 24upx;
 		background: #fff;
+		width: 100%;
+		box-sizing: border-box;
 
 		.s-header {
 			display: flex;
@@ -1022,6 +1034,10 @@
 			display: flex;
 			flex-direction: column;
 			align-items: center;
+			
+			&:last-child {
+				margin-right: 0;
+			}
 
 			image {
 				width: 270upx;
@@ -1099,8 +1115,10 @@
 		display: flex;
 		align-items: center;
 		height: 140upx;
-		padding: 6upx 30upx 8upx;
+		padding: 6upx 30upx 8upx 30upx;
 		background: #fff;
+		width: 100%;
+		box-sizing: border-box;
 
 		image {
 			flex-shrink: 0;
@@ -1151,6 +1169,8 @@
 		flex-wrap: wrap;
 		padding: 0 30upx;
 		background: #fff;
+		width: 100%;
+		box-sizing: border-box;
 
 		.guess-item {
 			display: flex;
@@ -1243,6 +1263,8 @@
 		flex-wrap: wrap;
 		padding: 0 30upx;
 		background: #fff;
+		width: 100%;
+		box-sizing: border-box;
 	}
 	
 	.guess-section .guess-item {
