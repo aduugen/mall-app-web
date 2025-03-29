@@ -84,13 +84,43 @@
 					<text class="yticon icon-caidan"></text>
 					<text>我的服务</text>
 				</view>
-				<view class="service-items">
-					<list-cell icon="icon-dizhi" iconColor="#286090" title="地址管理" :showArrow="false" @eventClick="navTo('/pages/address/address')"></list-cell>
-					<list-cell icon="icon-lishijilu" iconColor="#286090" title="我的足迹" :showArrow="false" @eventClick="navTo('/pages/user/readHistory')"></list-cell>
-					<list-cell icon="icon-shoucang" iconColor="#286090" title="我的关注" :showArrow="false" @eventClick="navTo('/pages/user/brandAttention')"></list-cell>
-					<list-cell icon="icon-shoucang_xuanzhongzhuangtai" iconColor="#286090" title="我的收藏" :showArrow="false" @eventClick="navTo('/pages/user/productCollection')"></list-cell>
-					<list-cell icon="icon-dianzan-ash" iconColor="#286090" title="我的评价" :showArrow="false"></list-cell>
-					<list-cell icon="icon-shezhi1" iconColor="#286090" title="设置" border="" :showArrow="false" @eventClick="navTo('/pages/set/set')"></list-cell>
+				<view class="service-grid">
+					<view class="service-item" @click="navTo('/pages/address/address')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-dizhi"></text>
+						</view>
+						<text class="service-text">地址管理</text>
+					</view>
+					<view class="service-item" @click="navTo('/pages/user/readHistory')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-lishijilu"></text>
+						</view>
+						<text class="service-text">我的足迹</text>
+					</view>
+					<view class="service-item" @click="navTo('/pages/user/brandAttention')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-shoucang"></text>
+						</view>
+						<text class="service-text">我的关注</text>
+					</view>
+					<view class="service-item" @click="navTo('/pages/user/productCollection')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-shoucang_xuanzhongzhuangtai"></text>
+						</view>
+						<text class="service-text">我的收藏</text>
+					</view>
+					<view class="service-item">
+						<view class="icon-wrapper">
+							<text class="yticon icon-dianzan-ash"></text>
+						</view>
+						<text class="service-text">我的评价</text>
+					</view>
+					<view class="service-item" @click="navTo('/pages/set/set')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-shezhi1"></text>
+						</view>
+						<text class="service-text">设置</text>
+					</view>
 				</view>
 				
 				<button class="logout-btn" @click="logout" v-if="hasLogin">退出登录</button>
@@ -563,40 +593,44 @@
 				line-height: 40upx;
 			}
 		}
-		.service-items {
-			padding: 0 20upx;
+		.service-grid {
+			display: flex;
+			flex-wrap: wrap;
+			padding: 15upx 10upx;
 			
-			::v-deep .mix-list-cell {
-				padding: 24upx 30upx;
+			.service-item {
+				width: 33.33%;
+				padding: 24upx 10upx;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				position: relative;
 				
 				&:active {
-					background-color: #f8f8f8;
+					opacity: 0.7;
 				}
 				
-				.cell-icon {
-					width: 48upx;
-					height: 48upx;
-					margin-right: 20upx;
-					
-					.yticon {
-						font-size: 40upx;
-					}
+				.icon-wrapper {
+					margin-bottom: 16upx;
+					background-color: rgba(40, 96, 144, 0.1);
+					border-radius: 50%;
+					width: 90upx;
+					height: 90upx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
 				}
 				
-				.cell-more {
-					color: #909399;
+				.yticon {
+					font-size: 48upx;
+					color: #286090;
 				}
-			}
-		}
-		.h-list{
-			white-space: nowrap;
-			padding: 30upx 30upx 0;
-			image{
-				display:inline-block;
-				width: 160upx;
-				height: 160upx;
-				margin-right: 20upx;
-				border-radius: 10upx;
+				
+				.service-text {
+					font-size: 26upx;
+					color: #303133;
+				}
 			}
 		}
 	}
