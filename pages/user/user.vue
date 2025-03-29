@@ -49,6 +49,8 @@
 					<text class="label">优惠券</text>
 				</view>
 			</view>
+			
+			<button class="logout-btn-section" @click="logout" v-if="hasLogin">退出登录</button>
 		</view>	
 			
 			<!-- 订单 -->
@@ -124,8 +126,6 @@
 						<text class="service-text">设置</text>
 					</view>
 				</view>
-				
-				<button class="logout-btn" @click="logout" v-if="hasLogin">退出登录</button>
 			</view>
 		</view>
 			
@@ -622,15 +622,26 @@
 			}
 		}
 	}
-	.logout-btn {
-		height: 66upx;
-		line-height: 66upx;
-		border-radius: 100upx;
-		background-color: #286090;
-		color: #fff;
-		font-size: $font-base;
-		width: 50%;
-		margin: 60upx auto 20upx;
+	.logout-btn-section {
+		position: absolute;
+		bottom: 15upx;
+		right: 20upx;
+		height: 56upx;
+		line-height: 56upx;
+		border-radius: 28upx;
+		background-color: rgba(255, 255, 255, 0.8);
+		color: #286090;
+		font-size: 24upx;
+		font-weight: bold;
+		width: 30%;
+		text-align: center;
+		box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.1);
+		border: 1upx solid rgba(255, 255, 255, 0.9);
+		
+		&:active {
+			transform: scale(0.98);
+			opacity: 0.9;
+		}
 	}
 	
 	.icon-container {
