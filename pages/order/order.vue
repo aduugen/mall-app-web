@@ -106,10 +106,6 @@
 					{
 						state: 3,
 						text: '已完成'
-					},
-					{
-						state: 5,
-						text: '已取消'
 					}
 				],
 			};
@@ -153,9 +149,6 @@
 						break;
 					case 3:
 						statusTip = '交易完成';
-						break;
-					case 5:
-						statusTip = '已取消';
 						break;
 				}
 				return statusTip;
