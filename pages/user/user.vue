@@ -80,12 +80,18 @@
 			</view>
 			<!-- 浏览历史 -->
 			<view class="history-section icon">
-				<list-cell icon="icon-dizhi" iconColor="#286090" title="地址管理" @eventClick="navTo('/pages/address/address')"></list-cell>
-				<list-cell icon="icon-lishijilu" iconColor="#286090" title="我的足迹" @eventClick="navTo('/pages/user/readHistory')"></list-cell>
-				<list-cell icon="icon-shoucang" iconColor="#286090" title="我的关注" @eventClick="navTo('/pages/user/brandAttention')"></list-cell>
-				<list-cell icon="icon-shoucang_xuanzhongzhuangtai" iconColor="#286090" title="我的收藏" @eventClick="navTo('/pages/user/productCollection')"></list-cell>
-				<list-cell icon="icon-dianzan-ash" iconColor="#286090" title="我的评价"></list-cell>
-				<list-cell icon="icon-shezhi1" iconColor="#286090" title="设置" border="" @eventClick="navTo('/pages/set/set')"></list-cell>
+				<view class="sec-header">
+					<text class="yticon icon-caidan"></text>
+					<text>我的服务</text>
+				</view>
+				<view class="service-items">
+					<list-cell icon="icon-dizhi" iconColor="#286090" title="地址管理" :showArrow="false" @eventClick="navTo('/pages/address/address')"></list-cell>
+					<list-cell icon="icon-lishijilu" iconColor="#286090" title="我的足迹" :showArrow="false" @eventClick="navTo('/pages/user/readHistory')"></list-cell>
+					<list-cell icon="icon-shoucang" iconColor="#286090" title="我的关注" :showArrow="false" @eventClick="navTo('/pages/user/brandAttention')"></list-cell>
+					<list-cell icon="icon-shoucang_xuanzhongzhuangtai" iconColor="#286090" title="我的收藏" :showArrow="false" @eventClick="navTo('/pages/user/productCollection')"></list-cell>
+					<list-cell icon="icon-dianzan-ash" iconColor="#286090" title="我的评价" :showArrow="false"></list-cell>
+					<list-cell icon="icon-shezhi1" iconColor="#286090" title="设置" border="" :showArrow="false" @eventClick="navTo('/pages/set/set')"></list-cell>
+				</view>
 				
 				<button class="logout-btn" @click="logout" v-if="hasLogin">退出登录</button>
 			</view>
@@ -549,11 +555,37 @@
 			color: $font-color-dark;
 			line-height: 40upx;
 			margin-left: 30upx;
+			padding-bottom: 15upx;
 			.yticon{
 				font-size: 44upx;
-				color: #5eba8f;
+				color: #286090;
 				margin-right: 16upx;
 				line-height: 40upx;
+			}
+		}
+		.service-items {
+			padding: 0 20upx;
+			
+			::v-deep .mix-list-cell {
+				padding: 24upx 30upx;
+				
+				&:active {
+					background-color: #f8f8f8;
+				}
+				
+				.cell-icon {
+					width: 48upx;
+					height: 48upx;
+					margin-right: 20upx;
+					
+					.yticon {
+						font-size: 40upx;
+					}
+				}
+				
+				.cell-more {
+					color: #909399;
+				}
 			}
 		}
 		.h-list{

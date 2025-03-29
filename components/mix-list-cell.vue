@@ -12,7 +12,7 @@
 			></text>
 			<text class="cell-tit clamp">{{title}}</text>
 			<text v-if="tips" class="cell-tip">{{tips}}</text>
-			<text class="cell-more yticon"
+			<text v-if="showArrow" class="cell-more yticon"
 				:class="typeList[navigateType]"
 			></text>
 		</view>
@@ -64,6 +64,10 @@
 			iconColor: {
 				type: String,
 				default: '#333'
+			},
+			showArrow: {
+				type: Boolean,
+				default: true
 			}
 		},
 		methods: {
