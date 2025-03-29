@@ -1341,7 +1341,7 @@
 		display: flex;
 		align-items: center;
 		width: 100%;
-		height: 90upx;
+		height: 110upx;
 		background-color: rgba(255, 255, 255, .9);
 		box-shadow: 0 0 20upx 0 rgba(0, 0, 0, .5);
 		padding-bottom: env(safe-area-inset-bottom);
@@ -1350,6 +1350,7 @@
 			display: flex;
 			flex: 1;
 			height: 100%;
+			align-items: center;
 		}
 
 		.p-b-btn {
@@ -1357,7 +1358,7 @@
 			flex-direction: column;
 			justify-content: center;
 			align-items: center;
-			width: 22%; /* 调整宽度以容纳四个按钮 */
+			width: 22%;
 			height: 100%;
 			font-size: $font-sm;
 			color: $font-color-base;
@@ -1391,16 +1392,17 @@
 			
 			.cart-count {
 				position: absolute;
-				top: 0;
-				right: 5upx;
-				width: 32upx;
-				height: 32upx;
-				line-height: 32upx;
+				top: -10upx;
+				right: -25upx;
+				width: 30upx;
+				height: 30upx;
+				line-height: 30upx;
 				background: #f04c41;
 				color: #fff;
 				border-radius: 50%;
-				font-size: 22upx;
+				font-size: 20upx;
 				text-align: center;
+				z-index: 100;
 			}
 		}
 
@@ -1410,17 +1412,18 @@
 			height: 100%;
 			padding-right: 10upx;
 			justify-content: flex-end;
+			align-items: center;
 			
 			.action-btn {
 				display: flex;
 				align-items: center;
 				justify-content: center;
 				width: 100%;
-				height: 76upx;
+				height: 72upx;
 				margin-right: 20upx;
 				font-size: $font-base;
 				padding: 0;
-				border-radius: 38upx;
+				border-radius: 36upx;
 				box-shadow: 1px 2px 5px rgba(40, 96, 144, 0.4);
 				background: $uni-color-primary;
 				color: #fff;
