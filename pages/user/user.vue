@@ -10,7 +10,6 @@
 			@touchmove="coverTouchmove"
 			@touchend="coverTouchend"
 		>	
-		<view class="user-section-top-rounded"></view>
 		<view class="user-section">
 			<view class="user-info-box">
 				<view class="portrait-box">
@@ -236,12 +235,12 @@
 
 	.user-section{
     height: 350upx;
-    padding: 60upx 30upx 30upx; /* 减小顶部内边距 */
+    padding: 30upx 30upx 30upx; /* 减小顶部内边距 */
     position:relative;
     background: linear-gradient(to top, #f8faf9, #286090); /* 渐变深蓝色背景 */
     border-radius: 15upx; /* 四周圆角 */
     box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.2); /* 添加阴影 */
-    margin: 20upx 0; /* 添加上下边距 */
+    margin: 0 0 20upx 0; /* 只保留底部边距 */
 }
 	.user-stats-box {
 		position: absolute;
@@ -334,6 +333,7 @@
 		position:relative;
 		background: #f5f5f5;
 		padding-bottom: 20upx;
+		padding-top: 0;
 		.arc{
 			position:absolute;
 			left: 0;
