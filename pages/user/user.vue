@@ -1,30 +1,5 @@
 <template>  
     <view class="container">  
-		
-		<view class="user-section">
-			<image class="bg" src="/static/user-bg.jpg"></image>
-			<view class="user-info-box">
-				<view class="portrait-box">
-					<image class="portrait" :src="userInfo.icon || '/static/missing-face.png'"></image>
-				</view>
-				<view class="info-box">
-					<text class="username">{{userInfo.nickname || userInfo.username || '游客'}}</text>
-				</view>
-			</view>
-			<view class="vip-card-box">
-				<image class="card-bg" src="/static/vip-card-bg.png" mode=""></image>
-				<view class="b-btn">
-					立即开通
-				</view>
-				<view class="tit">
-					<text class="yticon icon-iLinkapp-"></text>
-					黄金会员
-				</view>
-				<text class="e-m">mall移动端商城</text>
-				<text class="e-b">黄金及以上会员可享有会员价优惠商品。</text>
-			</view>
-		</view>
-		
 		<view 
 			class="cover-container"
 			:style="[{
@@ -34,23 +9,38 @@
 			@touchstart="coverTouchstart"
 			@touchmove="coverTouchmove"
 			@touchend="coverTouchend"
-		>
-			<image class="arc" src="/static/arc.png"></image>
-			
-			<view class="tj-sction">
-				<view class="tj-item">
-					<text class="num">{{userInfo.integration || '暂无'}}</text>
-					<text>积分</text>
+		>	
+		<view class="user-section-top-rounded"></view>
+		<view class="user-section">
+			<view class="user-info-box">
+				<view class="portrait-box">
+					<image class="portrait" :src="userInfo.icon || '/static/missing-face.png'"></image>
 				</view>
-				<view class="tj-item">
-					<text class="num">{{userInfo.growth || '暂无'}}</text>
-					<text>成长值</text>
-				</view>
-				<view class="tj-item" @click="navTo('/pages/coupon/couponList')">
-					<text class="num">{{couponCount || '暂无'}}</text>
-					<text>优惠券</text>
+				<view class="info-box">
+					<text class="username">{{userInfo.nickname || userInfo.username || '游客'}}</text>
+					<view class="vip-tag">
+						<text class="yticon icon-iLinkapp-"></text>
+						<text>黄金会员</text>
+					</view>
 				</view>
 			</view>
+			
+			<view class="user-stats-box">
+				<view class="stat-item">
+					<text class="num">{{userInfo.integration || '暂无'}}</text>
+					<text class="label">积分</text>
+				</view>
+				<view class="stat-item">
+					<text class="num">{{userInfo.growth || '暂无'}}</text>
+					<text class="label">成长值</text>
+				</view>
+				<view class="stat-item" @click="navTo('/pages/coupon/couponList')">
+					<text class="num">{{couponCount || '暂无'}}</text>
+					<text class="label">优惠券</text>
+				</view>
+			</view>
+		</view>	
+			
 			<!-- 订单 -->
 			<view class="order-section">
 				<view class="order-header">
@@ -245,87 +235,101 @@
 	}
 
 	.user-section{
-		height: 520upx;
-		padding: 100upx 30upx 0;
-		position:relative;
-		.bg{
-			position:absolute;
-			left: 0;
-			top: 0;
-			width: 100%;
-			height: 100%;
-			filter: blur(1px);
-			opacity: .7;
+    height: 350upx;
+    padding: 60upx 30upx 30upx; /* 减小顶部内边距 */
+    position:relative;
+    background: linear-gradient(to top, #f8faf9, #286090); /* 渐变深蓝色背景 */
+    border-radius: 15upx; /* 四周圆角 */
+    box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.2); /* 添加阴影 */
+    margin: 20upx 0; /* 添加上下边距 */
+}
+	.user-stats-box {
+		position: absolute;
+		top: 70%;
+		left: 45upx;
+		transform: translateY(-50%);
+		background-color: rgba(255, 255, 255, 0.2);
+		padding: 15upx;
+		border-radius: 10upx;
+		display: flex;
+		flex-direction: row;
+		
+		.stat-item {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			margin-left: 20upx;
+			
+			.num {
+				font-size: 28upx;
+				color: #fff;
+				font-weight: bold;
+			}
+			
+			.label {
+				font-size: 24upx;
+				color: rgba(255, 255, 255, 0.8);
+				margin-top: 4upx;
+			}
 		}
 	}
 	.user-info-box{
-		height: 180upx;
-		display:flex;
-		align-items:center;
-		position:relative;
+		height: 100upx;
+		display: flex;
+		align-items: center;
+		position: relative;
 		z-index: 1;
+		padding-top: 0upx;
+		padding-left: 20upx;
+		margin-bottom: 5upx;
+		margin-top: -10upx;
 		.portrait{
-			width: 130upx;
-			height: 130upx;
-			border:5upx solid #fff;
+			width: 80upx;
+			height: 80upx;
+			border: 3upx solid #fff;
 			border-radius: 50%;
 		}
-		.username{
-			font-size: $font-lg + 6upx;
-			color: $font-color-dark;
-			margin-left: 20upx;
+		.info-box {
+			display: flex;
+			flex-direction: column;
+			
+			.username{
+				font-size: $font-lg;
+				color: #fff;
+				margin-left: 15upx;
+				text-shadow: 0 0 5upx rgba(0, 0, 0, 0.3);
+				font-weight: bold;
+				margin-bottom: 5upx;
+			}
+			
+			.vip-tag {
+				margin-left: 15upx;
+				background: linear-gradient(left, rgba(0,0,0,.7), rgba(0,0,0,.8));
+				border-radius: 15upx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 3upx 10upx;
+				width: 140upx;
+				font-size: 22upx;
+				color: #f7d680;
+				
+				.yticon {
+					color: #f6e5a3;
+					margin-right: 8upx;
+					font-size: 22upx;
+				}
+			}
 		}
 	}
 
 	.vip-card-box{
-		display:flex;
-		flex-direction: column;
-		color: #f7d680;
-		height: 240upx;
-		background: linear-gradient(left, rgba(0,0,0,.7), rgba(0,0,0,.8));
-		border-radius: 16upx 16upx 0 0;
-		overflow: hidden;
-		position: relative;
-		padding: 20upx 24upx;
-		.card-bg{
-			position:absolute;
-			top: 20upx;
-			right: 0;
-			width: 380upx;
-			height: 260upx;
-		}
-		.b-btn{
-			position: absolute;
-			right: 20upx;
-			top: 16upx;
-			width: 132upx;
-			height: 40upx;
-			text-align: center;
-			line-height: 40upx;
-			font-size: 22upx;
-			color: #36343c;
-			border-radius: 20px;
-			background: linear-gradient(left, #f9e6af, #ffd465);
-			z-index: 1;
-		}
-		.tit{
-			font-size: $font-base+2upx;
-			color: #f7d680;
-			margin-bottom: 28upx;
-			.yticon{
-				color: #f6e5a3;
-				margin-right: 16upx;
-			}
-		}
-		.e-b{
-			font-size: $font-sm;
-			color: #d8cba9;
-			margin-top: 10upx;
-		}
+		display: none; /* 隐藏不需要的样式 */
 	}
+
 	.cover-container{
 		background: $page-color-base;
-		margin-top: -150upx;
+		margin-top: 0upx;
 		padding: 0 30upx;
 		position:relative;
 		background: #f5f5f5;
@@ -340,6 +344,7 @@
 	}
 	.tj-sction{
 		@extend %section;
+		margin-top: 30upx;
 		.tj-item{
 			@extend %flex-center;
 			flex-direction: column;
