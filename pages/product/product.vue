@@ -130,7 +130,7 @@
 				<navigator url="/pages/cart/cart" open-type="switchTab" class="p-b-btn" :class="{'active-cart': cartCount > 0}">
 					<view style="position: relative;">
 						<text class="yticon icon-gouwuche"></text>
-						<view v-if="cartCount > 0" class="cart-count">{{cartCount}}</view>
+						<view v-if="cartCount > 0" class="cart-count" style="position: absolute; top: -10upx; right: -25upx; z-index: 100;">{{cartCount}}</view>
 					</view>
 					<text>购物车</text>
 				</navigator>
@@ -800,7 +800,7 @@
 	.cart-count {
 		position: absolute;
 		top: -10upx;
-		right: -10upx;
+		right: -25upx;
 		font-size: 20upx;
 		background: #fa436a;
 		color: #fff;
@@ -809,7 +809,7 @@
 		height: 30upx;
 		line-height: 30upx;
 		text-align: center;
-		z-index: 10;
+		z-index: 100;
 	}
 	
 	.active-cart {
@@ -1239,7 +1239,6 @@
 
 		&.show {
 			display: block;
-
 			.mask {
 				animation: showPopup 0.2s linear both;
 			}
@@ -1368,11 +1367,16 @@
 			.yticon {
 				font-size: 40upx;
 				line-height: 48upx;
-				color: $font-color-light;
+				color: $font-color-base;
 			}
 			
 			&.active,
 			&.active .yticon {
+				color: $uni-color-primary;
+			}
+			
+			&.active-cart,
+			&.active-cart .yticon {
 				color: $uni-color-primary;
 			}
 			
@@ -1620,3 +1624,4 @@
 		}
 	}
 </style>
+
