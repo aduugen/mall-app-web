@@ -1340,7 +1340,6 @@
 		position: absolute;
 		top: -8upx;
 		right: -8upx;
-		background-color: #f04c41;
 		color: #fff;
 		font-size: 20upx;
 		line-height: 1;
