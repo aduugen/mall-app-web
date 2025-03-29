@@ -16,8 +16,8 @@
 				<view class="member-id">
 					<text>会员ID: {{userInfo.id || '未登录'}}</text>
 				</view>
-				<view class="qrcode-box" v-if="userInfo.id && qrCodeUrl">
-					<image class="qrcode" :src="qrCodeUrl"></image>
+				<view class="qrcode-box" v-if="userInfo.id && qrCodeUrl" @click="previewQRCode">
+					<image class="qrcode" :src="qrCodeUrl" mode="aspectFit"></image>
 					<text class="qrcode-tip">扫码查看会员</text>
 				</view>
 			</view>
@@ -166,36 +166,31 @@
 			generateQRCode() {
 				if(!this.userInfo.id) return;
 				
-				// 生成二维码内容，包含会员ID
-				const qrContent = `MALL_USER_ID:${this.userInfo.id}`;
-				
 				// 显示加载提示
 				uni.showLoading({
 					title: '生成二维码中'
 				});
 				
-				// 对不同平台采用不同的二维码生成方式
-				// APP和小程序使用uni.createQRCode
-				// #ifdef APP-PLUS || MP-WEIXIN || MP-ALIPAY
-				uni.createQRCode({
-					text: qrContent,
-					size: 150,
-					success: (res) => {
-						this.qrCodeUrl = res.path;
-						uni.hideLoading();
-					},
-					fail: (err) => {
-						console.error('生成二维码失败:', err);
-						this.useDefaultQRCode();
-						uni.hideLoading();
-					}
-				});
-				// #endif
-				
-				// H5和其他平台使用默认二维码或在线API
-				// #ifdef H5 || MP-BAIDU || MP-TOUTIAO || MP-QQ
-				this.useDefaultQRCode();
-				// #endif
+				try {
+					// 生成包含完整会员信息的二维码内容
+					const qrContent = JSON.stringify({
+						type: "member",
+						id: this.userInfo.id,
+						username: this.userInfo.username || this.userInfo.nickname || '',
+						time: new Date().getTime()
+					});
+					
+					// 使用在线API生成二维码
+					this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrContent)}`;
+					
+					console.log('二维码内容:', qrContent);
+					console.log('二维码URL:', this.qrCodeUrl);
+					
+					uni.hideLoading();
+				} catch (error) {
+					console.error('生成二维码出错:', error);
+					this.useDefaultQRCode();
+				}
 			},
 			
 			/**
@@ -205,6 +200,12 @@
 				// 使用静态二维码图片
 				this.qrCodeUrl = '/static/qrcode_for_macrozheng_258.jpg';
 				uni.hideLoading();
+				
+				uni.showToast({
+					title: '二维码生成失败，使用默认图片',
+					icon: 'none',
+					duration: 2000
+				});
 			},
 			
 			/**
@@ -277,6 +278,25 @@
 				this.moving = false;
 				this.coverTransition = 'transform 0.3s cubic-bezier(.21,1.93,.53,.64)';
 				this.coverTransform = 'translateY(0px)';
+			},
+			/**
+			 * 预览二维码大图
+			 */
+			previewQRCode() {
+				if (!this.qrCodeUrl) return;
+				
+				uni.previewImage({
+					urls: [this.qrCodeUrl],
+					current: this.qrCodeUrl,
+					indicator: 'default',
+					loop: false,
+					success: () => {
+						console.log('二维码预览成功');
+					},
+					fail: (err) => {
+						console.error('二维码预览失败:', err);
+					}
+				});
 			}
         }  
     }  
@@ -333,6 +353,12 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		transition: all 0.2s;
+		
+		&:active {
+			transform: scale(0.95);
+			opacity: 0.9;
+		}
 	}
 	
 	.qrcode {
@@ -342,8 +368,8 @@
 	}
 	
 	.qrcode-tip {
-		font-size: 24upx;
-		color: rgba(0, 0, 0, 0.8);
+		font-size: 20upx;
+		color: rgba(0, 0, 0, 0.6);
 		margin-top: 4upx;
 	}
 	
