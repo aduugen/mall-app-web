@@ -10,10 +10,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				// #ifdef MP 
 				"navigationBarTitleText": "Mall商城",
-				//"navigationStyle": "custom",
-				// #endif 
 				"enablePullDownRefresh": true,
 				"app-plus": {
 					"titleNView": {
@@ -50,7 +47,7 @@
 		{
 			"path": "pages/index/search",
 			"style": {
-				// "navigationBarTitleText": "SearchBar 搜索栏"
+				"navigationBarTitleText": "搜索"
 			}
 		},
 		{
@@ -104,31 +101,11 @@
 			"path": "pages/user/user",
 			"style": {
 				"navigationBarTitleText": "我的",
-				// #ifdef MP
-				"navigationStyle": "custom",
-				// #endif
 				"app-plus": {
 					"bounce": "none",
 					"titleNView": {
 						"type": "transparent",
-						"buttons": [{
-								"fontSrc": "/static/fonts/yticon-all.ttf",
-								"text": "\ue60f",
-								"fontSize": "24",
-								"color": "#303133",
-								"width": "46px",
-								"background": "rgba(0,0,0,0)",
-								"right": "70px"
-							},
-							{
-								"fontSrc": "/static/fonts/yticon-all.ttf",
-								"text": "\ue744",
-								"fontSize": "28",
-								"color": "#303133",
-								"background": "rgba(0,0,0,0)",
-								"redDot": true,
-								"right": "30px"
-							}
+						"buttons": [
 						]
 					}
 				}
