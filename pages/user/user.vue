@@ -11,6 +11,11 @@
 			@touchend="coverTouchend"
 		>	
 		<view class="user-section">
+			<!-- 会员ID显示 -->
+			<view class="member-id">
+				<text>会员ID: {{userInfo.id || '未登录'}}</text>
+			</view>
+			
 			<view class="user-info-box">
 				<view class="portrait-box">
 					<image class="portrait" :src="userInfo.icon || '/static/missing-face.png'"></image>
@@ -241,7 +246,19 @@
     border-radius: 15upx; /* 四周圆角 */
     box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.2); /* 添加阴影 */
     margin: 0 0 20upx 0; /* 只保留底部边距 */
-}
+	}
+	
+	.member-id {
+		position: absolute;
+		top: 15upx;
+		right: 20upx;
+		font-size: 24upx;
+		color: rgba(255, 255, 255, 0.8);
+		background-color: rgba(0, 0, 0, 0.2);
+		padding: 6upx 15upx;
+		border-radius: 30upx;
+		z-index: 3;
+	}
 	.user-stats-box {
 		position: absolute;
 		top: 70%;
