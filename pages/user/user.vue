@@ -123,7 +123,12 @@
 						<view class="icon-wrapper">
 							<text class="yticon icon-fapiaodayin"></text>
 						</view>
-						<text class="service-text">开票历史</text>
+						<text class="service-text">我的发票</text>
+					</view>
+					<view class="service-item" @click="navTo('/pages/order/invoice-list')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-fapiao"></text>
+						</view>
 					</view>
 					<view class="service-item" @click="navTo('/pages/set/set')">
 						<view class="icon-wrapper">
@@ -131,42 +136,6 @@
 						</view>
 						<text class="service-text">设置</text>
 					</view>
-				</view>
-			</view>
-			<view class="history-section icon">
-				<view class="sec-header">
-					<text class="yticon icon-lishijilu"></text>
-					<text>历史记录</text>
-				</view>
-				<view class="h-list">
-					<navigator url="/pages/address/address" class="h-item">
-						<text class="yticon icon-shouhuodizhi"></text>
-						<text>地址管理</text>
-					</navigator>
-					<navigator url="/pages/footprint/footprint" class="h-item">
-						<text class="yticon icon-zuji"></text>
-						<text>我的足迹</text>
-					</navigator>
-					<navigator url="" class="h-item">
-						<text class="yticon icon-shoucang"></text>
-						<text>我的关注</text>
-					</navigator>
-					<navigator url="/pages/product/favorite" class="h-item">
-						<text class="yticon icon-shoucang_active"></text>
-						<text>我的收藏</text>
-					</navigator>
-					<navigator url="" class="h-item">
-						<text class="yticon icon-pingjia"></text>
-						<text>我的评价</text>
-					</navigator>
-					<navigator url="/pages/order/invoice-list" class="h-item">
-						<text class="yticon icon-fapiao"></text>
-						<text>我的发票</text>
-					</navigator>
-					<navigator url="/pages/set/set" class="h-item">
-						<text class="yticon icon-settings"></text>
-						<text>设置</text>
-					</navigator>
 				</view>
 			</view>
 		</view>
