@@ -29,10 +29,6 @@
 					<view class="value">{{ invoice.taxNumber }}</view>
 				</view>
 				<view class="info-item">
-					<view class="label">发票内容</view>
-					<view class="value">{{ invoice.invoiceContent }}</view>
-				</view>
-				<view class="info-item">
 					<view class="label">发票金额</view>
 					<view class="value price">¥{{ invoice.invoiceAmount }}</view>
 				</view>

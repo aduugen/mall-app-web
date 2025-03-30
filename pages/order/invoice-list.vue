@@ -43,6 +43,10 @@
 						<view class="i-content">
 							<view class="i-info b-b">
 								<view class="info-item">
+									<text class="title">订单编号:</text>
+									<text class="content">{{item.orderSn}}</text>
+								</view>
+								<view class="info-item">
 									<text class="title">发票抬头:</text>
 									<text class="content">{{item.invoiceTitle}}</text>
 								</view>
@@ -51,18 +55,42 @@
 									<text class="content">{{item.taxNumber}}</text>
 								</view>
 								<view class="info-item">
-									<text class="title">发票内容:</text>
-									<text class="content">{{item.invoiceContent}}</text>
-								</view>
-								<view class="info-item">
 									<text class="title">发票金额:</text>
 									<text class="content price">¥{{item.invoiceAmount}}</text>
 								</view>
+								
 							</view>
 							<view class="i-action">
 								<view class="action-btn" @click="showInvoiceDetail(item.id)">
 									查看详情
 								</view>
+							</view>
+						</view>
+						
+						<!-- 商品信息区域 -->
+						<view class="goods-info" v-if="false">
+							<view class="goods-title b-b">商品信息</view>
+							<view class="goods-table">
+								<view class="goods-table-header">
+									<view class="col-name">商品名称</view>
+									<view class="col-spec">规格</view>
+									<view class="col-price">单价</view>
+									<view class="col-quantity">数量</view>
+									<view class="col-amount">金额</view>
+								</view>
+								<view class="goods-table-body">
+									<view class="goods-table-row" v-for="(good, goodIndex) in item.items" :key="goodIndex">
+										<view class="col-name">{{good.productName}}</view>
+										<view class="col-spec">{{good.weight}}{{good.unit}}</view>
+										<view class="col-price">¥{{good.price}}</view>
+										<view class="col-quantity">{{good.quantity}}</view>
+										<view class="col-amount">¥{{good.amount}}</view>
+									</view>
+								</view>
+							</view>
+							<view class="goods-total">
+								<text class="total-label">合计：</text>
+								<text class="total-amount">¥{{item.invoiceAmount}}</text>
 							</view>
 						</view>
 					</view>
@@ -458,8 +486,7 @@
 				padding: 20rpx 30rpx;
 				
 				.info-item {
-					display: flex;
-					margin-bottom: 15rpx;
+					margin-bottom: 20rpx;
 					
 					&:last-child {
 						margin-bottom: 0;
@@ -475,10 +502,11 @@
 						flex: 1;
 						font-size: 26rpx;
 						color: #303133;
+						word-break: break-all;
 						
 						&.price {
 							color: #fa436a;
-							font-weight: 600;
+							font-weight: bold;
 						}
 					}
 				}
@@ -526,5 +554,94 @@
 		font-size: 12px;
 		margin-bottom: 10px;
 		border-radius: 4px;
+	}
+	
+	.goods-info {
+		margin-top: 20rpx;
+		padding: 20rpx;
+		background-color: #fff;
+		
+		.goods-title {
+			font-size: 28rpx;
+			color: #303133;
+			margin-bottom: 20rpx;
+		}
+		
+		.goods-table {
+			margin-bottom: 20rpx;
+			
+			.goods-table-header {
+				display: flex;
+				font-size: 26rpx;
+				color: #909399;
+				padding: 10rpx 0;
+				
+				.col-name {
+					flex: 1;
+				}
+				
+				.col-spec {
+					flex: 1;
+				}
+				
+				.col-price {
+					flex: 1;
+				}
+				
+				.col-quantity {
+					flex: 1;
+				}
+				
+				.col-amount {
+					flex: 1;
+				}
+			}
+			
+			.goods-table-body {
+				.goods-table-row {
+					display: flex;
+					font-size: 26rpx;
+					color: #303133;
+					padding: 10rpx 0;
+					
+					.col-name {
+						flex: 1;
+					}
+					
+					.col-spec {
+						flex: 1;
+					}
+					
+					.col-price {
+						flex: 1;
+					}
+					
+					.col-quantity {
+						flex: 1;
+					}
+					
+					.col-amount {
+						flex: 1;
+					}
+				}
+			}
+		}
+		
+		.goods-total {
+			display: flex;
+			justify-content: flex-end;
+			align-items: center;
+			font-size: 28rpx;
+			color: #303133;
+			padding: 10rpx 0;
+			
+			.total-label {
+				margin-right: 10rpx;
+			}
+			
+			.total-amount {
+				font-weight: 600;
+			}
+		}
 	}
 </style> 
