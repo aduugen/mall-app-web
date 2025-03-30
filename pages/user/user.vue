@@ -466,6 +466,7 @@
 		.info-box {
 			display: flex;
 			flex-direction: column;
+			padding-left: 15upx;
 			
 			.username{
 				font-size: $font-lg;
@@ -477,7 +478,7 @@
 			}
 			
 			.vip-tag {
-				margin-left: 15upx;
+				margin-left: 0;
 				background: linear-gradient(left, rgba(0,0,0,.7), rgba(0,0,0,.8));
 				border-radius: 15upx;
 				display: flex;
