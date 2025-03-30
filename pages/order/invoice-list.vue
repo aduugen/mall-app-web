@@ -9,6 +9,9 @@
 			>
 				{{item.text}}
 			</view>
+			<view class="refresh-btn" @click="refreshCurrentTab">
+				<text class="iconfont icon-refresh">刷新</text>
+			</view>
 		</view>
 		
 		<swiper :current="tabCurrentIndex" class="swiper-box" duration="300" @change="changeTab">
@@ -18,6 +21,11 @@
 					scroll-y
 					@scrolltolower="loadData"
 				>
+					<!-- 显示调试信息 -->
+					<view class="debug-info" v-if="tabItem.invoiceList.length === 0">
+						<text>当前选项卡: {{tabIndex}}, 当前索引: {{tabCurrentIndex}}</text>
+					</view>
+					
 					<!-- 空白页 -->
 					<empty v-if="tabItem.invoiceList.length === 0"></empty>
 					
@@ -69,7 +77,7 @@
 <script>
 	import uniLoadMore from '@/components/uni-load-more/uni-load-more.vue';
 	import empty from "@/components/empty";
-	import { fetchInvoiceList } from '@/api/order.js';
+	import { fetchInvoiceList, fetchInvoiceDetail } from '@/api/order.js';
 	
 	export default {
 		components: {
@@ -109,9 +117,30 @@
 				pageSize: 10
 			};
 		},
+		watch: {
+			tabCurrentIndex(newVal, oldVal) {
+				console.log(`标签页从 ${oldVal} 切换到 ${newVal}`);
+			}
+		},
 		onLoad(options){
 			// 获取发票列表
 			this.loadData();
+		},
+		onShow() {
+			// 每次显示页面时重新加载数据
+			console.log('发票列表页面显示，重新加载数据');
+			
+			// 检查当前选项卡是否有数据，没有数据或数据少于5条才重新加载
+			const currentTab = this.navList[this.tabCurrentIndex];
+			if (!currentTab.invoiceList || currentTab.invoiceList.length < 5) {
+				// 只清空当前选项卡的数据
+				currentTab.invoiceList = [];
+				currentTab.loadingType = 'more';
+				this.pageNum = 1;
+				
+				// 加载当前选项卡的数据
+				this.loadData(true, true);
+			}
 		},
 		methods: {
 			// 格式化时间
@@ -167,27 +196,42 @@
 			
 			// 顶部选项卡点击事件
 			tabClick(index){
-				this.pageNum = 1;
+				console.log('点击切换选项卡', index);
+				// 不重置页码和清空数据，除非是刷新操作
 				this.tabCurrentIndex = index;
-				this.loadData(true);
+				// 如果当前选项卡没有数据，则加载数据
+				if (this.navList[index].invoiceList.length === 0) {
+					this.loadData(true);
+				}
 			},
 			
 			// 顶部选项卡滑动事件
 			changeTab(e){
-				this.pageNum = 1;
-				this.tabCurrentIndex = e.target.current;
-				this.loadData(true);
+				console.log('滑动切换选项卡，事件对象:', e);
+				
+				// 在uni-app中，swiper的change事件返回的是e.detail.current
+				const current = e.detail ? e.detail.current : e.target.current;
+				console.log('当前切换到的索引:', current);
+				
+				// 更新当前索引
+				this.tabCurrentIndex = current;
+				
+				// 如果当前选项卡没有数据，则加载数据
+				if (this.navList[this.tabCurrentIndex].invoiceList.length === 0) {
+					this.loadData(true);
+				}
 			},
 			
 			// 加载发票数据
-			loadData(refresh = false){
+			loadData(refresh = false, showLoading = false){
 				// 获取当前选项卡的状态和数据集合
 				const currentTab = this.navList[this.tabCurrentIndex];
 				
-				// 如果是刷新则清空原有数据
+				// 如果是刷新则清空原有数据和重置页码
 				if(refresh){
 					this.pageNum = 1;
 					currentTab.invoiceList = [];
+					currentTab.loadingType = 'more';
 				}
 				
 				// 如果已经是最后一页则不加载
@@ -198,37 +242,91 @@
 				// 设置为加载中状态
 				currentTab.loadingType = 'loading';
 				
-				// 请求后台数据
-                fetchInvoiceList({
-						status: currentTab.state,
-						pageNum: this.pageNum,
-						pageSize: this.pageSize
-					}).then(res => {
-					if(res.data && res.data.code === 200){
-						const data = res.data.data;
-						// 添加数据
-						currentTab.invoiceList = currentTab.invoiceList.concat(data.list);
-						// 当前页是否是最后一页
-						if(data.list.length < this.pageSize){
-							currentTab.loadingType = 'noMore';
-						}else{
-							currentTab.loadingType = 'more';
-							this.pageNum++;
+				// 如果需要显示loading
+				if(showLoading) {
+					uni.showLoading({
+						title: '加载中'
+					});
+				}
+				
+				// 构建API参数
+				const params = {
+					pageNum: this.pageNum,
+					pageSize: this.pageSize
+				};
+				
+				// 只有当状态不是全部时才添加状态过滤
+				if(currentTab.state !== -1) {
+					params.status = currentTab.state;
+				}
+				
+				console.log('发送请求参数:', params, '当前选项卡索引:', this.tabCurrentIndex);
+				
+				// 使用setTimeout确保UI更新后再发送请求
+				const that = this; // 保存this引用以便在setTimeout中使用
+				setTimeout(() => {
+					// 请求后台数据
+					fetchInvoiceList(params).then(res => {
+						// 如果显示了loading则隐藏
+						if(showLoading) {
+							uni.hideLoading();
 						}
-					} else {
+						
+						console.log('获取发票列表响应:', res);
+						// 注意：确保响应数据的处理正确
+						if(res && res.code === 200){
+							// 获取正确的数据结构
+							const data = res.data;
+							console.log('获取到的发票数据:', data);
+							
+							// 检查数据结构是否符合预期
+							if(data && data.list) {
+								// 添加数据
+								currentTab.invoiceList = currentTab.invoiceList.concat(data.list);
+								console.log(`当前选项卡(${that.tabCurrentIndex})数据长度:`, currentTab.invoiceList.length);
+								
+								// 当前页是否是最后一页
+								if(data.list.length < that.pageSize){
+									currentTab.loadingType = 'noMore';
+								}else{
+									currentTab.loadingType = 'more';
+									that.pageNum++;
+								}
+							} else {
+								// 没有数据或数据结构不对
+								currentTab.loadingType = 'noMore';
+								console.log('API返回的数据结构不符合预期:', data);
+							}
+						} else {
+							currentTab.loadingType = 'more';
+							uni.showToast({
+								title: (res && res.message) || '获取发票列表失败',
+								icon: 'none'
+							});
+						}
+					})
+					.catch(err => {
+						console.error('获取发票列表错误:', err);
 						currentTab.loadingType = 'more';
-						this.$api.msg(res.data.message || '获取发票列表失败');
-					}
-				})
-				.catch(err => {
-					console.error(err);
-					currentTab.loadingType = 'more';
-					this.$api.msg('获取发票列表失败');
-				});
+						uni.showToast({
+							title: '获取发票列表失败',
+							icon: 'none'
+						});
+					});
+				}, 500);
 			},
 			
 			// 查看发票详情
 			showInvoiceDetail(id){
+				console.log('查看发票详情, ID:', id);
+				if(!id) {
+					uni.showToast({
+						title: '发票ID不存在',
+						icon: 'none'
+					});
+					return;
+				}
+				
 				uni.navigateTo({
 					url: `/pages/order/invoice-detail?id=${id}`
 				});
@@ -257,6 +355,12 @@
 						}
 					}
 				});
+			},
+			
+			// 刷新当前选项卡的数据
+			refreshCurrentTab() {
+				console.log('刷新当前选项卡', this.tabCurrentIndex);
+				this.loadData(true, true); // 传入true表示显示loading
 			}
 		}
 	}
@@ -301,6 +405,12 @@
 					background: linear-gradient(to right, #ff3456, #ff347d);
 				}
 			}
+		}
+		
+		.refresh-btn {
+			padding: 0 20rpx;
+			font-size: 28rpx;
+			color: #909399;
 		}
 	}
 	
@@ -407,5 +517,14 @@
 	
 	.b-b {
 		border-bottom: 1rpx solid #f2f2f2;
+	}
+	
+	.debug-info {
+		padding: 10px;
+		background-color: #fffbe5;
+		color: #8f6500;
+		font-size: 12px;
+		margin-bottom: 10px;
+		border-radius: 4px;
 	}
 </style> 

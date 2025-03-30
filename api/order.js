@@ -150,6 +150,17 @@ export function fetchInvoiceList(data) {
 }
 
 /**
+ * 获取发票详情
+ * @param {number} id - 发票ID
+ */
+export function fetchInvoiceDetail(id) {
+	return request({
+		url: `/order/invoice/detail/${id}`,
+		method: 'get'
+	});
+}
+
+/**
  * 检查订单是否已申请过发票
  * @param {number} orderId - 订单ID
  */

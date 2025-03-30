@@ -91,6 +91,8 @@
 </template>
 
 <script>
+	import { fetchInvoiceDetail } from '@/api/order.js';
+
 	export default {
 		data() {
 			return {
@@ -161,18 +163,25 @@
 					title: '加载中'
 				});
 				
-				this.$api.request(`order/invoice/detail/${this.id}`, 'GET', {})
+				fetchInvoiceDetail(this.id)
 					.then(res => {
-						if (res.data && res.data.code === 200) {
-							this.invoice = res.data.data;
+						console.log('获取发票详情响应:', res);
+						if (res && res.code === 200) {
+							this.invoice = res.data;
 						} else {
-							this.$api.msg(res.data.message || '获取发票详情失败');
+							uni.showToast({
+								title: res.message || '获取发票详情失败',
+								icon: 'none'
+							});
 						}
 						uni.hideLoading();
 					})
 					.catch(err => {
-						console.error(err);
-						this.$api.msg('获取发票详情失败');
+						console.error('获取发票详情错误:', err);
+						uni.showToast({
+							title: '获取发票详情失败',
+							icon: 'none'
+						});
 						uni.hideLoading();
 					});
 			},
