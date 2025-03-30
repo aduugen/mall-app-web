@@ -420,7 +420,7 @@
 			position: relative;
 			
 			&.current {
-				color: #fa436a;
+				color: #3366cc;
 				
 				&:after {
 					content: '';
@@ -430,7 +430,7 @@
 					transform: translateX(-50%);
 					width: 44rpx;
 					height: 4rpx;
-					background: linear-gradient(to right, #ff3456, #ff347d);
+					background: linear-gradient(to right, #2255aa, #3366cc);
 				}
 			}
 		}
@@ -463,6 +463,7 @@
 			font-size: 24rpx;
 			color: #909399;
 			padding: 20rpx 30rpx;
+			background-color: #eef2fa;
 			
 			.time {
 				flex: 1;
@@ -500,12 +501,13 @@
 					
 					.content {
 						flex: 1;
+						padding-left: 10rpx;
 						font-size: 26rpx;
 						color: #303133;
 						word-break: break-all;
 						
 						&.price {
-							color: #fa436a;
+							color: #3366cc;
 							font-weight: bold;
 						}
 					}
@@ -521,9 +523,9 @@
 				.action-btn {
 					height: 60rpx;
 					padding: 0 30rpx;
-					border: 1rpx solid #fa436a;
+					border: 1rpx solid #3366cc;
 					border-radius: 30rpx;
-					color: #fa436a;
+					color: #3366cc;
 					font-size: 26rpx;
 					display: flex;
 					align-items: center;
@@ -534,8 +536,8 @@
 						width: 10rpx;
 						height: 10rpx;
 						margin-left: 10rpx;
-						border-top: 2rpx solid #fa436a;
-						border-right: 2rpx solid #fa436a;
+						border-top: 2rpx solid #3366cc;
+						border-right: 2rpx solid #3366cc;
 						transform: rotate(45deg);
 					}
 				}

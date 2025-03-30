@@ -277,7 +277,7 @@
 		.card-header {
 			position: relative;
 			height: 160rpx;
-			background: linear-gradient(to right, #ff3456, #ff347d);
+			background: linear-gradient(to right, #2255aa, #3366cc);
 			padding: 30rpx;
 			
 			.invoice-status {
@@ -311,7 +311,7 @@
 				font-weight: bold;
 				color: #303133;
 				margin: 30rpx 0 15rpx;
-				border-left: 4rpx solid #fa436a;
+				border-left: 4rpx solid #3366cc;
 				padding-left: 15rpx;
 			}
 			
@@ -333,7 +333,7 @@
 					
 					&.price {
 						font-weight: bold;
-						color: #fa436a;
+						color: #3366cc;
 					}
 				}
 			}
@@ -361,14 +361,14 @@
 			.action-btn {
 				margin-top: 30rpx;
 				height: 80rpx;
-				background: linear-gradient(to right, #ff3456, #ff347d);
+				background: linear-gradient(to right, #2255aa, #3366cc);
 				color: #fff;
 				border-radius: 40rpx;
 				display: flex;
 				justify-content: center;
 				align-items: center;
 				font-size: 28rpx;
-				box-shadow: 0 10rpx 20rpx rgba(255, 52, 86, 0.2);
+				box-shadow: 0 10rpx 20rpx rgba(51, 102, 204, 0.2);
 			}
 		}
 	}
