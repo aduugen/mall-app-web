@@ -26,6 +26,16 @@
 			</view>
 		</view>
 		
+		<!-- 位置信息展示区 -->
+		<view class="location-section" @click="chooseLocation" style="margin-top: 15upx;">
+			<view class="location-inner">
+				<text class="yticon icon-dizhi"></text>
+				<text class="yticon icon-dingwei"></text>
+				<text class="location-text">{{location.name || '定位中...'}}</text>
+				<text class="location-tips">切换位置</text>
+			</view>
+		</view>
+
 		<!-- 秒杀专区 -->
 		<view class="f-header m-t" v-if="homeFlashPromotion!==null">
 			<image src="/static/icon_flash_promotion.png"></image>
@@ -220,6 +230,7 @@
 			    timeRemaining: { hours: 0, minutes: 0, seconds: 0 },
 				searchContent:'',
 				cartItemsMap: {}, // 存储购物车中每个商品的数量
+				location: { name: '' },
 			};
 		},
 		onLoad() {
@@ -227,6 +238,8 @@
 			this.loadData();
 			// 加载购物车数据
 			this.loadCartItems();
+			// 获取用户位置
+			this.getUserLocation();
 		},
 		onShow() {
 			// 页面每次显示时都重新获取购物车数据
@@ -780,7 +793,81 @@
 						this.navToDetailPage(item);
 					}, 1500);
 				});
-			}
+			},
+			// 获取用户位置
+			getUserLocation() {
+				// 先检查本地存储是否有位置信息
+				const savedLocation = uni.getStorageSync('userLocation');
+				if (savedLocation) {
+					console.log('使用本地存储的位置信息:', savedLocation);
+					this.location = savedLocation;
+					return;
+				}
+				
+				uni.getLocation({
+					type: 'gcj02',
+					success: res => {
+						console.log('定位成功:', res);
+						this.reverseGeocode(res.latitude, res.longitude);
+					},
+					fail: err => {
+						console.error('定位失败:', err);
+						this.location.name = '无法获取位置';
+					}
+				});
+			},
+			
+			// 根据经纬度获取位置名称
+			reverseGeocode(latitude, longitude) {
+				// 使用uni-app提供的接口进行反向地理编码
+				uni.request({
+					url: `https://apis.map.qq.com/ws/geocoder/v1/?location=${latitude},${longitude}&key=您的腾讯地图密钥`,  // 需要替换为真实的地图API密钥
+					success: res => {
+						if (res.statusCode === 200 && res.data.status === 0) {
+							// 提取位置信息
+							const result = res.data.result;
+							this.location = {
+								name: result.address_component.district,
+								fullAddress: result.address,
+								latitude,
+								longitude
+							};
+							console.log('位置解析成功:', this.location);
+							
+							// 存储位置信息到本地
+							uni.setStorageSync('userLocation', this.location);
+						} else {
+							console.error('位置解析失败:', res);
+							this.location.name = '位置解析失败';
+						}
+					},
+					fail: err => {
+						console.error('请求地址解析失败:', err);
+						this.location.name = '位置解析失败';
+					}
+				});
+			},
+			
+			// 打开位置选择器
+			chooseLocation() {
+				uni.chooseLocation({
+					success: res => {
+						console.log('选择位置成功:', res);
+						this.location = {
+							name: res.name,
+							fullAddress: res.address,
+							latitude: res.latitude,
+							longitude: res.longitude
+						};
+						
+						// 存储位置信息到本地
+						uni.setStorageSync('userLocation', this.location);
+					},
+					fail: err => {
+						console.error('选择位置失败:', err);
+					}
+				});
+			},
 		},
 		// 标题栏input搜索框点击
 		onNavigationBarSearchInputClicked(e) {
@@ -818,13 +905,13 @@
 <style lang="scss">
 	/* #ifdef MP */
 	.mp-search-box {
-		position: absolute;
-		left: 0;
-		top: 30upx;
+		position: fixed;
+		top: 0;
 		z-index: 9999;
 		width: 100%;
-		padding: 0 80upx;
-
+		background-color: #fff;
+		padding: 0 0 20upx 0;
+		
 		.ser-input {
 			flex: 1;
 			height: 56upx;
@@ -834,6 +921,7 @@
 			color: $font-color-base;
 			border-radius: 20px;
 			background: rgba(255, 255, 255, .6);
+			margin: 0 30upx;
 		}
 	}
 
@@ -1132,23 +1220,23 @@
 			display: flex;
 			flex-direction: column;
 		}
-
+			
 		.tit {
 			font-size: $font-lg +2upx;
 			color: $font-color-dark;
 			line-height: 1.3;
 		}
-
+			
 		.tit2 {
 			font-size: $font-sm;
 			color: $font-color-light;
 		}
-
+			
 		.icon-you {
 			font-size: $font-lg +2upx;
 			color: $font-color-light;
 		}
-
+		
 		.timer {
 			display: inline-block;
 			width: 40upx;
@@ -1160,6 +1248,31 @@
 			color: #fff;
 			border-radius: 2px;
 			background: rgba(0, 0, 0, .8);
+		}
+	}
+
+	.header {
+		display: flex;
+		flex-direction: column;
+		padding: 20upx 0;
+		background-color: #fff;
+		position: relative;
+		z-index: 10;
+		
+		.search-box {
+			width: 100%;
+			
+			.ser-input {
+				flex:1;
+				height:56upx;
+				line-height:56upx;
+				text-align: center;
+				font-size:28upx;
+				color:$font-color-base;
+				border-radius:20px;
+				background: #f5f5f5;
+				margin:0 30upx;
+			}
 		}
 	}
 
@@ -1372,5 +1485,83 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	/* 位置信息展示区 */
+	.location-section {
+		padding: 0;
+		background: #fff;
+		position: relative;
+		margin-top: 10upx;
+		
+		.location-inner {
+			display: flex;
+			align-items: center;
+			height: 80upx;
+			padding: 0 30upx;
+			background: linear-gradient(to right, #f8f8f8, #f2f2f2);
+			border-radius: 0;
+			margin: 0;
+			width: 100%;
+			box-sizing: border-box;
+			box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.1);
+			
+			.yticon {
+				font-size: 38upx;
+				color: #286090;
+				margin-right: 10upx;
+			}
+			
+			.location-icon {
+				color: #f04c41;
+				font-size: 32upx;
+				margin-right: 10upx;
+			}
+			
+			.location-text {
+				flex: 1;
+				font-size: 28upx;
+				color: #333;
+				margin-right: 10upx;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				font-weight: bold;
+			}
+			
+			.location-tips {
+				font-size: 24upx;
+				color: #666;
+				position: relative;
+				padding-left: 15upx;
+				
+				&:before {
+					content: '';
+					position: absolute;
+					left: 0;
+					top: 50%;
+					transform: translateY(-50%);
+					width: 1px;
+					height: 20upx;
+					background: #ddd;
+				}
+			}
+			
+			&:active {
+				background: linear-gradient(to right, #f0f0f0, #e8e8e8);
+				transform: scale(0.98);
+				transition: all 0.2s;
+			}
+		}
+		
+		&:after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 1px;
+			background: #eee;
+		}
 	}
 </style>
