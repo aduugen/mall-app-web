@@ -119,6 +119,30 @@
 			if (options.orderId) {
 				this.orderId = options.orderId;
 				console.log('order id is:', this.orderId);
+				
+				// 检查订单是否已申请过发票
+				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+				const orderId = parseInt(this.orderId);
+				if (invoicedOrderList.includes(orderId)) {
+					uni.showModal({
+						title: '温馨提示',
+						content: '该订单发票申请已提交，请前往我的发票查看申请进展',
+						confirmText: '查看发票',
+						cancelText: '返回',
+						success: (result) => {
+							if (result.confirm) {
+								// 跳转到我的发票页面
+								uni.navigateTo({
+									url: '/pages/order/invoice-list'
+								});
+							} else {
+								uni.navigateBack();
+							}
+						}
+					});
+					return;
+				}
+				
 				// 获取订单信息
 				this.getOrderInfo();
 			}
@@ -165,12 +189,10 @@
 							console.error('获取订单信息失败', res);
 							this.showToast('获取订单信息失败: ' + (res ? res.message : '未知错误'));
 						}
-						uni.hideLoading();
 					})
 					.catch(err => {
 						console.error('获取订单信息异常', err);
 						this.showToast('获取订单信息失败: ' + (err.message || '服务器错误'));
-						uni.hideLoading();
 					})
 					.finally(() => {
 						// 确保在任何情况下都会隐藏加载提示
@@ -239,7 +261,7 @@
 				
 				// 构建提交数据
 				const params = {
-					orderId: this.orderId,
+					orderId: parseInt(this.orderId),
 					orderSn: this.orderSn,
 					invoiceType: this.invoiceForm.type,
 					titleType: this.invoiceForm.titleType,
@@ -259,6 +281,17 @@
 						console.log('申请发票响应:', res);
 						uni.hideLoading();
 						if (res && res.code === 200) {
+							// 添加订单ID到已申请发票的缓存
+							const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+							const orderId = parseInt(this.orderId);
+							if (!invoicedOrderList.includes(orderId)) {
+								invoicedOrderList.push(orderId);
+								uni.setStorageSync('invoicedOrders', invoicedOrderList);
+							}
+							
+							// 通知订单列表页刷新
+							uni.$emit('orderInvoiceApplied', orderId);
+							
 							uni.showToast({
 								title: '申请成功',
 								icon: 'success',
@@ -277,26 +310,36 @@
 					.catch(err => {
 						// 判断是否是重复申请的错误
 						if (err.statusCode === 200 &&  err.data.code === 500 && (err.data.message.includes('已申请过发票') || err.data.message.includes('该订单已申请'))) {
-								uni.showModal({
-									title: '温馨提示',
-									content: '该订单发票申请已提交，请前往我的发票查看申请进展',
-									confirmText: '查看发票',
-									cancelText: '返回',
-									success: (result) => {
-										if (result.confirm) {
-											// 跳转到我的发票页面
-											uni.navigateTo({
-												url: '/pages/order/invoice-list'
-											});
-										} else {
-											uni.navigateBack();
-										}
+							// 添加订单ID到已申请发票的缓存
+							const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+							const orderId = parseInt(this.orderId);
+							if (!invoicedOrderList.includes(orderId)) {
+								invoicedOrderList.push(orderId);
+								uni.setStorageSync('invoicedOrders', invoicedOrderList);
+							}
+								
+							// 通知订单列表页刷新
+							uni.$emit('orderInvoiceApplied', orderId);
+								
+							uni.showModal({
+								title: '温馨提示',
+								content: '该订单发票申请已提交，请前往我的发票查看申请进展',
+								confirmText: '查看发票',
+								cancelText: '返回',
+								success: (result) => {
+									if (result.confirm) {
+										// 跳转到我的发票页面
+										uni.navigateTo({
+											url: '/pages/order/invoice-list'
+										});
+									} else {
+										uni.navigateBack();
 									}
-								});
-							} else {
-								this.showToast(err ? err.message : '申请失败');
-							}		
-						uni.hideLoading();
+								}
+							});
+						} else {
+							this.showToast(err ? err.message : '申请失败');
+						}		
 					})
 					.finally(() => {
 						// 确保在任何情况下都会隐藏加载提示

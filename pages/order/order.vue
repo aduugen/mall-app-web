@@ -45,7 +45,7 @@
 							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
-							<button class="action-btn" @click="invoiceOrder(item)">开具发票</button>
+							<button class="action-btn" v-if="!isInvoiced(item.id)" @click="invoiceOrder(item)">开具发票</button>
 							<button class="action-btn" @click="applyAfterSale(item)">申请售后</button>
 							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
@@ -108,6 +108,7 @@
 						text: '已完成'
 					}
 				],
+				invoicedOrderList: [],
 			};
 		},
 		onLoad(options) {
@@ -129,10 +130,29 @@
 			uni.$on('orderListRefresh', () => {
 				this.loadData();
 			});
+			
+			// 监听发票申请成功事件
+			uni.$on('orderInvoiceApplied', (orderId) => {
+				this.updateInvoiceStatus(orderId);
+			});
 		},
 		onUnload() {
 			// 页面卸载时移除事件监听
 			uni.$off('orderListRefresh');
+			uni.$off('orderInvoiceApplied');
+		},
+		onShow() {
+			// 从本地缓存中读取已申请发票的订单ID列表
+			this.invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+			console.log('订单列表页面 - 已申请发票订单列表:', this.invoicedOrderList);
+			
+			// 检查可能需要隐藏的开具发票按钮
+			if (this.orderList && this.orderList.length > 0) {
+				for (let i = 0; i < this.orderList.length; i++) {
+					let orderId = parseInt(this.orderList[i].id);
+					console.log(`检查订单${orderId}是否已申请发票:`, this.invoicedOrderList.includes(orderId));
+				}
+			}
 		},
 		filters: {
 			formatStatus(status) {
@@ -204,6 +224,9 @@
 							this.loadingType = 'noMore';
 						}
 					}
+					
+					// 加载完数据后处理订单发票状态
+					this.updateOrderInvoiceStatus();
 				});
 			},
 			//swiper 切换
@@ -335,9 +358,84 @@
 			},
 			//开具发票
 			invoiceOrder(order) {
+				// 从本地缓存中获取已申请发票的订单列表
+				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+				const orderId = parseInt(order.id);
+				
+				console.log('开具发票检查 - 订单ID:', orderId, '类型:', typeof orderId);
+				console.log('已申请发票订单列表:', invoicedOrderList);
+				console.log('是否包含该订单ID:', invoicedOrderList.includes(orderId));
+				
+				// 如果该订单已申请过发票，则提示用户
+				if (invoicedOrderList.includes(orderId)) {
+					uni.showModal({
+						title: '温馨提示',
+						content: '该订单发票申请已提交，请前往我的发票查看申请进展',
+						confirmText: '查看发票',
+						cancelText: '返回',
+						success: (result) => {
+							if (result.confirm) {
+								// 跳转到我的发票页面
+								uni.navigateTo({
+									url: '/pages/order/invoice-list'
+								});
+							}
+						}
+					});
+					return;
+				}
+				
+				// 否则跳转到发票申请页面
 				uni.navigateTo({
-					url: `/pages/order/invoice?orderId=${order.id}`
+					url: `/pages/order/invoice?orderId=${orderId}`
 				});
+			},
+			// 更新订单的发票状态
+			updateInvoiceStatus(orderId) {
+				if (!this.orderList || this.orderList.length === 0) return;
+				
+				// 确保orderId是数字类型
+				orderId = parseInt(orderId);
+				
+				// 获取最新的已申请发票订单列表
+				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+				
+				// 如果当前订单列表中包含了刚申请过发票的订单，则更新UI
+				for (let i = 0; i < this.orderList.length; i++) {
+					if (parseInt(this.orderList[i].id) === orderId) {
+						// 由于无法直接修改订单对象添加一个新属性，我们使用整个列表的重新赋值来触发视图更新
+						const updatedOrderList = [...this.orderList];
+						updatedOrderList[i] = { ...updatedOrderList[i], invoiceApplied: true };
+						this.orderList = updatedOrderList;
+						
+						// 刷新已申请发票订单列表
+						this.invoicedOrderList = invoicedOrderList;
+						break;
+					}
+				}
+			},
+			// 更新订单的发票状态
+			updateOrderInvoiceStatus() {
+				if (!this.orderList || this.orderList.length === 0) return;
+				
+				// 获取最新的已申请发票订单列表
+				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+				
+				// 如果当前订单列表中包含了刚申请过发票的订单，则更新UI
+				for (let i = 0; i < this.orderList.length; i++) {
+					if (invoicedOrderList.includes(parseInt(this.orderList[i].id))) {
+						// 由于无法直接修改订单对象添加一个新属性，我们使用整个列表的重新赋值来触发视图更新
+						const updatedOrderList = [...this.orderList];
+						updatedOrderList[i] = { ...updatedOrderList[i], invoiceApplied: true };
+						this.orderList = updatedOrderList;
+						
+						// 刷新已申请发票订单列表
+						this.invoicedOrderList = invoicedOrderList;
+					}
+				}
+			},
+			isInvoiced(orderId) {
+				return this.invoicedOrderList.includes(parseInt(orderId));
 			},
 		},
 	}

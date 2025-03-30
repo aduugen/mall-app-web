@@ -148,3 +148,14 @@ export function fetchInvoiceList(data) {
 		params: data
 	});
 }
+
+/**
+ * 检查订单是否已申请过发票
+ * @param {number} orderId - 订单ID
+ */
+export function checkOrderInvoice(orderId) {
+	return request({
+		url: `/order/invoice/check/${orderId}`,
+		method: 'get'
+	});
+}

@@ -126,7 +126,7 @@
 			<view class="btn" v-if="order.status == 0" @click="doPay">立即支付</view>
 			<view class="btn" v-if="order.status == 2" @click="confirmReceipt">确认收货</view>
 			<view class="btn" v-if="order.status == 4" @click="toComment(order.id)">评价订单</view>
-			<view class="btn" v-if="order.status == 3 || order.status == 4" @click="toApplyInvoice">申请发票</view>
+			<view class="btn" v-if="(order.status == 3 || order.status == 4) && !isInvoiced" @click="toApplyInvoice">申请发票</view>
 		</view>
 
 	</view>
@@ -146,13 +146,27 @@
 			return {
 				orderId: null,
 				order: {},
-				orderStatus: {}
+				orderStatus: {},
+				isInvoiced: false
 			}
 		},
 		onLoad(option) {
 			//商品数据
 			this.orderId = option.orderId;
 			this.loadData();
+			
+			// 从本地缓存中读取已申请发票的订单ID列表
+			const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+			this.isInvoiced = invoicedOrderList.includes(parseInt(this.orderId));
+		},
+		onShow() {
+			// 每次显示页面时重新检查发票状态
+			const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+			console.log('订单详情页面 - 已申请发票订单列表:', invoicedOrderList);
+			console.log('当前订单ID:', this.orderId, '类型:', typeof this.orderId);
+			
+			this.isInvoiced = invoicedOrderList.includes(parseInt(this.orderId));
+			console.log('是否已申请发票:', this.isInvoiced);
 		},
 		filters: {
 			formatProductAttr(jsonAttr) {
@@ -190,6 +204,7 @@
 				fetchOrderDetail(this.orderId).then(response => {
 					this.order = response.data;
 					this.setOrderStatus(this.order.status);
+					this.isInvoiced = this.order.isInvoiced;
 				});
 			},
 			submit() {},
@@ -281,6 +296,27 @@
 				})
 			},
 			toApplyInvoice() {
+				// 再次检查是否已申请发票
+				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
+				if (invoicedOrderList.includes(parseInt(this.orderId))) {
+					uni.showModal({
+						title: '温馨提示',
+						content: '该订单发票申请已提交，请前往我的发票查看申请进展',
+						confirmText: '查看发票',
+						cancelText: '返回',
+						success: (result) => {
+							if (result.confirm) {
+								// 跳转到我的发票页面
+								uni.navigateTo({
+									url: '/pages/order/invoice-list'
+								});
+							}
+						}
+					});
+					return;
+				}
+				
+				// 否则跳转到发票申请页面
 				uni.navigateTo({
 					url: `/pages/order/invoice?orderId=${this.orderId}`
 				});
