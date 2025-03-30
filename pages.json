@@ -277,6 +277,18 @@
 			"style": {
 				"navigationBarTitleText": "开具发票"
 			}
+		},
+		{
+			"path": "pages/order/invoice-list",
+			"style": {
+				"navigationBarTitleText": "我的发票"
+			}
+		},
+		{
+			"path": "pages/order/invoice-detail",
+			"style": {
+				"navigationBarTitleText": "发票详情"
+			}
 		}
 	],
 	"globalStyle": {

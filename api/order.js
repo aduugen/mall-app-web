@@ -128,3 +128,23 @@ export function getOrderProductsForComment(orderId) {
 		method: 'get'
 	});
 }
+
+/**
+ * 申请发票
+ * @param {Object} data
+ */
+export function applyInvoice(data) {
+	return request({
+		url: '/order/invoice/apply',
+		method: 'post',
+		data: data
+	});
+}
+
+export function fetchInvoiceList(data) {
+	return request({
+		url: '/order/invoice/list',
+		method: 'get',
+		params: data
+	});
+}

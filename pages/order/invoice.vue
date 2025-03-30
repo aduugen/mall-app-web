@@ -88,6 +88,10 @@
 </template>
 
 <script>
+	import {
+		fetchOrderDetail
+	} from '@/api/order.js';
+
 	export default {
 		data() {
 			return {
@@ -124,8 +128,7 @@
 					title: '加载中'
 				});
 				
-				this.$api.request('order/detail/' + this.orderId, 'GET', {})
-					.then(res => {
+				fetchOrderDetail(this.orderId).then(res => {
 						if (res.data && res.data.code === 200) {
 							const orderDetail = res.data.data;
 							this.orderSn = orderDetail.orderSn;
@@ -157,6 +160,12 @@
 						console.error(err);
 						this.showToast('获取订单信息失败');
 						uni.hideLoading();
+					})
+					.finally(() => {
+						// 确保在任何情况下都会隐藏加载提示
+						setTimeout(() => {
+							uni.hideLoading();
+						}, 500);
 					});
 			},
 			
@@ -233,8 +242,7 @@
 				};
 				
 				// 调用申请发票API
-				this.$api.request('order/invoice/apply', 'POST', params)
-					.then(res => {
+				applyInvoice(params).then(res => {
 						uni.hideLoading();
 						if (res.data && res.data.code === 200) {
 							uni.showToast({
@@ -256,6 +264,12 @@
 						console.error(err);
 						uni.hideLoading();
 						this.showToast('申请失败，请稍后重试');
+					})
+					.finally(() => {
+						// 确保在任何情况下都会隐藏加载提示
+						setTimeout(() => {
+							uni.hideLoading();
+						}, 500);
 					});
 			},
 			

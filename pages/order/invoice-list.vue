@@ -69,7 +69,7 @@
 <script>
 	import uniLoadMore from '@/components/uni-load-more/uni-load-more.vue';
 	import empty from "@/components/empty";
-	import moment from 'moment';
+	import { fetchInvoiceList } from '@/api/order.js';
 	
 	export default {
 		components: {
@@ -115,8 +115,16 @@
 		},
 		methods: {
 			// 格式化时间
-			formatDate(date) {
-				return moment(date).format('YYYY-MM-DD HH:mm:ss');
+			formatDate(dateStr) {
+				if (!dateStr) return '';
+				const date = new Date(dateStr);
+				const year = date.getFullYear();
+				const month = String(date.getMonth() + 1).padStart(2, '0');
+				const day = String(date.getDate()).padStart(2, '0');
+				const hours = String(date.getHours()).padStart(2, '0');
+				const minutes = String(date.getMinutes()).padStart(2, '0');
+				const seconds = String(date.getSeconds()).padStart(2, '0');
+				return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 			},
 			
 			// 获取状态名称
@@ -191,16 +199,11 @@
 				currentTab.loadingType = 'loading';
 				
 				// 请求后台数据
-				this.$api.request(
-					'order/invoice/list', 
-					'GET', 
-					{
+                fetchInvoiceList({
 						status: currentTab.state,
 						pageNum: this.pageNum,
 						pageSize: this.pageSize
-					}
-				)
-				.then(res => {
+					}).then(res => {
 					if(res.data && res.data.code === 200){
 						const data = res.data.data;
 						// 添加数据
