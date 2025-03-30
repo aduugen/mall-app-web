@@ -89,13 +89,14 @@
 
 <script>
 	import {
-		fetchOrderDetail
+		fetchOrderDetail,
+		applyInvoice
 	} from '@/api/order.js';
 
 	export default {
 		data() {
 			return {
-				orderId: '',
+				orderId: null,
 				orderSn: '',
 				orderAmount: '0.00',
 				contentList: ['商品明细', '商品类别'],
@@ -116,6 +117,7 @@
 		onLoad(options) {
 			if (options.orderId) {
 				this.orderId = options.orderId;
+				console.log('order id is:', this.orderId);
 				// 获取订单信息
 				this.getOrderInfo();
 			}
@@ -128,9 +130,10 @@
 					title: '加载中'
 				});
 				
+				
 				fetchOrderDetail(this.orderId).then(res => {
-						if (res.data && res.data.code === 200) {
-							const orderDetail = res.data.data;
+						if (res.data && res.code === 200) { 
+							const orderDetail = res.data;
 							this.orderSn = orderDetail.orderSn;
 							this.orderAmount = orderDetail.totalAmount;
 							
@@ -152,13 +155,12 @@
 									orderDetail.receiverDetailAddress;
 							}
 						} else {
-							this.showToast('获取订单信息失败');
+							this.showToast('获取订单信息失败: ' + (res.data ? res.data.message : '未知错误'));
 						}
 						uni.hideLoading();
 					})
 					.catch(err => {
-						console.error(err);
-						this.showToast('获取订单信息失败');
+						this.showToast('获取订单信息失败2: ' + (err.message || '服务器错误'));
 						uni.hideLoading();
 					})
 					.finally(() => {
@@ -244,7 +246,7 @@
 				// 调用申请发票API
 				applyInvoice(params).then(res => {
 						uni.hideLoading();
-						if (res.data && res.data.code === 200) {
+						if (res.data && res.code === 200) {
 							uni.showToast({
 								title: '申请成功',
 								icon: 'success',
@@ -257,7 +259,7 @@
 								}
 							});
 						} else {
-							this.showToast(res.data.message || '申请失败');
+							this.showToast(res.message || '申请失败');
 						}
 					})
 					.catch(err => {
