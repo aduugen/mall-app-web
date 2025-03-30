@@ -121,6 +121,14 @@
 			</view>
 		</view>
 
+		<view class="action-section">
+			<view class="btn" v-if="order.status == 0" @click="cancelOrder">取消订单</view>
+			<view class="btn" v-if="order.status == 0" @click="doPay">立即支付</view>
+			<view class="btn" v-if="order.status == 2" @click="confirmReceipt">确认收货</view>
+			<view class="btn" v-if="order.status == 4" @click="toComment(order.id)">评价订单</view>
+			<view class="btn" v-if="order.status == 3 || order.status == 4" @click="toApplyInvoice">申请发票</view>
+		</view>
+
 	</view>
 </template>
 
@@ -271,6 +279,11 @@
 				uni.navigateTo({
 					url
 				})
+			},
+			toApplyInvoice() {
+				uni.navigateTo({
+					url: `/pages/order/invoice?orderId=${this.orderId}`
+				});
 			}
 		}
 	}

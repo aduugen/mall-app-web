@@ -74,7 +74,7 @@
 			<view class="order-info">
 				<view class="info-item">
 					<text class="label">订单编号</text>
-					<text class="value">{{orderId}}</text>
+					<text class="value">{{orderSn}}</text>
 				</view>
 				<view class="info-item">
 					<text class="label">订单金额</text>
@@ -92,6 +92,7 @@
 		data() {
 			return {
 				orderId: '',
+				orderSn: '',
 				orderAmount: '0.00',
 				contentList: ['商品明细', '商品类别'],
 				contentIndex: 0,
@@ -118,18 +119,45 @@
 		methods: {
 			// 获取订单信息
 			getOrderInfo() {
-				// 这里应该调用获取订单详情的API
-				// 示例代码
+				// 调用获取订单详情的API
 				uni.showLoading({
 					title: '加载中'
 				});
 				
-				// 模拟API调用
-				setTimeout(() => {
-					// 模拟数据，实际应该从API获取
-					this.orderAmount = '299.00';
-					uni.hideLoading();
-				}, 500);
+				this.$api.request('order/detail/' + this.orderId, 'GET', {})
+					.then(res => {
+						if (res.data && res.data.code === 200) {
+							const orderDetail = res.data.data;
+							this.orderSn = orderDetail.orderSn;
+							this.orderAmount = orderDetail.totalAmount;
+							
+							// 自动填充用户信息
+							if (orderDetail.memberUsername) {
+								this.invoiceForm.title = orderDetail.memberUsername;
+							}
+							if (orderDetail.receiverName) {
+								this.invoiceForm.receiverName = orderDetail.receiverName;
+							}
+							if (orderDetail.receiverPhone) {
+								this.invoiceForm.receiverPhone = orderDetail.receiverPhone;
+							}
+							if (orderDetail.receiverDetailAddress) {
+								this.invoiceForm.receiverAddress = 
+									orderDetail.receiverProvince + 
+									orderDetail.receiverCity + 
+									orderDetail.receiverRegion + 
+									orderDetail.receiverDetailAddress;
+							}
+						} else {
+							this.showToast('获取订单信息失败');
+						}
+						uni.hideLoading();
+					})
+					.catch(err => {
+						console.error(err);
+						this.showToast('获取订单信息失败');
+						uni.hideLoading();
+					});
 			},
 			
 			// 发票类型切换
@@ -189,21 +217,46 @@
 					title: '提交中'
 				});
 				
-				// 模拟API调用
-				setTimeout(() => {
-					uni.hideLoading();
-					uni.showToast({
-						title: '申请成功',
-						icon: 'success',
-						duration: 2000,
-						success: () => {
-							// 2秒后返回上一页
-							setTimeout(() => {
-								uni.navigateBack();
-							}, 2000);
+				// 构建提交数据
+				const params = {
+					orderId: this.orderId,
+					orderSn: this.orderSn,
+					invoiceType: this.invoiceForm.type,
+					titleType: this.invoiceForm.titleType,
+					invoiceTitle: this.invoiceForm.title,
+					taxNumber: this.invoiceForm.taxNumber,
+					invoiceContent: this.invoiceForm.content,
+					receiverEmail: this.invoiceForm.email,
+					receiverName: this.invoiceForm.receiverName,
+					receiverPhone: this.invoiceForm.receiverPhone,
+					receiverAddress: this.invoiceForm.receiverAddress
+				};
+				
+				// 调用申请发票API
+				this.$api.request('order/invoice/apply', 'POST', params)
+					.then(res => {
+						uni.hideLoading();
+						if (res.data && res.data.code === 200) {
+							uni.showToast({
+								title: '申请成功',
+								icon: 'success',
+								duration: 2000,
+								success: () => {
+									// 2秒后返回上一页
+									setTimeout(() => {
+										uni.navigateBack();
+									}, 2000);
+								}
+							});
+						} else {
+							this.showToast(res.data.message || '申请失败');
 						}
+					})
+					.catch(err => {
+						console.error(err);
+						uni.hideLoading();
+						this.showToast('申请失败，请稍后重试');
 					});
-				}, 1000);
 			},
 			
 			// 显示提示
@@ -232,6 +285,7 @@
 		border-radius: 15rpx;
 		padding: 20rpx 30rpx;
 		margin-bottom: 20rpx;
+		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 	}
 	
 	.form-item {
@@ -247,6 +301,7 @@
 			width: 180rpx;
 			font-size: 28rpx;
 			color: #333;
+			font-weight: 500;
 		}
 		
 		.input-box {
@@ -270,6 +325,9 @@
 			height: 160rpx;
 			font-size: 28rpx;
 			color: #333;
+			padding: 10rpx;
+			background-color: #f9f9f9;
+			border-radius: 6rpx;
 		}
 		
 		.picker-box {
@@ -291,6 +349,7 @@
 		border-radius: 15rpx;
 		padding: 20rpx 30rpx;
 		margin-bottom: 30rpx;
+		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 		
 		.info-item {
 			display: flex;
@@ -306,6 +365,7 @@
 			.value {
 				&.price {
 					color: #fa436a;
+					font-weight: bold;
 				}
 			}
 		}
@@ -314,7 +374,7 @@
 	.submit-btn {
 		width: 90%;
 		height: 80rpx;
-		background-color: #fa436a;
+		background: linear-gradient(to right, #ff3456, #ff347d);
 		color: #fff;
 		border-radius: 40rpx;
 		display: flex;
@@ -322,5 +382,7 @@
 		align-items: center;
 		font-size: 32rpx;
 		margin: 50rpx auto;
+		box-shadow: 0 10rpx 20rpx rgba(255, 52, 86, 0.2);
+		font-weight: bold;
 	}
 </style> 
