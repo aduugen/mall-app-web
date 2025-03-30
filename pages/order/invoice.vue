@@ -96,6 +96,7 @@
 	export default {
 		data() {
 			return {
+				response: null,
 				orderId: null,
 				orderSn: '',
 				orderAmount: '0.00',
@@ -130,12 +131,18 @@
 					title: '加载中'
 				});
 				
+				// 添加日志
+				console.log('开始获取订单信息，orderId:', this.orderId);
 				
 				fetchOrderDetail(this.orderId).then(res => {
-						if (res.data && res.code === 200) { 
+						console.log('获取订单详情响应:', res);
+						// 注意：res 本身就是响应数据，不需要通过 res.data 获取
+						if (res && res.code === 200) { 
 							const orderDetail = res.data;
 							this.orderSn = orderDetail.orderSn;
 							this.orderAmount = orderDetail.totalAmount;
+							
+							console.log('订单信息处理成功，orderSn:', this.orderSn);
 							
 							// 自动填充用户信息
 							if (orderDetail.memberUsername) {
@@ -155,12 +162,14 @@
 									orderDetail.receiverDetailAddress;
 							}
 						} else {
-							this.showToast('获取订单信息失败: ' + (res.data ? res.data.message : '未知错误'));
+							console.error('获取订单信息失败', res);
+							this.showToast('获取订单信息失败: ' + (res ? res.message : '未知错误'));
 						}
 						uni.hideLoading();
 					})
 					.catch(err => {
-						this.showToast('获取订单信息失败2: ' + (err.message || '服务器错误'));
+						console.error('获取订单信息异常', err);
+						this.showToast('获取订单信息失败: ' + (err.message || '服务器错误'));
 						uni.hideLoading();
 					})
 					.finally(() => {
@@ -243,10 +252,13 @@
 					receiverAddress: this.invoiceForm.receiverAddress
 				};
 				
+				console.log('提交发票申请参数:', params);
+				
 				// 调用申请发票API
 				applyInvoice(params).then(res => {
+						console.log('申请发票响应:', res);
 						uni.hideLoading();
-						if (res.data && res.code === 200) {
+						if (res && res.code === 200) {
 							uni.showToast({
 								title: '申请成功',
 								icon: 'success',
@@ -257,15 +269,34 @@
 										uni.navigateBack();
 									}, 2000);
 								}
-							});
+							});				    
 						} else {
-							this.showToast(res.message || '申请失败');
+							console.error('申请失败', res);
 						}
 					})
 					.catch(err => {
-						console.error(err);
+						// 判断是否是重复申请的错误
+						if (err.statusCode === 200 &&  err.data.code === 500 && (err.data.message.includes('已申请过发票') || err.data.message.includes('该订单已申请'))) {
+								uni.showModal({
+									title: '温馨提示',
+									content: '该订单发票申请已提交，请前往我的发票查看申请进展',
+									confirmText: '查看发票',
+									cancelText: '返回',
+									success: (result) => {
+										if (result.confirm) {
+											// 跳转到我的发票页面
+											uni.navigateTo({
+												url: '/pages/order/invoice-list'
+											});
+										} else {
+											uni.navigateBack();
+										}
+									}
+								});
+							} else {
+								this.showToast(err ? err.message : '申请失败');
+							}		
 						uni.hideLoading();
-						this.showToast('申请失败，请稍后重试');
 					})
 					.finally(() => {
 						// 确保在任何情况下都会隐藏加载提示
