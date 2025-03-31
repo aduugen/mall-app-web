@@ -315,6 +315,12 @@
 				"text": "分类"
 			},
 			{
+				"pagePath": "pages/index/search",
+				"iconPath": "static/tab-search.png",
+				"selectedIconPath": "static/tab-search-current.png",
+				"text": "搜索"
+			},
+			{
 				"pagePath": "pages/cart/cart",
 				"iconPath": "static/tab-cart.png",
 				"selectedIconPath": "static/tab-cart-current.png",
