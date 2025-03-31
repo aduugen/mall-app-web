@@ -18,7 +18,7 @@
 						"searchInput": {
 							"backgroundColor": "rgba(231, 231, 231,.7)",
 							"borderRadius": "15px",
-							"placeholder": "搜索书籍",
+							"placeholder": "搜索商品",
 							"disabled": true,
 							"placeholderColor": "#606266"
 						},

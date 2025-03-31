@@ -208,8 +208,8 @@
 		},
 		data() {
 			return {
-				titleNViewBackground: '',
-				titleNViewBackgroundList: ['rgba(40, 96, 144, 0.76)', 'rgba(40, 96, 144, 0.76)'],
+				titleNViewBackground: '#003366',
+				titleNViewBackgroundList: ['#003366', '#003366'],
 				swiperCurrent: 0,
 				swiperLength: 0,
 				carouselList: [],
@@ -986,7 +986,7 @@
 			width: 100%;
 			height: 426upx;
 			transition: .4s;
-			box-shadow: 0 8upx 20upx rgba(0, 0, 0, 0.2);
+			box-shadow: 0 8upx 30upx rgba(0, 0, 0, 0.4);
 		}
 	}
 
@@ -1006,7 +1006,7 @@
 			width: 100%;
 			height: 100%;
 			border-radius: 0;
-			box-shadow: 0 5upx 15upx rgba(0, 0, 0, 0.15);
+			box-shadow: 0 5upx 25upx rgba(0, 0, 0, 0.3);
 			object-fit: cover;
 			transform: translateY(0);
 		}
