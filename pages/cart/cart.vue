@@ -47,10 +47,6 @@
 						<text class="yticon icon-iconfontshanchu1"></text>
 						<text class="clear-btn-text">清空</text>
 					</view>
-					<view class="back-btn" @click="goBack">
-						<text class="yticon icon-zuo"></text>
-						<text class="back-btn-text">返回</text>
-					</view>
 				</view>
 				<view class="spacer"></view>
 				<button type="primary" class="no-border confirm-btn" @click="createOrder">结算(共{{selectedCount}}件)</button>
@@ -280,62 +276,6 @@
 						}
 					}
 				});
-			},
-			// 返回上一页
-			goBack() {
-				// 获取当前页面栈
-				const pages = getCurrentPages();
-				console.log('当前页面栈:', pages);
-				
-				// 由于购物车是 tabBar 页面，使用 navigateBack 可能无法正常返回
-				// 需要判断上一个页面的路径，直接导航到对应页面
-				
-				// 记录来源页面的路径，便于返回
-				const lastPage = uni.getStorageSync('cartLastPage');
-				console.log('上一个页面:', lastPage);
-				
-				if (lastPage && lastPage.path) {
-					// 如果存在记录的上一页，使用对应的导航方式返回
-					if (lastPage.path.indexOf('/pages/index/search') === 0) {
-						// 搜索页面使用 navigateTo 方式打开
-						uni.navigateTo({
-							url: lastPage.path,
-							success: () => {
-								console.log('成功返回到搜索页面');
-							},
-							fail: (err) => {
-								console.error('返回搜索页面失败:', err);
-								// 失败时默认返回首页
-								uni.switchTab({
-									url: '/pages/index/index'
-								});
-							}
-						});
-						return;
-					}
-				}
-				
-				// 如果没有特定的返回页面或者返回失败，尝试常规返回
-				if (pages.length > 1) {
-					uni.navigateBack({
-						delta: 1,
-						success: () => {
-							console.log('成功返回上一页');
-						},
-						fail: (err) => {
-							console.error('返回失败:', err);
-							// 如果返回失败，则跳转到首页
-							uni.switchTab({
-								url: '/pages/index/index'
-							});
-						}
-					});
-				} else {
-					// 如果页面栈中只有当前页面，则跳转到首页
-					uni.switchTab({
-						url: '/pages/index/index'
-					});
-				}
 			}
 		}
 	}
@@ -545,25 +485,6 @@
 			}
 			
 			.clear-btn-text {
-				font-size: 28upx;
-				color: $font-color-dark;
-				margin-left: 8upx;
-			}
-		}
-
-		.back-btn {
-			height: 52upx;
-			position: relative;
-			display: flex;
-			align-items: center;
-			margin-left: 25upx;
-
-			.yticon {
-				font-size: 38upx;
-				color: #286090;
-			}
-			
-			.back-btn-text {
 				font-size: 28upx;
 				color: $font-color-dark;
 				margin-left: 8upx;
