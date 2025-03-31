@@ -20,7 +20,9 @@
 							"borderRadius": "15px",
 							"placeholder": "搜索商品",
 							"disabled": true,
-							"placeholderColor": "#606266"
+							"placeholderColor": "#606266",
+							"autoFocus": false,
+							"onClick": "toSearch"
 						},
 						"buttons": [{
 								"fontSrc": "/static/fonts/yticon-all.ttf",

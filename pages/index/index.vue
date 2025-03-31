@@ -36,6 +36,16 @@
 			</view>
 		</view>
 
+		<!-- 通用搜索框 - 所有平台 -->
+		<!-- #ifndef APP-PLUS -->
+		<view class="common-search-box" @click="toSearch">
+			<view class="search-box-input">
+				<text class="yticon icon-sousuo"></text>
+				<text class="placeholder">搜索商品</text>
+			</view>
+		</view>
+		<!-- #endif -->
+
 		<!-- 秒杀专区 -->
 		<view class="f-header m-t" v-if="homeFlashPromotion!==null">
 			<image src="/static/icon_flash_promotion.png"></image>
@@ -868,13 +878,42 @@
 					}
 				});
 			},
+			
+			// 搜索框点击事件处理
+			toSearch() {
+				console.log('搜索框被点击，准备跳转到搜索页面');
+				// 搜索页面是tabBar页面，应使用switchTab
+				uni.switchTab({
+					url: '/pages/index/search',
+					success: function() {
+						console.log('跳转到搜索页面成功');
+					},
+					fail: function(err) {
+						console.error('跳转到搜索页面失败:', err);
+						// 如果switchTab失败，尝试navigateTo
+						uni.navigateTo({
+							url: '/pages/index/search'
+						});
+					}
+				});
+			},
 		},
 		// 标题栏input搜索框点击
 		onNavigationBarSearchInputClicked(e) {
-		 	this.$api.msg('点击了搜索框');
-		    uni.navigateTo({
-		    	url: '/pages/index/search'
-		    })
+		 	console.log('点击了导航栏搜索框，准备跳转到搜索页面');
+		    uni.switchTab({
+		    	url: '/pages/index/search',
+				success: function() {
+					console.log('导航栏搜索框：跳转到搜索页面成功');
+				},
+				fail: function(err) {
+					console.error('导航栏搜索框：跳转到搜索页面失败:', err);
+					// 如果switchTab失败，尝试navigateTo
+					uni.navigateTo({
+						url: '/pages/index/search'
+					});
+				}
+		    });
 		},
 		//点击导航栏 buttons 时触发
 		onNavigationBarButtonTap(e) {
@@ -1562,6 +1601,32 @@
 			bottom: 0;
 			height: 1px;
 			background: #eee;
+		}
+	}
+
+	/* 通用搜索框样式 */
+	.common-search-box {
+		padding: 15upx 30upx;
+		background: #fff;
+		
+		.search-box-input {
+			height: 70upx;
+			background: #f5f5f5;
+			border-radius: 35upx;
+			display: flex;
+			align-items: center;
+			padding: 0 30upx;
+			
+			.yticon {
+				font-size: 30upx;
+				color: #606266;
+				margin-right: 10upx;
+			}
+			
+			.placeholder {
+				font-size: 28upx;
+				color: #909399;
+			}
 		}
 	}
 </style>
