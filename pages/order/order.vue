@@ -20,6 +20,9 @@
 							<text class="state" :style="{color: '#286090'}">{{item.status | formatStatus}}</text>
 							<text v-if="item.status===3||item.status===4" class="del-btn yticon icon-iconfontshanchu1" @click="deleteOrder(item.id)"></text>
 						</view>
+						<view class="order-no">
+							<text class="order-no-text">订单编号：{{item.orderSn}}</text>
+						</view>
 						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList"
 						 :key="itemIndex">
 							<image class="goods-img" :src="orderItem.productPic" mode="aspectFill"></image>
@@ -795,5 +798,20 @@
 		100% {
 			opacity: .2
 		}
+	}
+
+	.inner-list-logo {
+		width: 60upx;
+		max-height: 60upx;
+		margin-right: 30upx;
+	}
+
+	/* 订单编号样式 */
+	.order-no {
+		padding-top: 0;
+	}
+	.order-no-text {
+		font-size: 24upx;
+		color: #999;
 	}
 </style>
