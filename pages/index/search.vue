@@ -85,6 +85,7 @@
         <!-- 购物车按钮 -->
         <view class="go-to-cart" @click="navigateToCart">
             <image class="cart-icon" src="../../static/icon_cart_blue.png" mode="aspectFit"></image>
+            <text class="cart-badge" v-if="cartCount > 0">{{cartCount}}</text>
         </view>
 		<uni-load-more :status="loadingType"></uni-load-more>
 	</view>
@@ -124,6 +125,7 @@
 					sort: 0,
 				},
 				cartItemsMap: {}, // 存储购物车中商品的数量
+				cartCount: 0, // 购物车中商品总数量
 				showHistoryKeywords: false,
 				historyKeywords: [],
 				preventHideHistory: false
@@ -368,17 +370,41 @@
 			
 			// 加载购物车数据
 			async loadCartItems() {
-				if (!this.hasLogin) return;
+				// 只有登录用户才能获取购物车数据
+				if (!this.hasLogin) {
+					this.cartItemsMap = {};
+					this.cartCount = 0;
+					return;
+				}
 				
 				try {
 					const response = await fetchCartList();
 					if (response && response.data) {
-						// 将购物车数据转换为映射，方便获取每个商品的数量
-						const itemsMap = {};
+						// 将购物车数据转为商品ID到数量的映射
+						const cartMap = {};
+						let totalCount = 0;
+						
 						response.data.forEach(item => {
-							itemsMap[item.productId] = (itemsMap[item.productId] || 0) + item.quantity;
+							// 确保productId是字符串类型
+							const productId = String(item.productId);
+							// 确保quantity是数字类型
+							const quantity = parseInt(item.quantity) || 0;
+							
+							// 累加数量到总计
+							totalCount += quantity;
+							
+							// 如果已存在该商品，累加数量
+							if (cartMap[productId]) {
+								cartMap[productId] += quantity;
+							} else {
+								cartMap[productId] = quantity;
+							}
 						});
-						this.cartItemsMap = itemsMap;
+						
+						this.cartItemsMap = cartMap;
+						this.cartCount = totalCount;
+						console.log('购物车数据映射:', this.cartItemsMap);
+						console.log('购物车商品总数:', this.cartCount);
 					}
 				} catch (error) {
 					console.error('获取购物车数据失败:', error);
@@ -387,9 +413,6 @@
 			
 			// 快速添加到购物车
 			quickAddToCart(item) {
-				// 阻止事件冒泡
-				event.stopPropagation();
-				
 				// 检查登录状态
 				if (!this.hasLogin) {
 					uni.showModal({
@@ -431,25 +454,24 @@
 					return;
 				}
 				
-				// 构建购物车项数据
-				let cartItem = {
-					price: item.promotionPrice || item.price || 0,
+				// 首先向后端请求商品详情，获取SKU库存信息
+				uni.showLoading({
+					title: '正在处理...'
+				});
+				
+				const cartItem = {
+					price: item.price || 0,
 					productAttr: "[]",
 					productBrand: item.brandName || "",
 					productCategoryId: item.productCategoryId || 0,
 					productId: item.id,
 					productName: item.name || "商品",
 					productPic: item.pic || "",
-					productSkuId: 0, // 默认SKU ID
+					productSkuId: 0,
 					productSn: item.productSn || "",
 					productSubTitle: item.subTitle || "",
 					quantity: 1
 				};
-				
-				// 添加到购物车
-				uni.showLoading({
-					title: '添加中...'
-				});
 				
 				addCartItem(cartItem).then(response => {
 					uni.hideLoading();
@@ -510,15 +532,25 @@
 			},
 			navigateToCart() {
 				console.log('点击了navigateToCart');
-				  uni.switchTab({
-				    url: '/pages/cart/cart',
-				    success: () => {
-				      console.log('导航成功');
-				    },
-				    fail: (err) => {
-				      console.error('导航失败:', err);
-				    }
-				  });
+				
+				// 记录当前页面信息到本地存储，以便购物车页面返回时使用
+				const currentPage = {
+					path: '/pages/index/search',
+					query: this.searchParam // 保存当前搜索参数
+				};
+				uni.setStorageSync('cartLastPage', currentPage);
+				console.log('已记录当前页面:', currentPage);
+				
+				// 导航到购物车页面
+				uni.switchTab({
+					url: '/pages/cart/cart',
+					success: () => {
+						console.log('导航成功');
+					},
+					fail: (err) => {
+						console.error('导航失败:', err);
+					}
+				});
 			},
 			stopPrevent() {},
 			searchByKeyword() {
@@ -1031,7 +1063,7 @@
 	    right: 5upx; // 与scroll-go-top对齐
 	    width: 80upx;
 	    height: 80upx;
-	    background: rgba(255, 255, 255, 0.7); // 与scroll-go-top保持一致的半透明背景
+	    background: rgba(255, 255, 255, 0.9); // 稍微提高不透明度
 	    border-radius: 50%;
 	    display: flex;
 	    justify-content: center;
@@ -1039,11 +1071,30 @@
 	    z-index: 1002;
 	    cursor: pointer;
 	    transition: opacity 0.3s ease;
+        box-shadow: 0 3upx 15upx rgba(0, 0, 0, 0.2);
 	
 	    .cart-icon {
 	      width: 50upx;
 	      height: 50upx; // 调整图片大小以适应按钮
 	    }
+        
+        .cart-badge {
+            position: absolute;
+            top: -10upx;
+            right: -5upx;
+            min-width: 36upx;
+            height: 36upx;
+            line-height: 36upx;
+            text-align: center;
+            background-color: #f04c41;
+            color: #fff;
+            font-size: 22upx;
+            border-radius: 18upx;
+            padding: 0 8upx;
+            box-sizing: border-box;
+            font-weight: bold;
+            box-shadow: 0 2upx 5upx rgba(0, 0, 0, 0.2);
+        }
 	
 	    &:hover {
 	      opacity: 0.9;
