@@ -6,15 +6,30 @@
 				{{item.text}}
 			</view>
 		</view>
+		
+		<!-- 搜索框，仅在"已完成"选项卡时显示 -->
+		<view class="search-box" v-if="tabCurrentIndex === 4">
+			<view class="search-input-box">
+				<text class="yticon icon-sousuo"></text>
+				<input class="search-input" type="text" v-model="searchKeyword" placeholder="输入订单号或商品名称搜索" @input="searchOrders" />
+				<text class="yticon icon-shanchu1" v-if="searchKeyword" @click="clearSearch"></text>
+			</view>
+		</view>
 
-		<swiper :current="tabCurrentIndex" class="swiper-box" duration="300" @change="changeTab">
+		<swiper :current="tabCurrentIndex" class="swiper-box" :class="{'with-search': tabCurrentIndex === 4}" duration="300" @change="changeTab">
 			<swiper-item class="tab-content" v-for="(tabItem,tabIndex) in navList" :key="tabIndex">
 				<scroll-view class="list-scroll-content" scroll-y @scrolltolower="loadData('add')">
 					<!-- 空白页 -->
-					<empty v-if="orderList==null||orderList.length === 0"></empty>
+					<empty v-if="(tabCurrentIndex === 4 && searchKeyword ? filteredOrderList.length === 0 : orderList==null||orderList.length === 0)"></empty>
 
-					<!-- 订单列表 -->
-					<view v-for="(item,index) in orderList" :key="index" class="order-item">
+					<!-- 显示搜索结果提示 -->
+					<view class="search-result-tip" v-if="tabCurrentIndex === 4 && searchKeyword && filteredOrderList.length >= 0">
+						<text v-if="filteredOrderList.length > 0">找到 {{filteredOrderList.length}} 条相关订单</text>
+						<text v-else>未找到相关订单</text>
+					</view>
+
+					<!-- 订单列表 - 搜索过滤逻辑 -->
+					<view v-for="(item,index) in (tabCurrentIndex === 4 && searchKeyword ? filteredOrderList : orderList)" :key="index" class="order-item">
 						<view class="i-top b-b">
 							<text class="time" @click="showOrderDetail(item.id)">{{item.createTime | formatDateTime}}</text>
 							<text class="state" :style="{color: '#286090'}">{{item.status | formatStatus}}</text>
@@ -89,6 +104,8 @@
 					pageSize: 5
 				},
 				orderList: [],
+				filteredOrderList: [], // 搜索过滤后的订单列表
+				searchKeyword: '', // 搜索关键词
 				loadingType:'more',
 				navList: [{
 						state: -1,
@@ -235,11 +252,13 @@
 			//swiper 切换
 			changeTab(e) {
 				this.tabCurrentIndex = e.target.current;
+				this.searchKeyword = ''; // 切换选项卡时清空搜索框
 				this.loadData();
 			},
 			//顶部tab点击
 			tabClick(index) {
 				this.tabCurrentIndex = index;
+				this.searchKeyword = ''; // 切换选项卡时清空搜索框
 			},
 			//删除订单
 			deleteOrder(orderId) {
@@ -439,6 +458,42 @@
 			},
 			isInvoiced(orderId) {
 				return this.invoicedOrderList.includes(parseInt(orderId));
+			},
+			// 搜索订单
+			searchOrders() {
+				if (this.tabCurrentIndex !== 4) return; // 只在已完成选项卡搜索
+				
+				if (!this.searchKeyword) {
+					this.filteredOrderList = []; // 搜索词为空时清空过滤列表
+					return;
+				}
+				
+				const keyword = this.searchKeyword.toLowerCase();
+				
+				// 在原始订单列表中搜索
+				this.filteredOrderList = this.orderList.filter(order => {
+					// 搜索订单号
+					if (order.orderSn && order.orderSn.toLowerCase().includes(keyword)) {
+						return true;
+					}
+					
+					// 搜索商品名称
+					if (order.orderItemList && order.orderItemList.length > 0) {
+						for (const item of order.orderItemList) {
+							if (item.productName && item.productName.toLowerCase().includes(keyword)) {
+								return true;
+							}
+						}
+					}
+					
+					return false;
+				});
+			},
+			
+			// 清空搜索
+			clearSearch() {
+				this.searchKeyword = '';
+				this.filteredOrderList = [];
 			},
 		},
 	}
@@ -813,5 +868,49 @@
 	.order-no-text {
 		font-size: 24upx;
 		color: #999;
+	}
+
+	/* 搜索框样式 */
+	.search-box {
+		padding: 20rpx 30rpx;
+		background-color: #fff;
+		position: relative;
+		z-index: 9;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+	}
+	
+	.search-input-box {
+		height: 70rpx;
+		background-color: #f5f5f5;
+		border-radius: 35rpx;
+		display: flex;
+		align-items: center;
+		padding: 0 30rpx;
+	}
+	
+	.search-input {
+		flex: 1;
+		padding: 0 20rpx;
+		font-size: 28rpx;
+	}
+	
+	.yticon {
+		color: #999;
+		font-size: 30rpx;
+	}
+	
+	.search-result-tip {
+		padding: 20rpx 30rpx;
+		font-size: 26rpx;
+		color: #666;
+		background-color: #f8f8f8;
+	}
+	
+	/* 适配搜索框后的滑动区域高度 */
+	.swiper-box {
+		height: calc(100% - 40px);
+	}
+	.swiper-box.with-search {
+		height: calc(100% - 40px - 110rpx);
 	}
 </style>
