@@ -45,8 +45,8 @@
 				type: Object,
 				default () {
 					return {
-						contentdown: "上拉显示更多",
-						contentrefresh: "正在加载...",
+						contentdown: "上拉加载更多",
+						contentrefresh: "正在加载中...",
 						contentnomore: "没有更多数据了"
 					};
 				}

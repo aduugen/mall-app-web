@@ -19,7 +19,12 @@
 				<scroll-view 
 					class="list-scroll-content" 
 					scroll-y
-					@scrolltolower="loadData"
+					@scrolltolower="onScrolltolower"
+					refresher-enabled
+					:refresher-triggered="tabItem.refreshing"
+					@refresherrefresh="refreshData(tabIndex)"
+					refresher-background="#f8f8f8"
+					:id="`scroll-view-${tabIndex}`"
 				>
 					<!-- 显示调试信息 -->
 					<view class="debug-info" v-if="tabItem.invoiceList.length === 0">
@@ -27,7 +32,13 @@
 					</view>
 					
 					<!-- 空白页 -->
-					<empty v-if="tabItem.invoiceList.length === 0"></empty>
+					<empty v-if="tabItem.invoiceList.length === 0 && tabItem.loadingType !== 'loading'"></empty>
+					
+					<!-- 加载中状态 -->
+					<view class="loading-container" v-if="tabItem.invoiceList.length === 0 && tabItem.loadingType === 'loading'">
+						<view class="loading-spinner"></view>
+						<text class="loading-text">加载中...</text>
+					</view>
 					
 					<!-- 发票列表 -->
 					<view 
@@ -120,29 +131,38 @@
 						state: -1,
 						text: '全部',
 						loadingType: 'more',
-						invoiceList: []
+						invoiceList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 0,
 						text: '待开票',
 						loadingType: 'more',
-						invoiceList: []
+						invoiceList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 1,
 						text: '已开票',
 						loadingType: 'more',
-						invoiceList: []
+						invoiceList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 2,
 						text: '开票失败',
 						loadingType: 'more',
-						invoiceList: []
+						invoiceList: [],
+						pageNum: 1,
+						refreshing: false
 					}
 				],
-				pageNum: 1,
-				pageSize: 10
+				pageSize: 10,
+				isLoadingMore: false,
+				_loadDataTimer: null
 			};
 		},
 		watch: {
@@ -164,10 +184,17 @@
 				// 只清空当前选项卡的数据
 				currentTab.invoiceList = [];
 				currentTab.loadingType = 'more';
-				this.pageNum = 1;
+				currentTab.pageNum = 1;
 				
 				// 加载当前选项卡的数据
 				this.loadData(true, true);
+			}
+		},
+		onUnload() {
+			// 页面销毁时清除定时器
+			if(this._loadDataTimer) {
+				clearTimeout(this._loadDataTimer);
+				this._loadDataTimer = null;
 			}
 		},
 		methods: {
@@ -225,8 +252,15 @@
 			// 顶部选项卡点击事件
 			tabClick(index){
 				console.log('点击切换选项卡', index);
-				// 不重置页码和清空数据，除非是刷新操作
+				
+				// 如果是同一个选项卡，不处理
+				if(this.tabCurrentIndex === index) {
+					return;
+				}
+				
+				// 切换选项卡
 				this.tabCurrentIndex = index;
+				
 				// 如果当前选项卡没有数据，则加载数据
 				if (this.navList[index].invoiceList.length === 0) {
 					this.loadData(true);
@@ -241,6 +275,11 @@
 				const current = e.detail ? e.detail.current : e.target.current;
 				console.log('当前切换到的索引:', current);
 				
+				// 如果是同一个选项卡，不处理
+				if(this.tabCurrentIndex === current) {
+					return;
+				}
+				
 				// 更新当前索引
 				this.tabCurrentIndex = current;
 				
@@ -250,98 +289,80 @@
 				}
 			},
 			
+			// 监听滚动事件，保存当前滚动位置
+			onScroll(e) {
+				const { scrollTop } = e.detail;
+				const currentTab = this.navList[this.tabCurrentIndex];
+				currentTab.scrollTop = scrollTop;
+			},
+			
 			// 加载发票数据
 			loadData(refresh = false, showLoading = false){
+				// 清除之前的定时器
+				if(this._loadDataTimer) {
+					clearTimeout(this._loadDataTimer);
+				}
+				
+				// 设置新的定时器，防止频繁触发
+				this._loadDataTimer = setTimeout(() => {
+					this._doLoadData(refresh, showLoading);
+				}, 300);
+			},
+			
+			// 实际执行数据加载的方法
+			_doLoadData(refresh = false, showLoading = false) {
 				// 获取当前选项卡的状态和数据集合
 				const currentTab = this.navList[this.tabCurrentIndex];
 				
+				// 如果正在加载中，防止重复触发
+				if(this.isLoadingMore && !refresh) {
+					return;
+				}
+				
 				// 如果是刷新则清空原有数据和重置页码
 				if(refresh){
-					this.pageNum = 1;
+					currentTab.pageNum = 1;
 					currentTab.invoiceList = [];
-					currentTab.loadingType = 'more';
+					currentTab.loadingType = 'loading'; // 立即显示加载状态
+					currentTab.scrollTop = 0; // 重置滚动位置
 				}
 				
 				// 如果已经是最后一页则不加载
 				if(currentTab.loadingType === 'noMore'){
+					uni.showToast({
+						title: '没有更多数据了',
+						icon: 'none',
+						duration: 1500
+					});
 					return;
 				}
 				
 				// 设置为加载中状态
 				currentTab.loadingType = 'loading';
+				this.isLoadingMore = true;
 				
-				// 如果需要显示loading
-				if(showLoading) {
+				// 如果需要显示loading或者是空列表第一次加载
+				if(showLoading || currentTab.invoiceList.length === 0) {
 					uni.showLoading({
 						title: '加载中'
 					});
 				}
 				
-				// 构建API参数
-				const params = {
-					pageNum: this.pageNum,
-					pageSize: this.pageSize
-				};
-				
-				// 只有当状态不是全部时才添加状态过滤
-				if(currentTab.state !== -1) {
-					params.status = currentTab.state;
-				}
-				
-				console.log('发送请求参数:', params, '当前选项卡索引:', this.tabCurrentIndex);
-				
-				// 使用setTimeout确保UI更新后再发送请求
-				const that = this; // 保存this引用以便在setTimeout中使用
-				setTimeout(() => {
-					// 请求后台数据
-					fetchInvoiceList(params).then(res => {
-						// 如果显示了loading则隐藏
-						if(showLoading) {
-							uni.hideLoading();
-						}
-						
-						console.log('获取发票列表响应:', res);
-						// 注意：确保响应数据的处理正确
-						if(res && res.code === 200){
-							// 获取正确的数据结构
-							const data = res.data;
-							console.log('获取到的发票数据:', data);
-							
-							// 检查数据结构是否符合预期
-							if(data && data.list) {
-								// 添加数据
-								currentTab.invoiceList = currentTab.invoiceList.concat(data.list);
-								console.log(`当前选项卡(${that.tabCurrentIndex})数据长度:`, currentTab.invoiceList.length);
-								
-								// 当前页是否是最后一页
-								if(data.list.length < that.pageSize){
-									currentTab.loadingType = 'noMore';
-								}else{
-									currentTab.loadingType = 'more';
-									that.pageNum++;
-								}
-							} else {
-								// 没有数据或数据结构不对
-								currentTab.loadingType = 'noMore';
-								console.log('API返回的数据结构不符合预期:', data);
-							}
-						} else {
-							currentTab.loadingType = 'more';
-							uni.showToast({
-								title: (res && res.message) || '获取发票列表失败',
-								icon: 'none'
-							});
-						}
-					})
-					.catch(err => {
-						console.error('获取发票列表错误:', err);
-						currentTab.loadingType = 'more';
-						uni.showToast({
-							title: '获取发票列表失败',
-							icon: 'none'
-						});
+				// 调用数据获取方法
+				this.fetchData(this.tabCurrentIndex).then(() => {
+					// 隐藏loading
+					uni.hideLoading();
+					this.isLoadingMore = false;
+				}).catch(() => {
+					// 隐藏loading
+					uni.hideLoading();
+					this.isLoadingMore = false;
+					
+					uni.showToast({
+						title: '获取发票列表失败',
+						icon: 'none'
 					});
-				}, 500);
+				});
 			},
 			
 			// 查看发票详情
@@ -388,7 +409,102 @@
 			// 刷新当前选项卡的数据
 			refreshCurrentTab() {
 				console.log('刷新当前选项卡', this.tabCurrentIndex);
-				this.loadData(true, true); // 传入true表示显示loading
+				// 强制刷新当前选项卡
+				this.loadData(true, true); // 传入true表示刷新模式和显示loading
+			},
+			
+			// 滚动到底部事件处理
+			onScrolltolower() {
+				console.log('滚动到底部，加载更多数据');
+				if (!this.isLoadingMore) {
+					this.loadData();
+				}
+			},
+			
+			// 下拉刷新处理
+			refreshData(tabIndex) {
+				console.log('下拉刷新选项卡', tabIndex);
+				
+				// 设置刷新状态
+				this.navList[tabIndex].refreshing = true;
+				
+				// 加载数据（刷新模式）
+				const currentTab = this.navList[tabIndex];
+				currentTab.pageNum = 1;
+				currentTab.invoiceList = [];
+				currentTab.loadingType = 'loading';
+				
+				// 请求数据
+				this.fetchData(tabIndex).then(() => {
+					// 完成刷新
+					setTimeout(() => {
+						this.navList[tabIndex].refreshing = false;
+					}, 300);
+					
+					// 提示刷新成功
+					uni.showToast({
+						title: '刷新成功',
+						icon: 'none',
+						duration: 1000
+					});
+				}).catch(() => {
+					// 完成刷新（即使有错误）
+					setTimeout(() => {
+						this.navList[tabIndex].refreshing = false;
+					}, 300);
+				});
+			},
+			
+			// 提取数据获取逻辑为单独的方法，便于复用
+			fetchData(tabIndex) {
+				return new Promise((resolve, reject) => {
+					const currentTab = this.navList[tabIndex];
+					
+					// 构建API参数
+					const params = {
+						pageNum: currentTab.pageNum,
+						pageSize: this.pageSize
+					};
+					
+					// 只有当状态不是全部时才添加状态过滤
+					if(currentTab.state !== -1) {
+						params.status = currentTab.state;
+					}
+					
+					// 请求后台数据
+					fetchInvoiceList(params).then(res => {
+						if(res && res.code === 200) {
+							// 获取正确的数据结构
+							const data = res.data;
+							
+							// 检查数据结构是否符合预期
+							if(data && data.list) {
+								// 添加数据
+								currentTab.invoiceList = currentTab.invoiceList.concat(data.list);
+								
+								// 当前页是否是最后一页
+								if(data.list.length < this.pageSize) {
+									currentTab.loadingType = 'noMore';
+								} else {
+									currentTab.loadingType = 'more';
+									currentTab.pageNum++; // 增加当前选项卡的页码
+								}
+								resolve(data);
+							} else {
+								// 没有数据或数据结构不对
+								currentTab.loadingType = 'noMore';
+								resolve(null);
+							}
+						} else {
+							currentTab.loadingType = 'more';
+							reject(new Error('获取发票列表失败'));
+						}
+					}).catch(err => {
+						console.error('获取发票列表错误:', err);
+						currentTab.loadingType = 'more';
+						reject(err);
+					});
+				});
 			}
 		}
 	}
@@ -448,6 +564,7 @@
 	
 	.list-scroll-content {
 		height: 100%;
+		padding-bottom: 100rpx;
 	}
 	
 	.invoice-item {
@@ -645,5 +762,38 @@
 				font-weight: 600;
 			}
 		}
+	}
+	
+	.loading-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 50rpx 0;
+		
+		.loading-spinner {
+			width: 60rpx;
+			height: 60rpx;
+			border: 6rpx solid #f3f3f3;
+			border-top: 6rpx solid #3366cc;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+			margin-bottom: 20rpx;
+		}
+		
+		.loading-text {
+			color: #909399;
+			font-size: 28rpx;
+		}
+	}
+	
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+	
+	/* 确保加载更多组件在底部有足够间距 */
+	.uni-load-more {
+		margin: 30rpx 0 50rpx 0;
 	}
 </style> 
