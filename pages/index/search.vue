@@ -1,7 +1,45 @@
 <template>
-	<view class="container">
-		<view class="container-item">
-		    <uni-search-bar class="searchbox" radius="5" placeholder="请输入搜索书籍名称" clearButton="auto" cancelButton="none" @confirm="search" />
+	<view class="container" @click="hideHistoryKeywords">
+		<view class="container-item search-header" @click.stop>
+			<view class="search-box">
+				<view class="search-input-box">
+					<text class="search-icon iconfont icon-search"></text>
+					<input 
+						class="search-input" 
+						type="text" 
+						v-model="searchValue" 
+						placeholder="请输入商品关键词" 
+						confirm-type="search"
+						@confirm="searchByKeyword"
+						@focus="showHistoryKeywords = true"
+						@blur="onInputBlur"
+					/>
+					<text class="clear-icon iconfont icon-close" v-if="searchValue" @click="clearSearchValue"></text>
+				</view>
+				<view class="search-btn" @click="searchByKeyword">搜索</view>
+			</view>
+			
+			<!-- 搜索历史记录 -->
+			<view class="search-history" v-if="showHistoryKeywords">
+				<view class="history-header">
+					<text class="history-title">最近搜索</text>
+					<text class="clear-history" @click="clearHistoryKeywords" v-if="historyKeywords.length > 0">清空</text>
+				</view>
+				<view class="history-list" v-if="historyKeywords.length > 0">
+					<view 
+						class="history-item" 
+						v-for="(keyword, index) in historyKeywords" 
+						:key="index"
+						@click="useHistoryKeyword(keyword)"
+					>
+						<text class="iconfont icon-clock history-icon"></text>
+						<text class="history-keyword">{{keyword}}</text>
+					</view>
+				</view>
+				<view class="no-history" v-else>
+					<text class="no-history-text">暂无搜索记录</text>
+				</view>
+			</view>
 		</view>
 		<view class="container-item">
 			<view class="navbar" >
@@ -85,13 +123,18 @@
 					pageSize: 6,
 					sort: 0,
 				},
-				cartItemsMap: {} // 存储购物车中商品的数量
+				cartItemsMap: {}, // 存储购物车中商品的数量
+				showHistoryKeywords: false,
+				historyKeywords: [],
+				preventHideHistory: false
 			}
 		},
 		onLoad(options) {
 			this.loadData();
 			// 加载购物车数据
 			this.loadCartItems();
+			// 加载历史搜索关键词
+			this.loadHistoryKeywords();
 		},
 		onShow() {
 			// 页面每次显示时都重新获取购物车数据
@@ -478,6 +521,121 @@
 				  });
 			},
 			stopPrevent() {},
+			searchByKeyword() {
+				if (!this.searchValue.trim()) {
+					uni.showToast({
+						title: '请输入搜索关键词',
+						icon: 'none'
+					});
+					return;
+				}
+				
+				// 保存搜索关键词到历史记录
+				this.saveKeywordToHistory(this.searchValue);
+				
+				// 执行搜索
+				this.searchParam.keyword = this.searchValue.trim();
+				this.loadData('refresh');
+				
+				// 隐藏历史记录
+				this.showHistoryKeywords = false;
+				
+				uni.showToast({
+					title: '搜索：' + this.searchValue,
+					icon: 'none'
+				});
+			},
+			
+			// 隐藏历史关键词
+			hideHistoryKeywords() {
+				this.showHistoryKeywords = false;
+			},
+			
+			// 处理输入框失焦事件
+			onInputBlur() {
+				// 延迟隐藏，以便点击历史记录项
+				setTimeout(() => {
+					if (!this.preventHideHistory) {
+						this.showHistoryKeywords = false;
+					}
+					this.preventHideHistory = false;
+				}, 200);
+			},
+			
+			// 加载历史搜索关键词
+			loadHistoryKeywords() {
+				try {
+					const historyStr = uni.getStorageSync('searchHistoryKeywords');
+					if (historyStr) {
+						this.historyKeywords = JSON.parse(historyStr);
+					}
+				} catch (e) {
+					console.error('加载搜索历史失败:', e);
+					this.historyKeywords = [];
+				}
+			},
+			
+			// 保存关键词到历史记录
+			saveKeywordToHistory(keyword) {
+				if (!keyword || !keyword.trim()) return;
+				
+				keyword = keyword.trim();
+				
+				// 从历史记录中移除相同的关键词
+				const index = this.historyKeywords.indexOf(keyword);
+				if (index !== -1) {
+					this.historyKeywords.splice(index, 1);
+				}
+				
+				// 将关键词添加到列表开头
+				this.historyKeywords.unshift(keyword);
+				
+				// 保留最近的20个关键词
+				if (this.historyKeywords.length > 20) {
+					this.historyKeywords = this.historyKeywords.slice(0, 20);
+				}
+				
+				// 保存到本地存储
+				this.saveHistoryKeywordsToStorage();
+			},
+			
+			// 将历史关键词保存到本地存储
+			saveHistoryKeywordsToStorage() {
+				try {
+					uni.setStorageSync('searchHistoryKeywords', JSON.stringify(this.historyKeywords));
+				} catch (e) {
+					console.error('保存搜索历史失败:', e);
+				}
+			},
+			
+			clearSearchValue() {
+				this.searchValue = '';
+			},
+			
+			clearHistoryKeywords() {
+				uni.showModal({
+					title: '提示',
+					content: '确定要清空搜索历史吗？',
+					success: (res) => {
+						if (res.confirm) {
+							this.historyKeywords = [];
+							this.saveHistoryKeywordsToStorage();
+							uni.showToast({
+								title: '已清空搜索历史',
+								icon: 'none'
+							});
+						}
+					}
+				});
+			},
+			
+			useHistoryKeyword(keyword) {
+				// 防止失焦事件隐藏历史记录
+				this.preventHideHistory = true;
+				
+				this.searchValue = keyword;
+				this.searchByKeyword();
+			}
 		},
 		computed: {
 			...mapState(['hasLogin'])
@@ -496,18 +654,112 @@
 	.container-item {
 	  position: relative; /* 使用 relative 或 static 而不是 fixed */
 	}
-	.searchbar {
-		display: flex;
-		width: 100%;
+	.search-header {
+		padding: 20upx;
+		background: #fff;
+		border-bottom: 1upx solid #f5f5f5;
+		position: relative;
 		z-index: 100;
 	}
-	.searchbox {
-		margin-top: 0px;
-		width: 100%;
-		position: relative;
-		background: #fff;
+	.search-box {
+		display: flex;
+		align-items: center;
+		height: 80upx;
 	}
-	
+	.search-input-box {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		height: 100%;
+		background-color: #f5f5f5;
+		border-radius: 40upx;
+		padding: 0 20upx;
+	}
+	.search-icon {
+		font-size: 40upx;
+		color: #909399;
+	}
+	.search-input {
+		flex: 1;
+		height: 100%;
+		padding: 0 10upx;
+		font-size: 28upx;
+	}
+	.clear-icon {
+		font-size: 36upx;
+		color: #909399;
+		padding: 10upx;
+	}
+	.search-btn {
+		width: 120upx;
+		height: 70upx;
+		line-height: 70upx;
+		margin-left: 20upx;
+		background: $uni-color-primary;
+		color: #fff;
+		border-radius: 35upx;
+		font-size: 28upx;
+		text-align: center;
+	}
+	.search-history {
+		margin-top: 20upx;
+		padding: 10upx 0;
+		background: #fff;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.05);
+	}
+	.history-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0 20upx 20upx;
+		border-bottom: 1upx solid #f5f5f5;
+	}
+	.history-title {
+		font-size: 30upx;
+		color: $font-color-dark;
+		font-weight: bold;
+	}
+	.clear-history {
+		font-size: 28upx;
+		color: $uni-color-primary;
+		padding: 5upx 10upx;
+	}
+	.history-list {
+		display: flex;
+		flex-wrap: wrap;
+		padding: 20upx;
+	}
+	.history-item {
+		padding: 10upx 20upx;
+		background: #f8f8f8;
+		border-radius: 30upx;
+		margin-right: 20upx;
+		margin-bottom: 20upx;
+		display: flex;
+		align-items: center;
+		transition: all 0.2s;
+	}
+	.history-item:active {
+		background: #e6e6e6;
+	}
+	.history-icon {
+		font-size: 28upx;
+		color: #909399;
+		margin-right: 10upx;
+	}
+	.history-keyword {
+		font-size: 28upx;
+		color: $font-color-dark;
+	}
+	.no-history {
+		padding: 40upx 0;
+		text-align: center;
+	}
+	.no-history-text {
+		font-size: 28upx;
+		color: #909399;
+	}
 	.navbar {
 		display: flex;
 		width: 100%;
