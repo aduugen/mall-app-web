@@ -43,7 +43,7 @@
 						<image :src="allChecked?'/static/selected.png':'/static/select.png'" mode="aspectFit" @click="check('all')"></image>
 						<text class="checkbox-text">全选</text>
 					</view>
-					<view class="clear-btn" @click="clearCart">
+					<view class="clear-btn" @click="clearCartList">
 						<text class="yticon icon-iconfontshanchu1"></text>
 						<text class="clear-btn-text">清空</text>
 					</view>
