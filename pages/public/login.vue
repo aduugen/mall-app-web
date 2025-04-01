@@ -158,6 +158,7 @@
 	.wrapper {
 		position: relative;
 		background: rgba(255, 255, 255, 0.02);
+		z-index: 90;
 		//padding-bottom: 40upx;
 		border-radius: 25upx;
 		margin: 0 30upx;
