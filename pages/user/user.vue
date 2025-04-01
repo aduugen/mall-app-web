@@ -375,7 +375,7 @@
 	
 	.member-id-box {
 		position: absolute;
-		top: 15upx;
+		top: 55upx;
 		right: 20upx;
 		z-index: 3;
 		display: flex;
@@ -456,10 +456,10 @@
 		align-items: center;
 		position: relative;
 		z-index: 1;
-		padding-top: 0upx;
+		padding-top: 15upx;
 		padding-left: 20upx;
 		margin-bottom: 5upx;
-		margin-top: -10upx;
+		margin-top: 0upx;
 		.portrait{
 			width: 80upx;
 			height: 80upx;
@@ -470,6 +470,7 @@
 			display: flex;
 			flex-direction: column;
 			padding-left: 15upx;
+			padding-top: 15upx;
 			
 			.username{
 				font-size: $font-lg;
