@@ -569,7 +569,8 @@
 			display: flex;
 			flex-wrap: wrap;
 			width: 100%;
-			padding: 0 30upx;
+			padding: 0 15upx;
+			justify-content: flex-start;
 		}
 		
 		.order-item {
@@ -583,7 +584,7 @@
 		
 		.service-item {
 			@extend %flex-center;
-			width: 33.33%;
+			width: 25%;
 			height: 130upx;
 			font-size: $font-sm;
 			color: $font-color-dark;
@@ -594,14 +595,14 @@
 			}
 			
 			.service-text {
-				font-size: $font-sm;
+				font-size: 24upx;
 				color: $font-color-dark;
 			}
 		}
 		
 		.yticon{
-			font-size: 48upx;
-			margin-bottom: 18upx;
+			font-size: 44upx;
+			margin-bottom: 16upx;
 			color: #286090;
 		}
 		.icon-shouhoutuikuan{
