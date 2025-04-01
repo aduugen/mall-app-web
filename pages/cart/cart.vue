@@ -32,7 +32,7 @@
 							</view>
 							<uni-number-box class="step" :min="1" :max="100" :value="item.quantity" :index="index" @eventChange="numberChange"></uni-number-box>
 						</view>
-						<text class="del-btn yticon icon-fork" @click="handleDeleteCartItem(index)"></text>
+						<text class="del-btn yticon icon-fork" @click="delGoods(index)"></text>
 					</view>
 				</block>
 			</view>
@@ -62,9 +62,10 @@
 	import uniNumberBox from '@/components/uni-number-box.vue';
 	import {
 		fetchCartList,
-		deletCartItem,
-		updateQuantity,
-		clearCartList
+		updateCartItem,
+		deleteCartItem,
+		removeCartItem,
+		clearCart
 	} from '@/api/cart.js';
 	export default {
 		components: {
@@ -117,12 +118,22 @@
 				if(!this.hasLogin){
 					return;
 				}
-				fetchCartList().then(response => {
+				try {
+					const response = await fetchCartList();
 					let list = response.data;
 					let cartList = list.map(item => {
 						item.checked = true;
 						item.loaded = "loaded";
-						let spDataArr = JSON.parse(item.productAttr);
+						let spDataArr = [];
+						try {
+							if (item.productAttr) {
+								spDataArr = JSON.parse(item.productAttr);
+							}
+						} catch (e) {
+							console.error('解析商品属性出错:', e);
+							spDataArr = [];
+						}
+						
 						let spDataStr = '';
 						for (let attr of spDataArr) {
 							spDataStr += attr.key;
@@ -132,10 +143,8 @@
 						}
 						item.spDataStr = spDataStr;
 						
-						// 计算促销价格
-						if (item.reduceAmount && item.reduceAmount > 0) {
-							item.promotionPrice = Number(item.price) - Number(item.reduceAmount);
-						} else {
+						// 如果没有促销信息，则使用原价
+						if (!item.promotionPrice) {
 							item.promotionPrice = null;
 						}
 						
@@ -144,9 +153,9 @@
 							商品ID: item.productId,
 							商品名称: item.productName,
 							原价: item.price,
-							优惠金额: item.reduceAmount,
+							优惠金额: item.reduceAmount || 0,
 							促销价: item.promotionPrice,
-							促销信息: item.promotionMessage,
+							促销信息: item.promotionMessage || '无促销',
 							最终价格: item.promotionPrice || item.price
 						});
 						
@@ -154,7 +163,14 @@
 					});
 					this.cartList = cartList;
 					this.calcTotal(); //计算总价
-				});
+				} catch (error) {
+					console.error('获取购物车数据失败:', error);
+					uni.showToast({
+						title: '加载购物车失败',
+						icon: 'none',
+						duration: 1500
+					});
+				}
 			},
 			//监听image加载完成
 			onImageLoad(key, index) {
@@ -191,22 +207,61 @@
 			},
 			//数量
 			numberChange(data) {
+				let that = this;
 				let cartItem = this.cartList[data.index];
-				updateQuantity({id:cartItem.id,quantity:data.number}).then(response=>{
-					cartItem.quantity = data.number;
-					this.calcTotal();
-				});
+				
+				try {
+					that.loadingType = 'loading';
+					updateCartItem({id:cartItem.id, quantity:data.number})
+						.then(response => {
+							cartItem.quantity = data.number;
+							that.calcTotal();
+							that.$api.msg('数量已更新');
+						})
+						.catch(err => {
+							console.error('更新购物车商品数量失败', err);
+							that.$api.msg('更新失败，请稍后再试');
+							// 恢复原数量
+							that.loadData();
+						})
+						.finally(() => {
+							that.loadingType = 'more';
+						});
+				} catch (e) {
+					console.error('更新购物车数量出错', e);
+					that.loadingType = 'more';
+					that.$api.msg('操作异常，请稍后再试');
+					// 恢复原数据
+					that.loadData();
+				}
 			},
 			//删除
-			handleDeleteCartItem(index) {
-				let list = this.cartList;
-				let row = list[index];
-				let id = row.id;
-				deletCartItem({ids:id}).then(response=>{
-					this.cartList.splice(index, 1);
-					this.calcTotal();
-					uni.hideLoading();
-				});
+			delGoods(index) {
+				let that = this;
+				uni.showModal({
+					content: '确定要删除该商品吗?',
+					success: (res) => {
+						if (res.confirm) {
+							that.loadingType = 'loading';
+							let id = that.cartList[index].id;
+							try {
+								removeCartItem(id).then(res => {
+									that.loadData();
+									that.$api.msg('删除成功');
+								}).catch(err => {
+									console.error('删除购物车项失败', err);
+									that.$api.msg('删除失败，请稍后再试');
+								}).finally(() => {
+									that.loadingType = 'more';
+								});
+							} catch (e) {
+								console.error('删除购物车项出错', e);
+								that.loadingType = 'more';
+								that.$api.msg('操作异常，请稍后再试');
+							}
+						}
+					}
+				})
 			},
 			//计算总价
 			calcTotal() {
@@ -264,18 +319,31 @@
 					this.clearCart();
 				}
 			},
-			//清空
-			clearCart() {
+			//清空购物车
+			clearCartList() {
 				uni.showModal({
 					content: '清空购物车？',
 					success: (e) => {
 						if (e.confirm) {
-							clearCartList().then(response => {
-								this.cartList = [];
-							});
+							try {
+								this.loadingType = 'loading';
+								clearCart().then(response => {
+									this.loadData();
+									this.$api.msg('购物车已清空');
+								}).catch(err => {
+									console.error('清空购物车失败', err);
+									this.$api.msg('操作失败，请稍后再试');
+								}).finally(() => {
+									this.loadingType = 'more';
+								});
+							} catch (e) {
+								console.error('清空购物车出错', e);
+								this.loadingType = 'more';
+								this.$api.msg('操作异常，请稍后再试');
+							}
 						}
 					}
-				});
+				})
 			}
 		}
 	}

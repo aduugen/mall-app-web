@@ -4,6 +4,9 @@ export function addCartItem(data) {
 	return request({
 		method: 'POST',
 		url: '/cart/add',
+		header: {
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
 		data: data
 	})
 }
@@ -11,29 +14,52 @@ export function addCartItem(data) {
 export function fetchCartList() {
 	return request({
 		method: 'GET',
-		url: '/cart/list/promotion'
+		url: '/cart/list'
 	})
 }
 
-export function deletCartItem(params) {
+/**
+ * 删除指定购物车项
+ * @param {Object} id
+ */
+export function removeCartItem(id) {
 	return request({
-		method: 'POST',
 		url: '/cart/delete',
-		params:params
-	})
-}
-
-export function updateQuantity(params) {
-	return request({
-		method: 'GET',
-		url: '/cart/update/quantity',
-		params:params
-	})
-}
-
-export function clearCartList() {
-	return request({
 		method: 'POST',
-		url: '/cart/clear'
+		data: [id],
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
+		timeout: 10000
+	})
+}
+
+/**
+ * 更新购物车商品数量
+ * @param {Object} params 包含id和quantity字段
+ */
+export function updateCartItem(params) {
+	return request({
+		url: '/cart/update/quantity',
+		method: 'POST',
+		data: params,
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
+		timeout: 10000
+	})
+}
+
+/**
+ * 清空购物车
+ */
+export function clearCart() {
+	return request({
+		url: '/cart/clear',
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
+		timeout: 10000
 	})
 }

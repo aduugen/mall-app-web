@@ -701,13 +701,47 @@
 					最终价格: finalPrice
 				});
 				
+				// 显示加载提示
+				uni.showLoading({
+					title: '正在添加...'
+				});
+				
 				addCartItem(cartItem).then(response => {
+					uni.hideLoading();
 					uni.showToast({
-						title: response.message,
+						title: response.message || '添加成功',
+						icon: 'success',
 						duration: 1500
 					})
 					// 添加商品到购物车后更新购物车数量
 					this.getCartCount();
+				}).catch(error => {
+					uni.hideLoading();
+					console.error('添加购物车失败:', error);
+					
+					// 根据错误类型显示不同提示
+					if (error && error.data && error.data.code === 401) {
+						// 授权失败，提示登录
+						uni.showModal({
+							title: '提示',
+							content: '登录已过期，请重新登录',
+							confirmText: '去登录',
+							success: function(res) {
+								if (res.confirm) {
+									uni.navigateTo({
+										url: '/pages/public/login'
+									});
+								}
+							}
+						});
+					} else {
+						// 其他错误
+						uni.showToast({
+							title: '添加失败，请稍后再试',
+							icon: 'none',
+							duration: 1500
+						});
+					}
 				});
 			},
 			//检查登录状态并弹出登录框

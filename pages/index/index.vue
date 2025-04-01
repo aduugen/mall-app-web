@@ -600,6 +600,12 @@
 					}
 				} catch (error) {
 					console.error('获取购物车数据失败:', error);
+					// 错误后也不阻止用户继续使用
+					uni.showToast({
+						title: '获取购物车数据失败',
+						icon: 'none',
+						duration: 1500
+					});
 				}
 			},
 			quickAddToCart(item) {
@@ -759,6 +765,10 @@
 						};
 						
 						addCartItem(cartItem).then(response => {
+							// 隐藏加载提示
+							uni.hideLoading();
+							clearTimeout(timeout);
+							
 							uni.showToast({
 								title: response.message || '添加成功',
 								icon: 'success',
@@ -768,15 +778,35 @@
 							// 添加成功后重新获取购物车数据
 							this.loadCartItems();
 						}).catch(error => {
+							// 隐藏加载提示
+							uni.hideLoading();
+							clearTimeout(timeout);
+							
 							console.error('添加购物车失败:', error);
-							uni.showToast({
-								title: '添加失败，请到详情页选择规格',
-								icon: 'none',
-								duration: 1500
-							});
-							setTimeout(() => {
-								this.navToDetailPage(item);
-							}, 1500);
+							
+							// 根据错误类型显示不同提示
+							if (error && error.data && error.data.code === 401) {
+								// 授权失败，提示登录
+								uni.showModal({
+									title: '提示',
+									content: '登录已过期，请重新登录',
+									confirmText: '去登录',
+									success: function(res) {
+										if (res.confirm) {
+											uni.navigateTo({
+												url: '/pages/public/login'
+											});
+										}
+									}
+								});
+							} else {
+								// 其他错误
+								uni.showToast({
+									title: '添加失败，请稍后再试',
+									icon: 'none',
+									duration: 1500
+								});
+							}
 						});
 					} catch (error) {
 						console.error('处理价格时出错:', error);

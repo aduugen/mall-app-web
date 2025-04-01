@@ -6,8 +6,10 @@ const http = new Request()
 http.setConfig((config) => { /* 设置全局配置 */
 	config.baseUrl = API_BASE_URL /* 根域名不同 */
 	config.header = {
+		'Content-Type': 'application/json;charset=UTF-8',
 		...config.header
 	}
+	config.timeout = 60000 // 设置超时时间为60秒
 	return config
 })
 
@@ -45,12 +47,7 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 http.interceptor.response((response) => { /* 请求之后拦截器 */
 	const res = response.data;
 	if (res.code !== 200) {
-		//提示错误信息
-		uni.showToast({
-			title:res.message,
-			duration:1500
-		})
-		//401未登录处理
+		// 401未登录处理
 		if (res.code === 401) {
 			// 清除无效token
 			uni.removeStorageSync('token');
@@ -69,6 +66,13 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 					}
 				});
 			}, 1500);
+		} else {
+			// 提示错误信息，对于非关键错误不要过度打扰用户
+			uni.showToast({
+				title: res.message || '请求出错',
+				icon: 'none',
+				duration: 1500
+			});
 		}
 		return Promise.reject(response);
 	} else {
@@ -77,16 +81,20 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 }, (response) => {
 	//提示错误信息
 	console.log('response error', response);
+	
 	// 处理500等服务器错误，可能是由无效token引起的
 	if (response.statusCode === 500 || response.statusCode === 401) {
-		// 尝试清除token并提示用户重新登录
-		uni.removeStorageSync('token');
-		uni.removeStorageSync('userInfo');
-		
-		setTimeout(() => {
+		// 只有在token存在的情况下才提示登录过期
+		const token = uni.getStorageSync('token');
+		if (token) {
+			// 清除相关数据
+			uni.removeStorageSync('token');
+			uni.removeStorageSync('userInfo');
+			
+			// 登录过期提示
 			uni.showModal({
-				title: '登录已过期',
-				content: '请重新登录',
+				title: '提示',
+				content: '登录已过期，请重新登录',
 				showCancel: false,
 				success: function() {
 					uni.navigateTo({
@@ -94,12 +102,13 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 					});
 				}
 			});
-		}, 1500);
+		} else {
+			// 如果没有token，可能是其他服务器错误，只在控制台输出
+			console.error('服务器错误:', response.statusCode);
+		}
 	} else {
-		uni.showToast({
-			title: response.errMsg || '请求失败',
-			duration: 1500
-		});
+		// 其他错误提示
+		console.error('请求错误:', response.errMsg);
 	}
 	return Promise.reject(response);
 })
