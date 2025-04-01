@@ -135,7 +135,7 @@
 					<text>购物车</text>
 				</navigator>
 				<view class="p-b-btn" :class="{active: favorite}" @click="toFavorite">
-					<text class="yticon" :class="favorite?'icon-shoucang_xuanzhongzhuangtai':'icon-shoucang'"></text>
+					<text class="yticon" :class="favorite?'icon-shoucang_xuanzhongzhuangtai':'icon-xingxing'"></text>
 					<text>收藏</text>
 				</view>
 				<view class="p-b-btn" @click="goBack">
