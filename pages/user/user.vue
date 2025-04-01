@@ -12,7 +12,7 @@
 		>	
 		<view class="user-section">
 			<!-- 会员ID和二维码显示 -->
-			<view class="member-id-box">
+			<view class="member-id-box" v-if="hasLogin">
 				<view class="member-id">
 					<text>会员ID: {{userInfo.id || '未登录'}}</text>
 				</view>
@@ -21,16 +21,19 @@
 					<text class="qrcode-tip">扫码查看会员</text>
 				</view>
 			</view>
-			
+				
 			<view class="user-info-box">
 				<view class="portrait-box">
 					<image class="portrait" :src="userInfo.icon || '/static/missing-face.png'"></image>
 				</view>
 				<view class="info-box">
 					<text class="username">{{userInfo.nickname || userInfo.username || '游客'}}</text>
-					<view class="vip-tag">
+					<view class="vip-tag" v-if="hasLogin">
 						<text class="yticon icon-iLinkapp-"></text>
 						<text>黄金会员</text>
+					</view>
+					<view class="guest-tag" v-else>
+						<text>点击登录获取更多权益</text>
 					</view>
 				</view>
 			</view>
@@ -51,6 +54,12 @@
 			</view>
 			
 			<button class="logout-btn-section" @click="logout" v-if="hasLogin">退出登录</button>
+			
+			<!-- 未登录状态下的登录提示 -->
+			<view class="login-tip" v-if="!hasLogin" @click="navTo('/pages/public/login')">
+				<text class="login-tip-text">登录/注册</text>
+				<text class="yticon icon-you"></text>
+			</view>
 		</view>	
 			
 			<!-- 订单 -->
@@ -281,11 +290,31 @@
 			 */
 			navTo(url){
 				if(!this.hasLogin){
-					url = '/pages/public/login';
+					if(url.indexOf('/pages/public/login') !== -1 || url.indexOf('/pages/public/register') !== -1) {
+						uni.navigateTo({  
+							url
+						})
+					} else {
+						// 对于需要登录的页面，显示提示
+						uni.showModal({
+							title: '提示',
+							content: '您还未登录，请先登录',
+							confirmText: '去登录',
+							cancelText: '取消',
+							success: (res) => {
+								if(res.confirm) {
+									uni.navigateTo({
+										url: '/pages/public/login'
+									})
+								}
+							}
+						})
+					}
+				} else {
+					uni.navigateTo({  
+						url
+					})
 				}
-				uni.navigateTo({  
-					url
-				})  
 			}, 
 	
 			/**
@@ -649,6 +678,86 @@
 		text-align: center;
 		box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.1);
 		border: 1upx solid rgba(255, 255, 255, 0.9);
+		
+		&:active {
+			transform: scale(0.98);
+			opacity: 0.9;
+		}
+	}
+	
+	.login-register-box {
+		position: absolute;
+		top: 30upx;
+		right: 20upx;
+		display: flex;
+		z-index: 5;
+	}
+	
+	.login-btn, .register-btn {
+		height: 60upx;
+		line-height: 60upx;
+		border-radius: 30upx;
+		padding: 0 30upx;
+		margin-left: 20upx;
+		text-align: center;
+		font-size: 26upx;
+		font-weight: bold;
+		box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.2);
+		transition: all 0.2s;
+		
+		&:active {
+			transform: scale(0.95);
+			opacity: 0.9;
+		}
+	}
+	
+	.login-btn {
+		background: linear-gradient(to right, #4bb0ff, #286090);
+		color: #ffffff;
+		border: 1upx solid rgba(255, 255, 255, 0.3);
+	}
+	
+	.register-btn {
+		background-color: rgba(255, 255, 255, 0.9);
+		color: #286090;
+		border: 1upx solid rgba(255, 255, 255, 0.8);
+	}
+	
+	.guest-tag {
+		font-size: 22upx;
+		color: rgba(255, 255, 255, 0.8);
+		background-color: rgba(0, 0, 0, 0.2);
+		border-radius: 15upx;
+		padding: 3upx 15upx;
+		margin-top: 5upx;
+	}
+	
+	.login-tip {
+		position: absolute;
+		bottom: 15upx;
+		right: 15upx;
+		height: 56upx;
+		line-height: 56upx;
+		border-radius: 28upx;
+		background: linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0.9));
+		color: #286090;
+		font-size: 24upx;
+		font-weight: bold;
+		width: 30%;
+		text-align: center;
+		box-shadow: 0 2upx 10upx rgba(0, 0, 0, 0.1);
+		border: 1upx solid rgba(255, 255, 255, 0.9);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		
+		.login-tip-text {
+			margin-right: 1upx;
+		}
+		
+		.yticon {
+			font-size: 24upx;
+		}
 		
 		&:active {
 			transform: scale(0.98);
