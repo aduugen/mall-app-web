@@ -12,7 +12,9 @@ export function deleteProductCollection(params) {
 	return request({
 		method: 'POST',
 		url: '/member/productCollection/delete',
-		params: params
+		params: {
+			productId: params.productId
+		}
 	})
 }
 

@@ -135,7 +135,7 @@
 					<text>购物车</text>
 				</navigator>
 				<view class="p-b-btn" :class="{active: favorite}" @click="toFavorite">
-					<text class="yticon icon-xingxing"></text>
+					<text class="yticon" :class="favorite?'icon-shoucang_xuanzhongzhuangtai':'icon-shoucang'"></text>
 					<text>收藏</text>
 				</view>
 				<view class="p-b-btn" @click="goBack">
@@ -515,31 +515,90 @@
 					return;
 				}
 				
-				if(this.favorite){
-					deleteProductCollection({
-						productId: this.product.id
-					}).then(response=>{
-						this.favorite = false;
-						uni.showToast({
-							title: '取消收藏成功',
-							icon: 'success',
-							duration: 1500
-						});
+				// 验证商品ID是否存在
+				if (!this.product || !this.product.id) {
+					uni.showToast({
+						title: '商品信息不完整，无法收藏',
+						icon: 'none',
+						duration: 1500
 					});
-				}else{
-					addProductCollection({
-						productId: this.product.id,
-						productName: this.product.name,
-						productPic: this.product.pic,
-						productSubTitle: this.product.subTitle,
-						productPrice: this.product.price
-					}).then(response=>{
-						this.favorite = true;
-						uni.showToast({
-							title: '收藏成功',
-							icon: 'success',
-							duration: 1500
+					return;
+				}
+				
+				// 打印调试信息
+				console.log('收藏按钮点击:', {
+					当前状态: this.favorite ? '已收藏' : '未收藏',
+					商品ID: this.product.id,
+					商品名: this.product.name
+				});
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: this.favorite ? '取消收藏中...' : '收藏中...'
+				});
+				
+				try {
+					if(this.favorite){
+						// 使用data参数而不是params
+						console.log('准备取消收藏，商品ID:', this.product.id);
+						deleteProductCollection({
+							productId: this.product.id
+						}).then(response => {
+							uni.hideLoading();
+							this.favorite = false;
+							console.log('取消收藏成功:', response);
+							uni.showToast({
+								title: '取消收藏成功',
+								icon: 'success',
+								duration: 1500
+							});
+						}).catch(err => {
+							uni.hideLoading();
+							console.error('取消收藏失败:', err);
+							uni.showToast({
+								title: '操作失败，请稍后再试',
+								icon: 'none',
+								duration: 1500
+							});
 						});
+					} else {
+						// 创建收藏
+						let data = {
+							productId: this.product.id,
+							productName: this.product.name || '',
+							productPic: this.product.pic || '',
+							productSubTitle: this.product.subTitle || '',
+							productPrice: this.product.price || 0
+						};
+						
+						console.log('创建收藏，参数:', data);
+						
+						createProductCollection(data).then(response => {
+							uni.hideLoading();
+							this.favorite = true;
+							console.log('收藏成功:', response);
+							uni.showToast({
+								title: '收藏成功',
+								icon: 'success',
+								duration: 1500
+							});
+						}).catch(err => {
+							uni.hideLoading();
+							console.error('收藏失败:', err);
+							uni.showToast({
+								title: '操作失败，请稍后再试',
+								icon: 'none',
+								duration: 1500
+							});
+						});
+					}
+				} catch (e) {
+					uni.hideLoading();
+					console.error('收藏操作出现异常:', e);
+					uni.showToast({
+						title: '系统异常，请稍后再试',
+						icon: 'none',
+						duration: 1500
 					});
 				}
 			},
@@ -877,6 +936,9 @@
 						productId: this.product.id
 					}).then(response => {
 						this.favorite = response.data != null;
+						console.log('收藏状态初始化:', this.favorite ? '已收藏' : '未收藏');
+					}).catch(err => {
+						console.error('获取收藏状态失败:', err);
 					});
 				}
 			},
