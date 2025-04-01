@@ -1,12 +1,5 @@
 <template>
 	<view class="container">
-		<!-- 小程序头部兼容 -->
-		<!-- #ifdef MP -->
-		<view class="mp-search-box">
-			<input class="ser-input" type="text" value="输入关键字搜索" disabled />
-		</view>
-		<!-- #endif -->
-
 		<!-- 头部轮播 -->
 		<view class="carousel-section">
 			<!-- 标题栏和状态栏占位符 -->
@@ -35,16 +28,6 @@
 				<text class="location-tips">切换位置</text>
 			</view>
 		</view>
-
-		<!-- 通用搜索框 - 所有平台 -->
-		<!-- #ifndef APP-PLUS -->
-		<view class="common-search-box" @click="toSearch">
-			<view class="search-box-input">
-				<text class="yticon icon-sousuo"></text>
-				<text class="placeholder">搜索商品</text>
-			</view>
-		</view>
-		<!-- #endif -->
 
 		<!-- 秒杀专区 -->
 		<view class="f-header m-t" v-if="homeFlashPromotion!==null">
@@ -1642,7 +1625,7 @@
 			
 			.yticon {
 				font-size: 30upx;
-				color: #606266;
+				color: #286090;
 				margin-right: 10upx;
 			}
 			
