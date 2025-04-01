@@ -23,8 +23,10 @@ http.validateStatus = (statusCode) => {
 http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 	const token = uni.getStorageSync('token');
 	if(token){
+		// 检查token是否已经包含Bearer前缀
+		const tokenValue = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 		config.header = {
-			'Authorization': token,
+			'Authorization': tokenValue,
 			...config.header
 		}
 	}else{
@@ -52,21 +54,21 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 		if (res.code === 401) {
 			// 清除无效token
 			uni.removeStorageSync('token');
-			uni.showModal({
-				title: '提示',
-				content: '你已被登出，可以取消继续留在该页面，或者重新登录',
-				confirmText:'重新登录',
-				cancelText:'取消',
-				success: function(res) {
-					if (res.confirm) {
+			// 清除用户信息
+			uni.removeStorageSync('userInfo');
+			
+			setTimeout(() => {
+				uni.showModal({
+					title: '提示',
+					content: '登录已过期，请重新登录',
+					showCancel: false,
+					success: function() {
 						uni.navigateTo({
 							url: '/pages/public/login'
 						})
-					} else if (res.cancel) {
-						console.log('用户点击取消');
 					}
-				}
-			});
+				});
+			}, 1500);
 		}
 		return Promise.reject(response);
 	} else {
@@ -76,11 +78,12 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 	//提示错误信息
 	console.log('response error', response);
 	// 处理500等服务器错误，可能是由无效token引起的
-	if (response.statusCode === 500) {
+	if (response.statusCode === 500 || response.statusCode === 401) {
 		// 尝试清除token并提示用户重新登录
-		const token = uni.getStorageSync('token');
-		if (token) {
-			uni.removeStorageSync('token');
+		uni.removeStorageSync('token');
+		uni.removeStorageSync('userInfo');
+		
+		setTimeout(() => {
 			uni.showModal({
 				title: '登录已过期',
 				content: '请重新登录',
@@ -91,7 +94,7 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 					});
 				}
 			});
-		}
+		}, 1500);
 	} else {
 		uni.showToast({
 			title: response.errMsg || '请求失败',

@@ -66,15 +66,32 @@
 					username: this.username,
 					password: this.password
 				}).then(response => {
-					let token = response.data.tokenHead+response.data.token;
-					uni.setStorageSync('token',token);
-					uni.setStorageSync('username',this.username);
-					uni.setStorageSync('password',this.password);
-					memberInfo().then(response=>{
+					// 确保正确格式化token
+					let token = '';
+					if (response.data.tokenHead && response.data.token) {
+						// 检查tokenHead是否已包含空格
+						const tokenHead = response.data.tokenHead.endsWith(' ') ? 
+							response.data.tokenHead : 
+							response.data.tokenHead + ' ';
+						token = tokenHead + response.data.token;
+					} else if (response.data.token) {
+						token = 'Bearer ' + response.data.token;
+					}
+					
+					uni.setStorageSync('token', token);
+					uni.setStorageSync('username', this.username);
+					uni.setStorageSync('password', this.password);
+					
+					memberInfo().then(response => {
 						this.login(response.data);
+						this.logining = false;
 						uni.navigateBack();
+					}).catch(error => {
+						console.error('获取用户信息失败', error);
+						this.logining = false;
 					});
-				}).catch(() => {
+				}).catch((error) => {
+					console.error('登录失败', error);
 					this.logining = false;
 				});
 			},
