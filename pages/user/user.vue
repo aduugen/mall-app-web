@@ -261,10 +261,13 @@
 					content: '确定要退出登录吗？',
 					success: (res) => {
 						if (res.confirm) {
-							this.logout();
+							// 调用Vuex中的logout方法
+							this.$store.commit('logout');
+							
 							uni.showToast({
 								title: '退出成功'
 							});
+							
 							setTimeout(() => {
 								this.navTo('/pages/public/login');
 							}, 1500);

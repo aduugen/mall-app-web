@@ -23,6 +23,24 @@ http.validateStatus = (statusCode) => {
 }
 
 http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
+	// 获取请求的URL，用于判断是否为公开API
+	const url = config.url || '';
+	// 公开API列表，这些API不需要登录即可访问
+	const publicApis = [
+		'/product/detail/', 
+		'/product/categoryTreeList', 
+		'/product/search',
+		'/home/',
+		'/cart/list',
+		'/brand/'
+	];
+	
+	// 检查当前请求是否是公开API
+	const isPublicApi = publicApis.some(api => url.includes(api));
+	
+	// 设置公开API标记，用于后续识别
+	config.isPublicApi = isPublicApi;
+	
 	const token = uni.getStorageSync('token');
 	if(token){
 		// 检查token是否已经包含Bearer前缀
@@ -36,36 +54,73 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 			...config.header
 		}
 	}
-	/*
-	if (!token) { // 如果token不存在，调用cancel 会取消本次请求，但是该函数的catch() 仍会执行
-	  cancel('token 不存在') // 接收一个参数，会传给catch((err) => {}) err.errMsg === 'token 不存在'
+	
+	// 如果游客访问非公开API且没有token，可以取消请求并提示登录
+	// 但对于公开API，即使没有token也不取消请求
+	if (!token && !isPublicApi) {
+		// 这里也可以选择取消请求，但为了避免过度干扰用户体验，先不取消
+		console.log('未登录访问非公开API:', url);
 	}
-	*/
+	
 	return config
 })
 
 http.interceptor.response((response) => { /* 请求之后拦截器 */
 	const res = response.data;
+	
+	// 获取请求的URL和公开API标记
+	const url = response.config.url || '';
+	const isPublicApi = response.config.isPublicApi || false;
+	
+	// 记录响应状态，用于调试
+	console.log(`API响应 [${url}]: 状态码=${res.code}, 公开API=${isPublicApi}`);
+	
 	if (res.code !== 200) {
-		// 401未登录处理
+		// 对于公开API，即使返回错误也不要弹窗提示
+		if (isPublicApi) {
+			console.log('公开API返回非200状态码:', url, res.code, res.message);
+			// 对于公开API的错误，如果是401，直接返回数据，静默处理
+			if (res.code === 401) {
+				console.log('公开API返回401，静默处理');
+				return res;
+			}
+			// 其他错误返回reject但标记为静默处理
+			return Promise.reject({
+				silent: true, // 标记为静默错误，不显示提示
+				data: res
+			});
+		}
+		
+		// 401未登录处理 - 只处理非公开API的401错误
 		if (res.code === 401) {
 			// 清除无效token
 			uni.removeStorageSync('token');
 			// 清除用户信息
 			uni.removeStorageSync('userInfo');
 			
-			setTimeout(() => {
-				uni.showModal({
-					title: '提示',
-					content: '登录已过期，请重新登录',
-					showCancel: false,
-					success: function() {
-						uni.navigateTo({
-							url: '/pages/public/login'
-						})
-					}
-				});
-			}, 1500);
+			// 避免重复显示登录提示框
+			if (!getApp().loginModalShown) {
+				getApp().loginModalShown = true;
+				
+				setTimeout(() => {
+					uni.showModal({
+						title: '提示',
+						content: '登录已过期，请重新登录',
+						showCancel: false,
+						success: function(res) {
+							getApp().loginModalShown = false;
+							if (res.confirm) {
+								uni.navigateTo({
+									url: '/pages/public/login'
+								});
+							}
+						},
+						fail: function() {
+							getApp().loginModalShown = false;
+						}
+					});
+				}, 50);
+			}
 		} else {
 			// 提示错误信息，对于非关键错误不要过度打扰用户
 			uni.showToast({
@@ -82,8 +137,21 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 	//提示错误信息
 	console.log('response error', response);
 	
+	// 获取请求的URL和公开API标记
+	const url = response.config ? (response.config.url || '') : '';
+	const isPublicApi = response.config ? (response.config.isPublicApi || false) : false;
+	
 	// 处理500等服务器错误，可能是由无效token引起的
 	if (response.statusCode === 500 || response.statusCode === 401) {
+		// 如果是公开API，不提示登录，只打印日志
+		if (isPublicApi) {
+			console.log('公开API请求错误，静默处理:', url, response.statusCode);
+			return Promise.reject({
+				silent: true,
+				data: response
+			});
+		}
+		
 		// 只有在token存在的情况下才提示登录过期
 		const token = uni.getStorageSync('token');
 		if (token) {
@@ -91,17 +159,28 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 			uni.removeStorageSync('token');
 			uni.removeStorageSync('userInfo');
 			
-			// 登录过期提示
-			uni.showModal({
-				title: '提示',
-				content: '登录已过期，请重新登录',
-				showCancel: false,
-				success: function() {
-					uni.navigateTo({
-						url: '/pages/public/login'
-					});
-				}
-			});
+			// 避免重复显示登录提示框
+			if (!getApp().loginModalShown) {
+				getApp().loginModalShown = true;
+				
+				// 登录过期提示
+				uni.showModal({
+					title: '提示',
+					content: '登录已过期，请重新登录',
+					showCancel: false,
+					success: function(res) {
+						getApp().loginModalShown = false;
+						if (res.confirm) {
+							uni.navigateTo({
+								url: '/pages/public/login'
+							});
+						}
+					},
+					fail: function() {
+						getApp().loginModalShown = false;
+					}
+				});
+			}
 		} else {
 			// 如果没有token，可能是其他服务器错误，只在控制台输出
 			console.error('服务器错误:', response.statusCode);

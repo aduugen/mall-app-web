@@ -609,18 +609,17 @@
 				}
 			},
 			quickAddToCart(item) {
-				// 检查登录状态
 				if (!this.hasLogin) {
 					uni.showModal({
 						title: '提示',
-						content: '你还没登录，是否要登录？',
+						content: '请先登录后再加入购物车',
 						confirmText: '去登录',
 						cancelText: '取消',
 						success: function(res) {
 							if (res.confirm) {
 								uni.navigateTo({
 									url: '/pages/public/login'
-								})
+								});
 							}
 						}
 					});

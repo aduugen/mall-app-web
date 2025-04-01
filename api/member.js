@@ -28,3 +28,10 @@ export function memberRegister(data) {
 		data: data
 	})
 }
+
+export function memberLogout() {
+	return request({
+		method: 'POST',
+		url: '/sso/logout'
+	})
+}

@@ -45,12 +45,18 @@
 			return {
 				username: '',
 				password: '',
-				logining: false
+				logining: false,
+				redirectUrl: '' // 用于存储重定向URL
 			}
 		},
-		onLoad() {
+		onLoad(options) {
 			this.username = uni.getStorageSync('username') || '';
 			this.password = uni.getStorageSync('password') || '';
+			
+			// 保存重定向URL
+			if (options.redirect) {
+				this.redirectUrl = decodeURIComponent(options.redirect);
+			}
 		},
 		methods: {
 			...mapMutations(['login']),
@@ -85,7 +91,17 @@
 					memberInfo().then(response => {
 						this.login(response.data);
 						this.logining = false;
-						uni.navigateBack();
+						
+						// 登录成功后，根据情况进行导航
+						setTimeout(() => {
+							if (this.redirectUrl) {
+								uni.redirectTo({
+									url: '/' + this.redirectUrl
+								});
+							} else {
+								uni.navigateBack();
+							}
+						}, 300);
 					}).catch(error => {
 						console.error('获取用户信息失败', error);
 						this.logining = false;

@@ -345,19 +345,71 @@
 		},
 		methods: {
 			async loadData(id) {
-				fetchProductDetail(id).then(response => {
-					this.product = response.data.product;
-					this.skuStockList = response.data.skuStockList;
-					this.brand = response.data.brand;
-					this.initImgList();
-					this.initServiceList();
-					this.initSpecList(response.data);
-					this.initAttrList(response.data);
-					this.initPromotionTipList(response.data);
-					this.initProductDesc();
-					this.handleReadHistory();
-					this.initProductCollection();
+				// 显示加载提示
+				uni.showLoading({
+					title: '加载中...'
 				});
+				
+				try {
+					const response = await fetchProductDetail(id);
+					
+					// 成功加载数据
+					if (response && response.data) {
+						this.product = response.data.product || {};
+						this.skuStockList = response.data.skuStockList || [];
+						this.brand = response.data.brand || {};
+						
+						this.initImgList();
+						this.initServiceList();
+						this.initSpecList(response.data);
+						this.initAttrList(response.data);
+						this.initPromotionTipList(response.data);
+						this.initProductDesc();
+						
+						// 只有登录用户才记录浏览历史和检查收藏状态
+						if (this.hasLogin) {
+							this.handleReadHistory();
+							this.initProductCollection();
+						}
+					} else {
+						// 可能是错误，但不一定是401
+						console.warn('商品信息加载不完整', response);
+						uni.showToast({
+							title: '商品信息加载失败',
+							icon: 'none'
+						});
+					}
+				} catch (error) {
+					// 如果是被标记为静默的错误(来自公开API)，不显示错误提示
+					if (error && error.silent) {
+						console.log('静默处理的错误:', error);
+						// 尝试从错误中提取可用的数据
+						if (error.data && error.data.data) {
+							const data = error.data.data;
+							if (data.product) {
+								this.product = data.product;
+								this.skuStockList = data.skuStockList || [];
+								this.brand = data.brand || {};
+								
+								this.initImgList();
+								this.initServiceList();
+								this.initSpecList(data);
+								this.initAttrList(data);
+								this.initPromotionTipList(data);
+								this.initProductDesc();
+							}
+						}
+					} else {
+						// 普通错误，显示提示
+						console.error('商品详情加载错误:', error);
+						uni.showToast({
+							title: '商品信息加载失败',
+							icon: 'none'
+						});
+					}
+				} finally {
+					uni.hideLoading();
+				}
 			},
 			//规格弹窗开关
 			toggleSpec() {
@@ -440,36 +492,54 @@
 				this.$refs.share.toggleMask();
 			},
 			//收藏
-			toFavorite() {
-				if (!this.checkForLogin()) {
+			toFavorite(){
+				if (!this.hasLogin) {
+					uni.showModal({
+						title: '提示',
+						content: '请先登录后再收藏商品',
+						confirmText: '去登录',
+						cancelText: '取消',
+						success: function(res) {
+							if (res.confirm) {
+								// 获取当前页面路径，作为登录后的重定向URL
+								const pages = getCurrentPages();
+								const currentPage = pages[pages.length - 1];
+								const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
+								
+								uni.navigateTo({
+									url: `/pages/public/login?redirect=${redirect}`
+								});
+							}
+						}
+					});
 					return;
 				}
-				if (this.favorite) {
-					//取消收藏
+				
+				if(this.favorite){
 					deleteProductCollection({
 						productId: this.product.id
-					}).then(response => {
+					}).then(response=>{
+						this.favorite = false;
 						uni.showToast({
-							title: "取消收藏成功！",
-							icon: 'none'
+							title: '取消收藏成功',
+							icon: 'success',
+							duration: 1500
 						});
-						this.favorite = !this.favorite;
 					});
-				} else {
-					//收藏
-					let productCollection = {
+				}else{
+					addProductCollection({
 						productId: this.product.id,
 						productName: this.product.name,
 						productPic: this.product.pic,
-						productPrice: this.product.price,
-						productSubTitle: this.product.subTitle
-					}
-					createProductCollection(productCollection).then(response => {
+						productSubTitle: this.product.subTitle,
+						productPrice: this.product.price
+					}).then(response=>{
+						this.favorite = true;
 						uni.showToast({
-							title: "收藏成功！",
-							icon: 'none'
+							title: '收藏成功',
+							icon: 'success',
+							duration: 1500
 						});
-						this.favorite = !this.favorite;
 					});
 				}
 			},
@@ -658,11 +728,30 @@
 				}
 				return null;
 			},
-			//将商品加入到购物车
+			//添加到购物车
 			addToCart() {
-				if (!this.checkForLogin()) {
+				if (!this.hasLogin) {
+					uni.showModal({
+						title: '提示',
+						content: '请先登录后再加入购物车',
+						confirmText: '去登录',
+						cancelText: '取消',
+						success: function(res) {
+							if (res.confirm) {
+								// 获取当前页面路径，作为登录后的重定向URL
+								const pages = getCurrentPages();
+								const currentPage = pages[pages.length - 1];
+								const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
+								
+								uni.navigateTo({
+									url: `/pages/public/login?redirect=${redirect}`
+								});
+							}
+						}
+					});
 					return;
 				}
+				
 				let productSkuStock = this.getSkuStock();
 				
 				// 确定最终价格：优先使用促销价，如果没有促销价则使用原价
@@ -690,8 +779,8 @@
 					quantity: 1
 				};
 				
-				// 记录价格信息用于调试
-				console.info("加入购物车价格信息", {
+				// 打印调试信息
+				console.log('添加到购物车:', {
 					商品ID: this.product.id,
 					商品名称: this.product.name,
 					原价: this.product.price,
@@ -744,39 +833,6 @@
 					}
 				});
 			},
-			//检查登录状态并弹出登录框
-			checkForLogin() {
-				if (!this.hasLogin) {
-					uni.showModal({
-						title: '提示',
-						content: '你还没登录，是否要登录？',
-						confirmText: '去登录',
-						cancelText: '取消',
-						success: function(res) {
-							if (res.confirm) {
-								uni.navigateTo({
-									url: '/pages/public/login'
-								})
-							} else if (res.cancel) {
-								console.log('用户点击取消');
-							}
-						}
-					});
-					return false;
-				} else {
-					return true;
-				}
-			},
-			//初始化收藏状态
-			initProductCollection() {
-				if (this.hasLogin) {
-					productCollectionDetail({
-						productId: this.product.id
-					}).then(response => {
-						this.favorite = response.data != null;
-					});
-				}
-			},
 			//跳转到品牌详情页
 			navToBrandDetail(){
 				let id = this.brand.id;
@@ -813,6 +869,16 @@
 			},
 			goBack() {
 				uni.navigateBack();
+			},
+			//初始化收藏状态
+			initProductCollection() {
+				if (this.hasLogin) {
+					productCollectionDetail({
+						productId: this.product.id
+					}).then(response => {
+						this.favorite = response.data != null;
+					});
+				}
 			},
 		},
 

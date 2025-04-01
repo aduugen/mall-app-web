@@ -66,10 +66,17 @@
 				    content: '确定要退出登录么',
 				    success: (e)=>{
 				    	if(e.confirm){
-				    		this.logout();
+				    		// 使用store直接提交logout
+				    		this.$store.commit('logout');
+				    		
+				    		// 显示退出成功提示
+				    		uni.showToast({
+				    			title: '已退出登录'
+				    		});
+				    		
 				    		setTimeout(()=>{
 				    			uni.navigateBack();
-				    		}, 200)
+				    		}, 1000);
 				    	}
 				    }
 				});

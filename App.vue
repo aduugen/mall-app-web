@@ -8,6 +8,11 @@
 	import { memberInfo } from '@/api/member.js';
 
 	export default {
+		data() {
+			return {
+				loginModalShown: false // 全局标记，用于防止重复显示登录弹窗
+			}
+		},
 		methods: {
 			...mapMutations(['login'])
 		},
@@ -18,18 +23,29 @@
 			if(token) {
 				// 如果有token但没有用户信息或用户信息不完整，重新获取用户信息
 				if(!userInfo.id || !userInfo.nickname) {
+					// 获取用户信息前先做防错处理
 					memberInfo().then(response => {
-						if(response.data) {
+						if(response && response.data) {
 							this.login(response.data);
 							console.log('用户信息已更新');
 						}
 					}).catch(err => {
+						// 捕获错误时不影响应用正常使用
 						console.log('获取用户信息失败', err);
+						
+						// 如果返回401错误，可能是token过期，清除token
+						if(err && (err.data && err.data.code === 401 || err.statusCode === 401)) {
+							console.log('登录已过期，清除无效token');
+							uni.removeStorageSync('token');
+							uni.removeStorageSync('userInfo');
+						}
 					});
 				} else {
 					// 使用缓存中的用户信息
 					this.login(userInfo);
 				}
+			} else {
+				console.log('游客模式');
 			}
 		},
 		onShow: function() {
