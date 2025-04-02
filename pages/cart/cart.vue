@@ -22,9 +22,9 @@
 							 @error="onImageError('cartList', index)"></image>
 							<view class="yticon icon-xuanzhong2 checkbox" :class="{checked: item.checked}" @click.stop="check('item', index)"></view>
 						</view>
-						<view class="item-right" @click="navToDetailPage(item)">
-							<text class="clamp title">{{item.productName}}</text>
-							<text class="attr">{{item.spDataStr}}</text>
+						<view class="item-right">
+							<text class="clamp title" @click="navToDetailPage(item)">{{item.productName}}</text>
+							<text class="attr" @click="navToDetailPage(item)">{{item.spDataStr}}</text>
 							<view class="price-box">
 								<text class="price" v-if="item.promotionPrice">￥{{item.promotionPrice}}</text>
 								<text class="price-original" v-if="item.promotionPrice">￥{{item.price}}</text>
@@ -86,6 +86,17 @@
 		},
 		onShow(){
 			//页面显示时重新加载购物车
+			console.log('购物车页面显示，重新加载数据');
+			
+			// 检查是否需要刷新购物车（从商品详情页返回）
+			const app = getApp();
+			if(app.globalData && app.globalData.cartNeedRefresh) {
+				console.log('检测到购物车数据变更，正在重置标记');
+				// 重置标记
+				app.globalData.cartNeedRefresh = false;
+			}
+			
+			// 无条件重新加载购物车数据
 			this.loadData();
 		},
 		watch: {
@@ -217,7 +228,7 @@
 					that.loadingType = 'loading';
 					updateCartItem({id:cartItem.id, quantity:data.number})
 						.then(response => {
-							// 不要直接修改本地数据，而是重新获取最新的购物车数据
+							// 立即重新获取最新的购物车数据，确保显示正确
 							that.loadData();
 							that.$api.msg('数量已更新');
 							// 更新购物车数量徽标
