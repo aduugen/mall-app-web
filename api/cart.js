@@ -40,12 +40,8 @@ export function removeCartItem(id) {
  */
 export function updateCartItem(params) {
 	return request({
-		url: '/cart/update/quantity',
+		url: `/cart/update/quantity?id=${params.id}&quantity=${params.quantity}`,
 		method: 'POST',
-		params: params,
-		header: {
-			'Content-Type': 'application/x-www-form-urlencoded'
-		},
 		timeout: 10000
 	})
 }

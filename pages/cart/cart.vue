@@ -217,8 +217,8 @@
 					that.loadingType = 'loading';
 					updateCartItem({id:cartItem.id, quantity:data.number})
 						.then(response => {
-							cartItem.quantity = data.number;
-							that.calcTotal();
+							// 不要直接修改本地数据，而是重新获取最新的购物车数据
+							that.loadData();
 							that.$api.msg('数量已更新');
 							// 更新购物车数量徽标
 							that.$store.dispatch('updateCartCount');
