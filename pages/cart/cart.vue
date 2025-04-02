@@ -129,9 +129,19 @@
 				if(!this.hasLogin){
 					return;
 				}
+				
+				// 清空购物车本地数据，确保获取最新数据
+				this.cartList = [];
+				
 				try {
+					// 添加短暂延迟，确保后端数据同步完成
+					await new Promise(resolve => setTimeout(resolve, 100));
+					
 					const response = await fetchCartList();
 					let list = response.data;
+					
+					console.log('购物车数据加载成功，共', list ? list.length : 0, '项商品');
+					
 					let cartList = list.map(item => {
 						item.checked = true;
 						item.loaded = "loaded";
@@ -158,17 +168,6 @@
 						if (!item.promotionPrice) {
 							item.promotionPrice = null;
 						}
-						
-						// 记录价格信息用于调试
-						console.info("购物车商品价格信息", {
-							商品ID: item.productId,
-							商品名称: item.productName,
-							原价: item.price,
-							优惠金额: item.reduceAmount || 0,
-							促销价: item.promotionPrice,
-							促销信息: item.promotionMessage || '无促销',
-							最终价格: item.promotionPrice || item.price
-						});
 						
 						return item;
 					});
@@ -463,6 +462,12 @@
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
+				cursor: pointer;
+				
+				&:hover {
+					color: $uni-color-primary;
+					text-decoration: underline;
+				}
 			}
 			
 			.attr {
@@ -473,6 +478,11 @@
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
+				cursor: pointer;
+				
+				&:hover {
+					color: $uni-color-primary;
+				}
 			}
 			
 			.price-box {

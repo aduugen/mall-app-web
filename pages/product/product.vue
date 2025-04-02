@@ -883,17 +883,8 @@
 						icon: 'success',
 						duration: 1500
 					});
-					
-					// 更新购物车徽标和本地数量
-					this.$store.dispatch('updateCartCount').then(count => {
-						this.cartCount = count;
-						
-						// 设置一个标记，提示购物车页面需要刷新数据
-						if(typeof getApp().globalData === 'undefined') {
-							getApp().globalData = {};
-						}
-						getApp().globalData.cartNeedRefresh = true;
-					});
+					// 更新购物车徽标
+					return this.$store.dispatch('updateCartCount');
 				}).catch(error => {
 					uni.hideLoading();
 					console.error('操作购物车失败:', error);
