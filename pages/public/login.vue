@@ -87,16 +87,17 @@
 						this.login(response.data);
 						this.logining = false;
 						
+						// 更新购物车徽标
+						this.$store.dispatch('updateCartCount');
+						
 						// 登录成功后，根据情况进行导航
-						setTimeout(() => {
-							if (this.redirectUrl) {
-								uni.redirectTo({
-									url: '/' + this.redirectUrl
-								});
-							} else {
-								uni.navigateBack();
-							}
-						}, 300);
+						if (this.redirectUrl) {
+							uni.redirectTo({
+								url: '/' + this.redirectUrl
+							});
+						} else {
+							uni.navigateBack();
+						}
 					}).catch(error => {
 						console.error('获取用户信息失败', error);
 						this.logining = false;

@@ -232,7 +232,9 @@
 		fetchProductDetail
 	} from '@/api/product.js';
 	import {
-		addCartItem
+		addCartItem,
+		updateCartItem,
+		fetchCartList
 	} from '@/api/cart.js';
 	import {
 		fetchProductCouponList,
@@ -252,9 +254,6 @@
 	import {
 		formatDate
 	} from '@/utils/date';
-	import {
-		fetchCartList
-	} from '@/api/cart.js';
 	const defaultServiceList = [{
 		id: 1,
 		name: "无忧退货"
@@ -316,13 +315,23 @@
 			let id = options.id;
 			this.shareList = defaultShareList;
 			this.loadData(id);
-			this.getCartCount();
+			// 更新购物车数量
+			this.$store.dispatch('updateCartCount');
 		},
 		onShow() {
-			this.getCartCount();
+			// 更新购物车数量
+			this.$store.dispatch('updateCartCount');
+		},
+		onUnload() {
+			// 在页面卸载前同步本地购物车数量到Vuex
+			this.$store.commit('setCartCount', this.cartCount);
 		},
 		computed: {
-			...mapState(['hasLogin'])
+			...mapState(['hasLogin']),
+			// 同步Vuex中的购物车数量
+			storeCartCount() {
+				return this.$store.state.cartCount;
+			}
 		},
 		filters: {
 			formatDateTime(time) {
@@ -823,49 +832,62 @@
 					finalPrice = productSkuStock.promotionPrice;
 				}
 				
-				let cartItem = {
-					price: finalPrice,
-					productAttr: productSkuStock.spData,
-					productBrand: this.product.brandName,
-					productCategoryId: this.product.productCategoryId,
-					productId: this.product.id,
-					productName: this.product.name,
-					productPic: this.product.pic,
-					productSkuCode: productSkuStock.skuCode,
-					productSkuId: productSkuStock.id,
-					productSn: this.product.productSn,
-					productSubTitle: this.product.subTitle,
-					quantity: 1
-				};
-				
-				// 打印调试信息
-				console.log('添加到购物车:', {
-					商品ID: this.product.id,
-					商品名称: this.product.name,
-					原价: this.product.price,
-					促销价: this.product.promotionPrice,
-					SKU原价: productSkuStock ? productSkuStock.price : '无',
-					SKU促销价: productSkuStock ? productSkuStock.promotionPrice : '无',
-					最终价格: finalPrice
-				});
-				
 				// 显示加载提示
 				uni.showLoading({
-					title: '正在添加...'
+					title: '正在处理...'
 				});
 				
-				addCartItem(cartItem).then(response => {
+				// 先检查购物车中是否已有相同商品
+				fetchCartList().then(response => {
+					let cartList = response.data || [];
+					let existingItem = null;
+					
+					// 查找购物车中是否已有相同商品和规格
+					for (let item of cartList) {
+						if (item.productId === this.product.id && item.productSkuId === productSkuStock.id) {
+							existingItem = item;
+							break;
+						}
+					}
+					
+					if (existingItem) {
+						// 如果购物车中已有相同商品，直接使用更新接口更新数量
+						return updateCartItem({
+							id: existingItem.id,
+							quantity: existingItem.quantity + 1
+						});
+					} else {
+						// 如果购物车中没有相同商品，创建新条目
+						let cartItem = {
+							price: finalPrice,
+							productAttr: productSkuStock.spData,
+							productBrand: this.product.brandName,
+							productCategoryId: this.product.productCategoryId,
+							productId: this.product.id,
+							productName: this.product.name,
+							productPic: this.product.pic,
+							productSkuCode: productSkuStock.skuCode,
+							productSkuId: productSkuStock.id,
+							productSn: this.product.productSn,
+							productSubTitle: this.product.subTitle,
+							quantity: 1
+						};
+						
+						// 调用添加购物车API
+						return addCartItem(cartItem);
+					}
+				}).then(response => {
 					uni.hideLoading();
 					uni.showToast({
 						title: response.message || '添加成功',
 						icon: 'success',
 						duration: 1500
-					})
-					// 添加商品到购物车后更新购物车数量
-					this.getCartCount();
+					});
+					// 更新购物车徽标
+					return this.$store.dispatch('updateCartCount');
 				}).catch(error => {
 					uni.hideLoading();
-					console.error('添加购物车失败:', error);
+					console.error('操作购物车失败:', error);
 					
 					// 根据错误类型显示不同提示
 					if (error && error.data && error.data.code === 401) {
@@ -910,23 +932,15 @@
 				});
 			},
 			getCartCount() {
-				// 调用购物车API获取购物车数量
-				fetchCartList().then(response => {
-					if (response && response.data) {
-						// 计算总数量（考虑每个商品的quantity字段）
-						let totalCount = 0;
-						response.data.forEach(item => {
-							totalCount += (item.quantity || 1);
-						});
-						this.cartCount = totalCount;
-					} else {
-						this.cartCount = 0;
-					}
-				}).catch(() => {
-					this.cartCount = 0;
+				// 使用Vuex的updateCartCount方法更新购物车徽标
+				this.$store.dispatch('updateCartCount').then(() => {
+					// 从Vuex状态中获取最新的购物车数量
+					this.cartCount = this.$store.state.cartCount;
 				});
 			},
 			goBack() {
+				// 在返回前同步购物车数量到Vuex
+				this.$store.commit('setCartCount', this.cartCount);
 				uni.navigateBack();
 			},
 			//初始化收藏状态
@@ -943,7 +957,15 @@
 				}
 			},
 		},
-
+		watch: {
+			// 监听Vuex中购物车数量的变化
+			storeCartCount: {
+				handler(newVal) {
+					this.cartCount = newVal;
+				},
+				immediate: true
+			}
+		},
 	}
 </script>
 

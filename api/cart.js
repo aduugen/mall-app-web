@@ -27,7 +27,7 @@ export function removeCartItem(id) {
 		url: '/cart/delete',
 		method: 'POST',
 		data: [id],
-		headers: {
+		header: {
 			'Content-Type': 'application/json;charset=UTF-8'
 		},
 		timeout: 10000
@@ -42,9 +42,9 @@ export function updateCartItem(params) {
 	return request({
 		url: '/cart/update/quantity',
 		method: 'POST',
-		data: params,
-		headers: {
-			'Content-Type': 'application/json;charset=UTF-8'
+		params: params,
+		header: {
+			'Content-Type': 'application/x-www-form-urlencoded'
 		},
 		timeout: 10000
 	})
@@ -57,7 +57,7 @@ export function clearCart() {
 	return request({
 		url: '/cart/clear',
 		method: 'POST',
-		headers: {
+		header: {
 			'Content-Type': 'application/json;charset=UTF-8'
 		},
 		timeout: 10000

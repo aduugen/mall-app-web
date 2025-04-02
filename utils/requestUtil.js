@@ -55,6 +55,14 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 		}
 	}
 	
+	// 确保PUT和POST请求的Content-Type正确设置
+	if (config.method === 'PUT' || config.method === 'POST') {
+		config.header = {
+			'Content-Type': 'application/json;charset=UTF-8',
+			...config.header
+		}
+	}
+	
 	// 如果游客访问非公开API且没有token，可以取消请求并提示登录
 	// 但对于公开API，即使没有token也不取消请求
 	if (!token && !isPublicApi) {

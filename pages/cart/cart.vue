@@ -163,6 +163,9 @@
 					});
 					this.cartList = cartList;
 					this.calcTotal(); //计算总价
+					
+					// 更新购物车数量徽标
+					this.$store.dispatch('updateCartCount');
 				} catch (error) {
 					console.error('获取购物车数据失败:', error);
 					uni.showToast({
@@ -217,6 +220,8 @@
 							cartItem.quantity = data.number;
 							that.calcTotal();
 							that.$api.msg('数量已更新');
+							// 更新购物车数量徽标
+							that.$store.dispatch('updateCartCount');
 						})
 						.catch(err => {
 							console.error('更新购物车商品数量失败', err);
@@ -248,14 +253,16 @@
 								removeCartItem(id).then(res => {
 									that.loadData();
 									that.$api.msg('删除成功');
+									// 更新购物车数量徽标
+									that.$store.dispatch('updateCartCount');
 								}).catch(err => {
-									console.error('删除购物车项失败', err);
+									console.error('删除购物车商品失败', err);
 									that.$api.msg('删除失败，请稍后再试');
 								}).finally(() => {
 									that.loadingType = 'more';
 								});
 							} catch (e) {
-								console.error('删除购物车项出错', e);
+								console.error('删除操作出错', e);
 								that.loadingType = 'more';
 								that.$api.msg('操作异常，请稍后再试');
 							}
@@ -321,25 +328,28 @@
 			},
 			//清空购物车
 			clearCartList() {
+				let that = this;
 				uni.showModal({
 					content: '清空购物车？',
 					success: (e) => {
 						if (e.confirm) {
+							that.loadingType = 'loading';
 							try {
-								this.loadingType = 'loading';
-								clearCart().then(response => {
-									this.loadData();
-									this.$api.msg('购物车已清空');
+								clearCart().then(res => {
+									that.loadData();
+									that.$api.msg('购物车已清空');
+									// 更新购物车数量徽标
+									that.$store.dispatch('updateCartCount');
 								}).catch(err => {
 									console.error('清空购物车失败', err);
-									this.$api.msg('操作失败，请稍后再试');
+									that.$api.msg('清空失败，请稍后再试');
 								}).finally(() => {
-									this.loadingType = 'more';
+									that.loadingType = 'more';
 								});
 							} catch (e) {
-								console.error('清空购物车出错', e);
-								this.loadingType = 'more';
-								this.$api.msg('操作异常，请稍后再试');
+								console.error('清空操作出错', e);
+								that.loadingType = 'more';
+								that.$api.msg('操作异常，请稍后再试');
 							}
 						}
 					}

@@ -422,8 +422,8 @@
 						duration: 1500
 					});
 					
-					// 添加成功后重新获取购物车数据
-					this.loadCartItems();
+					// 更新购物车徽标
+					this.$store.dispatch('updateCartCount');
 				}).catch(error => {
 					uni.hideLoading();
 					console.error('添加购物车失败:', error);

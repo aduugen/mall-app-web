@@ -3,7 +3,8 @@
 	 * vuex管理登陆状态，具体可以参考官方登陆模板示例
 	 */
 	import {
-		mapMutations
+		mapMutations,
+		mapState
 	} from 'vuex';
 	import { memberInfo } from '@/api/member.js';
 
@@ -13,8 +14,27 @@
 				loginModalShown: false // 全局标记，用于防止重复显示登录弹窗
 			}
 		},
+		computed: {
+			...mapState(['hasLogin', 'userInfo', 'cartCount'])
+		},
 		methods: {
 			...mapMutations(['login'])
+		},
+		watch: {
+			// 全局监听购物车数量变化
+			cartCount(newVal) {
+				// 更新tabbar徽标
+				if (newVal > 0) {
+					uni.setTabBarBadge({
+						index: 3,
+						text: newVal.toString()
+					});
+				} else {
+					uni.removeTabBarBadge({
+						index: 3
+					});
+				}
+			}
 		},
 		onLaunch: function() {
 			let userInfo = uni.getStorageSync('userInfo') || '';
@@ -28,6 +48,8 @@
 						if(response && response.data) {
 							this.login(response.data);
 							console.log('用户信息已更新');
+							// 更新购物车徽标
+							this.$store.dispatch('updateCartCount');
 						}
 					}).catch(err => {
 						// 捕获错误时不影响应用正常使用
@@ -43,17 +65,23 @@
 				} else {
 					// 使用缓存中的用户信息
 					this.login(userInfo);
+					// 更新购物车徽标
+					this.$store.dispatch('updateCartCount');
 				}
 			} else {
 				console.log('游客模式');
 			}
 		},
 		onShow: function() {
-			console.log('App Show')
+			console.log('App Show');
+			// 如果用户已登录，更新购物车徽标
+			if (this.hasLogin) {
+				this.$store.dispatch('updateCartCount');
+			}
 		},
 		onHide: function() {
-			console.log('App Hide')
-		},
+			console.log('App Hide');
+		}
 	}
 </script>
 
