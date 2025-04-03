@@ -137,14 +137,49 @@
 			 * 替换onLoad下代码即可
 			 */
 			this.tabCurrentIndex = +options.state;
-			// #ifndef MP
-			this.loadData()
-			// #endif
-			// #ifdef MP
-			if (options.state == 0) {
-				this.loadData()
+			
+			// 处理搜索关键词参数，主要用于从发票列表页面跳转
+			const hasKeyword = options.keyword && this.tabCurrentIndex === 4;
+			
+			// 先加载数据
+			const loadPromise = new Promise((resolve) => {
+				// #ifndef MP
+				this.loadData().then(resolve).catch(resolve);
+				// #endif
+				// #ifdef MP
+				if (options.state == 0) {
+					this.loadData().then(resolve).catch(resolve);
+				} else {
+					resolve();
+				}
+				// #endif
+			});
+			
+			// 如果有搜索关键词，需要等待数据加载完成后执行搜索
+			if (hasKeyword) {
+				this.searchKeyword = options.keyword;
+				
+				// 显示加载提示
+				if (options.exactMatch === 'true') {
+					uni.showLoading({
+						title: '搜索订单中...'
+					});
+				}
+				
+				// 等待数据加载完成
+				loadPromise.then(() => {
+					// 延迟执行搜索，确保数据已渲染
+					setTimeout(() => {
+						// 如果需要精确匹配（主要用于订单号搜索）
+						if (options.exactMatch === 'true') {
+							this.searchOrderByOrderSn(options.keyword);
+						} else {
+							this.searchOrders();
+						}
+						uni.hideLoading();
+					}, 500);
+				});
 			}
-			// #endif
 			
 			// 监听评价成功事件
 			uni.$on('orderListRefresh', () => {
@@ -226,27 +261,34 @@
 				let state = navItem.state;
 				if (this.loadingType === 'loading') {
 					//防止重复加载
-					return;
+					return Promise.reject(new Error('正在加载中'));
 				}
 				this.orderParam.status = navItem.state;
 				this.loadingType = 'loading';
-				fetchOrderList(this.orderParam).then(response => {
-					let list = response.data.list;
-					if(type=='refresh'){
-						this.orderList = list;
-						this.loadingType = 'more';
-					}else{
-						if(list!=null&&list.length>0){
-							this.orderList = this.orderList.concat(list);
+				
+				return new Promise((resolve, reject) => {
+					fetchOrderList(this.orderParam).then(response => {
+						let list = response.data.list;
+						if(type=='refresh'){
+							this.orderList = list;
 							this.loadingType = 'more';
 						}else{
-							this.orderParam.pageNum--;
-							this.loadingType = 'noMore';
+							if(list!=null&&list.length>0){
+								this.orderList = this.orderList.concat(list);
+								this.loadingType = 'more';
+							}else{
+								this.orderParam.pageNum--;
+								this.loadingType = 'noMore';
+							}
 						}
-					}
-					
-					// 加载完数据后处理订单发票状态
-					this.updateOrderInvoiceStatus();
+						
+						// 加载完数据后处理订单发票状态
+						this.updateOrderInvoiceStatus();
+						resolve(this.orderList);
+					}).catch(error => {
+						this.loadingType = 'more';
+						reject(error);
+					});
 				});
 			},
 			//swiper 切换
@@ -470,6 +512,21 @@
 				
 				const keyword = this.searchKeyword.toLowerCase();
 				
+				// 检查是否是完整的订单号格式（通常订单号有特定格式）
+				const isOrderSn = /^\d{10,}$/.test(keyword) || keyword.length > 10;
+				
+				if (isOrderSn) {
+					// 对订单号执行精确匹配
+					const exactMatch = this.orderList.find(order => 
+						order.orderSn && order.orderSn.toLowerCase() === keyword
+					);
+					
+					if (exactMatch) {
+						this.filteredOrderList = [exactMatch];
+						return;
+					}
+				}
+				
 				// 在原始订单列表中搜索
 				this.filteredOrderList = this.orderList.filter(order => {
 					// 搜索订单号
@@ -487,6 +544,77 @@
 					}
 					
 					return false;
+				});
+			},
+			
+			// 按订单编号专门搜索订单，处理分页情况
+			searchOrderByOrderSn(orderSn) {
+				if (this.tabCurrentIndex !== 4) return; // 只在已完成选项卡搜索
+				
+				// 先在当前列表精确搜索
+				const exactMatch = this.orderList.find(order => order.orderSn === orderSn);
+				
+				if (exactMatch) {
+					// 如果在当前列表找到了精确匹配的订单，只显示它
+					this.filteredOrderList = [exactMatch];
+					return;
+				}
+				
+				// 否则发起API请求，直接搜索订单号
+				uni.showLoading({
+					title: '搜索中...'
+				});
+				
+				// 构建专门搜索订单的请求参数
+				const searchParams = {
+					keyword: orderSn, // 使用关键词参数，而不是orderSn参数(后端API可能不支持)
+					status: 3, // 已完成订单状态
+					pageNum: 1,
+					pageSize: 20 // 增大页面大小，提高找到结果的概率
+				};
+				
+				// 调用API搜索指定订单号
+				fetchOrderList(searchParams).then(response => {
+					uni.hideLoading();
+					
+					if (response && response.data && response.data.list) {
+						// 在返回结果中精确查找订单号匹配的订单
+						const matchedOrders = response.data.list.filter(order => 
+							order.orderSn === orderSn
+						);
+						
+						if (matchedOrders.length > 0) {
+							// 如果找到了精确匹配的订单，只显示它们
+							this.filteredOrderList = matchedOrders;
+						} else {
+							// 如果没有精确匹配，但有关键词匹配的结果，显示全部结果
+							this.filteredOrderList = response.data.list;
+							
+							if (this.filteredOrderList.length === 0) {
+								uni.showToast({
+									title: '未找到对应订单',
+									icon: 'none'
+								});
+							} else {
+								uni.showToast({
+									title: '未找到精确匹配，显示相关订单',
+									icon: 'none'
+								});
+							}
+						}
+					} else {
+						uni.showToast({
+							title: '搜索失败',
+							icon: 'none'
+						});
+					}
+				}).catch(err => {
+					uni.hideLoading();
+					console.error('搜索订单失败:', err);
+					uni.showToast({
+						title: '搜索失败，请重试',
+						icon: 'none'
+					});
 				});
 			},
 			

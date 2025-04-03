@@ -72,8 +72,8 @@
 								
 							</view>
 							<view class="i-action">
-								<view class="action-btn" @click="showInvoiceDetail(item.id)">
-									查看详情
+								<view class="action-btn" @click="viewOrderDetail(item.orderSn)">
+									查看订单内容
 								</view>
 							</view>
 						</view>
@@ -379,6 +379,42 @@
 				uni.navigateTo({
 					url: `/pages/order/invoice-detail?id=${id}`
 				});
+			},
+			
+			// 查看订单内容
+			viewOrderDetail(orderSn) {
+				console.log('查看订单内容, 订单编号:', orderSn);
+				if(!orderSn) {
+					uni.showToast({
+						title: '订单编号不存在',
+						icon: 'none'
+					});
+					return;
+				}
+				
+				// 显示loading提示
+				uni.showLoading({
+					title: '正在跳转...'
+				});
+				
+				// 跳转到已完成订单页面并传递订单编号作为搜索关键词
+				setTimeout(() => {
+					uni.hideLoading();
+					// 同时传递关键词和精确匹配参数
+					uni.navigateTo({
+						url: `/pages/order/order?state=4&keyword=${orderSn}&exactMatch=true`,
+						success: () => {
+							console.log('跳转成功');
+						},
+						fail: (err) => {
+							console.error('跳转失败:', err);
+							uni.showToast({
+								title: '跳转失败，请重试',
+								icon: 'none'
+							});
+						}
+					});
+				}, 300);
 			},
 			
 			// 删除发票申请记录
