@@ -11,7 +11,11 @@
 	export default {
 		data() {
 			return {
-				loginModalShown: false // 全局标记，用于防止重复显示登录弹窗
+				loginModalShown: false, // 全局标记，用于防止重复显示登录弹窗
+				globalData: {
+					cartNeedRefresh: false, // 购物车是否需要刷新
+					forceCartRefresh: false // 是否强制刷新购物车数据
+				}
 			}
 		},
 		computed: {

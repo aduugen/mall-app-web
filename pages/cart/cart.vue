@@ -78,7 +78,9 @@
 				empty: false, //空白页现实  true|false
 				cartList: [],
 				sliderX: 0, // 滑块初始位置
-				slideThreshold: 100 // 触发清空的阈值
+				slideThreshold: 100, // 触发清空的阈值
+				isUpdating: false, // 防止重复提交标记
+				loadingType: 'more' // 加载状态
 			};
 		},
 		onLoad() {
@@ -90,13 +92,26 @@
 			
 			// 检查是否需要刷新购物车（从商品详情页返回）
 			const app = getApp();
-			if(app.globalData && app.globalData.cartNeedRefresh) {
-				console.log('检测到购物车数据变更，正在重置标记');
-				// 重置标记
-				app.globalData.cartNeedRefresh = false;
+			let needRefresh = false;
+			
+			if(app.globalData) {
+				// 检查是否设置了购物车刷新标记
+				if(app.globalData.cartNeedRefresh) {
+					console.log('检测到购物车数据变更，正在重置标记');
+					// 重置标记
+					app.globalData.cartNeedRefresh = false;
+					needRefresh = true;
+				}
+				
+				// 检查是否设置了强制刷新标记
+				if(app.globalData.forceCartRefresh) {
+					console.log('检测到需要强制刷新购物车数据');
+					app.globalData.forceCartRefresh = false;
+					needRefresh = true;
+				}
 			}
 			
-			// 无条件重新加载购物车数据
+			// 无论如何都重新加载购物车数据，确保数据是最新的
 			this.loadData();
 		},
 		watch: {
@@ -224,32 +239,57 @@
 				let that = this;
 				let cartItem = this.cartList[data.index];
 				
-				try {
-					that.loadingType = 'loading';
-					updateCartItem({id:cartItem.id, quantity:data.number})
-						.then(response => {
-							// 立即重新获取最新的购物车数据，确保显示正确
-							that.loadData();
-							that.$api.msg('数量已更新');
-							// 更新购物车数量徽标
-							that.$store.dispatch('updateCartCount');
-						})
-						.catch(err => {
-							console.error('更新购物车商品数量失败', err);
-							that.$api.msg('更新失败，请稍后再试');
-							// 恢复原数量
-							that.loadData();
-						})
-						.finally(() => {
-							that.loadingType = 'more';
-						});
-				} catch (e) {
-					console.error('更新购物车数量出错', e);
-					that.loadingType = 'more';
-					that.$api.msg('操作异常，请稍后再试');
-					// 恢复原数据
-					that.loadData();
+				// 记录原始数量，用于失败时恢复
+				const originalQuantity = cartItem.quantity;
+				// 设置新数量，立即在UI上反映变化
+				cartItem.quantity = data.number;
+				
+				// 防止重复触发
+				if (that.isUpdating) {
+					return;
 				}
+				that.isUpdating = true;
+				
+				// 显示加载状态
+				uni.showLoading({
+					title: '更新中...',
+					mask: true
+				});
+				
+				console.log('更新购物车数量', cartItem.id, '从', originalQuantity, '到', data.number);
+				
+				updateCartItem({
+					id: cartItem.id, 
+					quantity: data.number
+				}).then(response => {
+					console.log('更新成功', response);
+					
+					// 重新获取最新的购物车数据，确保数据同步
+					that.loadData();
+					
+					// 更新购物车数量徽标
+					that.$store.dispatch('updateCartCount');
+					
+					uni.showToast({
+						title: '数量已更新',
+						icon: 'success',
+						duration: 1000
+					});
+				}).catch(err => {
+					console.error('更新购物车商品数量失败', err);
+					// 恢复原数量
+					cartItem.quantity = originalQuantity;
+					// 计算总价
+					that.calcTotal();
+					uni.showToast({
+						title: '更新失败，请稍后再试',
+						icon: 'none',
+						duration: 2000
+					});
+				}).finally(() => {
+					uni.hideLoading();
+					that.isUpdating = false;
+				});
 			},
 			//删除
 			delGoods(index) {
@@ -398,18 +438,18 @@
 			align-items: center;
 			background: #fff;
 			box-shadow: 0 -2upx 10upx 0 rgba(0, 0, 0, .1);
-
+		
 			image {
 				width: 240upx;
 				height: 160upx;
 				margin-bottom: 30upx;
 			}
-
+		
 			.empty-tips {
 				display: flex;
 				font-size: $font-sm+2upx;
 				color: $font-color-disabled;
-
+			
 				.navigator {
 					color: $uni-color-primary;
 					margin-left: 16upx;
@@ -423,18 +463,18 @@
 		display: flex;
 		position: relative;
 		padding: 30upx 40upx;
-
+	
 		.image-wrapper {
 			width: 230upx;
 			height: 230upx;
 			flex-shrink: 0;
 			position: relative;
-
+		
 			image {
 				border-radius: 8upx;
 			}
 		}
-
+	
 		.checkbox {
 			position: absolute;
 			left: -16upx;
@@ -447,7 +487,7 @@
 			background: #fff;
 			border-radius: 50px;
 		}
-
+	
 		.item-right {
 			flex: 1;
 			display: flex;
@@ -513,7 +553,7 @@
 				bottom: 0;
 			}
 		}
-
+	
 		.del-btn {
 			padding: 4upx 10upx;
 			font-size: 34upx;

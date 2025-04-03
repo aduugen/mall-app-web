@@ -79,6 +79,11 @@
 					index: this.index
 				}
 				this.$emit('eventChange', data);
+			},
+			value(newVal) {
+				if (newVal !== this.inputValue) {
+					this.inputValue = newVal;
+				}
 			}
 		},
 		methods: {

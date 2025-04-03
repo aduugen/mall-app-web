@@ -911,9 +911,18 @@
 						icon: 'success',
 						duration: 1500
 					});
+					
+					// 设置全局标记，表示购物车数据已更新
+					const app = getApp();
+					if (app.globalData) {
+						app.globalData.cartNeedRefresh = true;
+						// 添加新标记，表示数据发生了变化，需要强制刷新数据
+						app.globalData.forceCartRefresh = true;
+					}
+					
 					// 更新购物车徽标
 					this.cartCount += 1; // 本地立即更新数量
-					return this.$store.dispatch('updateCartCount');
+					this.$store.dispatch('updateCartCount');
 				}).catch(error => {
 					uni.hideLoading();
 					console.error('操作购物车失败:', error);
