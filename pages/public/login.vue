@@ -20,7 +20,7 @@
 				还没有账号?
 				<text @click="toRegist">马上注册</text>
 		    </view>
-			<view class="forget-section" @click="toRegist">
+			<view class="forget-section" @click="forgetPassword">
 				忘记密码? 
 			</view>
 		</view>
@@ -57,10 +57,22 @@
 		methods: {
 			...mapMutations(['login']),
 			navBack() {
-				uni.navigateBack();
+				if (this.redirectUrl) {
+					uni.switchTab({
+						url: '/pages/index/index'
+					});
+				} else {
+					uni.navigateBack();
+				}
 			},
 			toRegist() {
-				uni.navigateTo({url:'/pages/public/register'});
+				let url = '/pages/public/register';
+				if (this.redirectUrl) {
+					url += `?redirect=${encodeURIComponent(this.redirectUrl)}`;
+				}
+				uni.navigateTo({
+					url: url
+				});
 			},
 			async toLogin() {
 				this.logining = true;
@@ -111,6 +123,13 @@
 				} finally {
 					this.logining = false;
 				}
+			},
+			forgetPassword() {
+				uni.showToast({
+					title: '忘记密码功能暂未开放',
+					icon: 'none',
+					duration: 2000
+				});
 			},
 		},
 

@@ -57,18 +57,31 @@
 				password: '',
 				mobile: '',
 				code: '123456', // 默认验证码
-				registering: false
+				registering: false,
+				redirectUrl: '' // 添加redirectUrl字段
 			}
 		},
-		onLoad() {
+		onLoad(options) {
+			// 保存重定向URL
+			if (options.redirect) {
+				this.redirectUrl = decodeURIComponent(options.redirect);
+			}
 		},
 		methods: {
 			navBack() {
-				uni.navigateBack();
+				// 返回登录页
+				uni.redirectTo({
+					url: '/pages/public/login'
+				});
 			},
 			toLogin() {
-				uni.navigateTo({
-					url: '/pages/public/login'
+				// 将redirectUrl传递回登录页，使用redirectTo而非navigateTo
+				let url = '/pages/public/login';
+				if (this.redirectUrl) {
+					url += `?redirect=${encodeURIComponent(this.redirectUrl)}`;
+				}
+				uni.redirectTo({
+					url: url
 				});
 			},
 			async handleRegister() {
@@ -110,8 +123,13 @@
 					});
 					
 					setTimeout(() => {
-						uni.navigateTo({
-							url: '/pages/public/login'
+						// 注册成功后，带上重定向参数跳转到登录页，使用redirectTo替代navigateTo
+						let url = '/pages/public/login';
+						if (this.redirectUrl) {
+							url += `?redirect=${encodeURIComponent(this.redirectUrl)}`;
+						}
+						uni.redirectTo({
+							url: url
 						});
 					}, 1000);
 				} catch (error) {
