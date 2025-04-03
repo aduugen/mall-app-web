@@ -69,7 +69,10 @@
 									<text class="title">发票金额:</text>
 									<text class="content price">¥{{item.invoiceAmount}}</text>
 								</view>
-								
+								<view class="info-item" v-if="item.invoiceType === 1">
+									<text class="title">收票邮箱:</text>
+									<text class="content">{{item.receiverEmail}}</text>
+								</view>
 							</view>
 							<view class="i-action">
 								<view class="action-btn" @click="viewOrderDetail(item.orderSn)">

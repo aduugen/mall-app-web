@@ -31,7 +31,10 @@ export function payOrderSuccess(data) {
 		header: {
 			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
 		},
-		data: data
+		params: {
+			orderId: data.orderId,
+			payType: data.payType
+		}
 	})
 }
 

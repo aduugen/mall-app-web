@@ -14,7 +14,6 @@
 				</view>
 				<label class="radio">
 					<radio value="" color="#fa436a" :checked='payType == 1' />
-					</radio>
 				</label>
 			</view>
 			<view class="type-item b-b" @click="changePayType(2)">
@@ -24,7 +23,6 @@
 				</view>
 				<label class="radio">
 					<radio value="" color="#fa436a" :checked='payType == 2' />
-					</radio>
 				</label>
 			</view>
 		</view>
@@ -71,12 +69,19 @@
 					window.location.href = API_BASE_URL+"/alipay/webPay?outTradeNo=" + this.orderInfo.orderSn + "&subject=" + this.orderInfo.receiverName + "的商品订单" + "&totalAmount=" + this.orderInfo.totalAmount
 				}else{
 					payOrderSuccess({
-						orderId: this.orderId,
+						orderId: parseInt(this.orderId),
 						payType: this.payType
 					}).then(response => {
 						uni.redirectTo({
 							url: '/pages/money/paySuccess'
 						})
+					}).catch(error => {
+						console.error('支付失败:', error);
+						uni.showToast({
+							title: '支付处理失败，请重试',
+							icon: 'none',
+							duration: 2000
+						});
 					});
 				}
 
