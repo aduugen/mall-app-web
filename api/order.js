@@ -52,7 +52,9 @@ export function cancelUserOrder(data) {
 		header: {
 			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
 		},
-		data: data
+		params: {
+			orderId: data.orderId
+		}
 	})
 }
 
@@ -63,7 +65,9 @@ export function confirmReceiveOrder(data) {
 		header: {
 			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
 		},
-		data: data
+		params: {
+			orderId: data.orderId
+		}
 	})
 }
 
@@ -74,7 +78,9 @@ export function deleteUserOrder(data) {
 		header: {
 			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
 		},
-		data: data
+		params: {
+			orderId: data.orderId
+		}
 	})
 }
 

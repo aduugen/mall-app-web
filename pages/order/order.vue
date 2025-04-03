@@ -361,9 +361,19 @@
 				            uni.showLoading({
 				            	title: '请稍后'
 				            })
-				            confirmReceiveOrder({orderId:orderId}).then(response=>{
+				            confirmReceiveOrder({
+				            	orderId: parseInt(orderId)
+				            }).then(response=>{
 				            	uni.hideLoading();
 				            	superThis.loadData();
+				            }).catch(error => {
+				                uni.hideLoading();
+				                console.error('确认收货失败:', error);
+				                uni.showToast({
+				                    title: '确认收货失败，请重试',
+				                    icon: 'none',
+				                    duration: 2000
+				                });
 				            });
 				        } else if (res.cancel) {
 				            console.log('用户点击取消');
