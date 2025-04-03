@@ -23,6 +23,16 @@ http.validateStatus = (statusCode) => {
 }
 
 http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
+	// 打印完整的请求URL信息
+	console.log('请求URL:', (config.baseURL || '') + config.url);
+	console.log('请求方法:', config.method);
+	if (config.params) {
+		console.log('请求参数(params):', config.params);
+	}
+	if (config.data) {
+		console.log('请求数据(data):', config.data);
+	}
+	
 	// 获取请求的URL，用于判断是否为公开API
 	const url = config.url || '';
 	// 公开API列表，这些API不需要登录即可访问
@@ -149,24 +159,26 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 			if (!getApp().loginModalShown) {
 				getApp().loginModalShown = true;
 				
+				uni.showToast({
+					title: '登录已过期，请重新登录',
+					icon: 'none',
+					duration: 1500
+				});
+				
 				setTimeout(() => {
-					uni.showModal({
-						title: '提示',
-						content: '登录已过期，请重新登录',
-						showCancel: false,
-						success: function(res) {
+					// 直接跳转到登录页面
+					uni.navigateTo({
+						url: '/pages/public/login',
+						success: () => {
+							console.log('跳转到登录页成功');
 							getApp().loginModalShown = false;
-							if (res.confirm) {
-								uni.navigateTo({
-									url: '/pages/public/login'
-								});
-							}
 						},
-						fail: function() {
+						fail: (err) => {
+							console.error('跳转到登录页失败', err);
 							getApp().loginModalShown = false;
 						}
 					});
-				}, 50);
+				}, 1500);
 			}
 		} else {
 			// 提示错误信息，对于非关键错误不要过度打扰用户
@@ -236,6 +248,44 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 		// 其他错误提示
 		console.error('请求错误:', response.errMsg);
 	}
+	
+	// 401: 未授权，可能是token过期或无效，清除token并跳转登录页
+	if (response.statusCode === 401) {
+		console.log('检测到401错误，跳转到登录页');
+		
+		// 清除失效的token
+		uni.removeStorageSync('token');
+		
+		// 延迟执行，确保UI消息能够显示
+		setTimeout(() => {
+			uni.showToast({
+				title: '登录已过期，请重新登录',
+				icon: 'none',
+				duration: 1500
+			});
+			
+			// 跳转到登录页面
+			setTimeout(() => {
+				uni.navigateTo({
+					url: '/pages/public/login',
+					success: () => console.log('跳转到登录页成功'),
+					fail: (err) => {
+						console.error('跳转到登录页失败', err);
+						// 如果navigateTo失败，尝试使用reLaunch
+						uni.reLaunch({
+							url: '/pages/public/login',
+							success: () => console.log('使用reLaunch跳转到登录页成功'),
+							fail: (e) => console.error('所有跳转方式都失败', e)
+						});
+					}
+				});
+			}, 1500);
+		}, 0);
+		
+		// 返回一个拒绝的Promise，中断后续操作
+		return Promise.reject('登录已过期');
+	}
+	
 	return Promise.reject(response);
 })
 

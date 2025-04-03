@@ -15,7 +15,7 @@
 					 password @confirm="toLogin" />
 				</view>
 			</view>
-			<button class="confirm-btn" @click="toLogin" :disabled="logining">登录</button>
+			<button class="confirm-btn" @tap.prevent="toLogin" :disabled="logining">登录</button>
 			<view class="register-section">
 				还没有账号?
 				<text @click="toRegist">马上注册</text>
@@ -46,41 +46,73 @@
 			}
 		},
 		onLoad(options) {
+			// 获取缓存的用户名和密码
 			this.username = uni.getStorageSync('username') || '';
 			this.password = uni.getStorageSync('password') || '';
 			
-			// 保存重定向URL
-			if (options.redirect) {
-				this.redirectUrl = decodeURIComponent(options.redirect);
-			}
+			// 清空重定向URL
+			this.redirectUrl = '';
+			console.log('登录页面已加载，准备登录');
 		},
 		methods: {
 			...mapMutations(['login']),
 			navBack() {
-				if (this.redirectUrl) {
-					uni.switchTab({
-						url: '/pages/index/index'
-					});
-				} else {
-					uni.navigateBack();
-				}
+				// 简化返回逻辑，始终返回到首页
+				console.log('点击返回按钮，返回到首页');
+				uni.switchTab({
+					url: '/pages/index/index',
+					success: () => console.log('返回首页成功'),
+					fail: (err) => console.error('返回首页失败', err)
+				});
 			},
 			toRegist() {
-				let url = '/pages/public/register';
-				if (this.redirectUrl) {
-					url += `?redirect=${encodeURIComponent(this.redirectUrl)}`;
-				}
+				// 直接跳转到注册页面
 				uni.navigateTo({
-					url: url
+					url: '/pages/public/register'
 				});
 			},
 			async toLogin() {
+				console.log('登录按钮点击');
+				
+				// 表单验证
+				if (!this.username.trim()) {
+					uni.showToast({
+						title: '请输入用户名',
+						icon: 'none'
+					});
+					return;
+				}
+				
+				if (!this.password.trim()) {
+					uni.showToast({
+						title: '请输入密码',
+						icon: 'none'
+					});
+					return;
+				}
+				
+				// 设置登录状态
+				if (this.logining) {
+					console.log('登录处理中，请勿重复点击');
+					return;
+				}
+				
+				// 设置登录中状态
 				this.logining = true;
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: '登录中...',
+					mask: true
+				});
+				
 				try {
+					console.log('发起登录请求');
 					const response = await memberLogin({
 						username: this.username,
 						password: this.password
 					});
+					console.log('登录请求成功', response);
 					
 					// 确保正确格式化token
 					let token = '';
@@ -99,20 +131,30 @@
 					uni.setStorageSync('username', this.username);
 					uni.setStorageSync('password', this.password);
 					
+					console.log('获取用户信息');
 					const memberInfoResp = await memberInfo();
 					this.login(memberInfoResp.data);
 					
 					// 更新购物车徽标
 					this.$store.dispatch('updateCartCount');
 					
-					// 登录成功后，根据情况进行导航
-					if (this.redirectUrl) {
-						uni.redirectTo({
-							url: '/' + this.redirectUrl
-						});
-					} else {
-						uni.navigateBack();
-					}
+					// 登录成功，跳转页面
+					console.log('登录成功，固定跳转到用户页面');
+					
+					// 无论是否有重定向URL，都直接跳转到用户页面
+					uni.switchTab({
+						url: '/pages/user/user',
+						success: () => console.log('跳转到用户页面成功'),
+						fail: (err) => {
+							console.error('跳转到用户页面失败:', err);
+							// 如果switchTab失败，尝试使用reLaunch
+							uni.reLaunch({
+								url: '/pages/user/user',
+								success: () => console.log('使用reLaunch跳转到用户页面成功'),
+								fail: (e) => console.error('所有跳转方式都失败', e)
+							});
+						}
+					});
 				} catch (error) {
 					console.error('登录失败', error);
 					uni.showToast({
@@ -121,7 +163,8 @@
 						duration: 2000
 					});
 				} finally {
-					this.logining = false;
+					uni.hideLoading(); // 隐藏加载提示
+					this.logining = false; // 重置登录状态
 				}
 			},
 			forgetPassword() {
@@ -222,6 +265,14 @@
 		color: #fff;
 		margin-top: 50upx;
 		background: linear-gradient(to right, #4bb0ff, #286090);
+		position: relative;  /* 添加相对定位 */
+		overflow: hidden;    /* 确保波纹效果在按钮内 */
+		
+		/* 添加点击状态样式 */
+		&:active {
+			opacity: 0.8;
+			transform: scale(0.98);
+		}
 	}
 
 	.register-section {

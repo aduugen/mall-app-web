@@ -63,8 +63,10 @@
 		},
 		onLoad(options) {
 			// 保存重定向URL
+			console.log('注册页面 onLoad options:', options);
 			if (options.redirect) {
 				this.redirectUrl = decodeURIComponent(options.redirect);
+				console.log('注册页面解析的redirectUrl:', this.redirectUrl);
 			}
 		},
 		methods: {
@@ -75,12 +77,12 @@
 				});
 			},
 			toLogin() {
-				// 将redirectUrl传递回登录页，使用redirectTo而非navigateTo
+				// 将redirectUrl传递回登录页，使用reLaunch而非redirectTo，彻底清除页面栈
 				let url = '/pages/public/login';
 				if (this.redirectUrl) {
 					url += `?redirect=${encodeURIComponent(this.redirectUrl)}`;
 				}
-				uni.redirectTo({
+				uni.reLaunch({
 					url: url
 				});
 			},
@@ -123,12 +125,12 @@
 					});
 					
 					setTimeout(() => {
-						// 注册成功后，带上重定向参数跳转到登录页，使用redirectTo替代navigateTo
+						// 注册成功后，带上重定向参数跳转到登录页，使用reLaunch替代redirectTo
 						let url = '/pages/public/login';
 						if (this.redirectUrl) {
 							url += `?redirect=${encodeURIComponent(this.redirectUrl)}`;
 						}
-						uni.redirectTo({
+						uni.reLaunch({
 							url: url
 						});
 					}, 1000);

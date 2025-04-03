@@ -39,10 +39,13 @@ const store = new Vuex.Store({
 			
 			// 清除本地存储
 			uni.removeStorage({  
-                key: 'userInfo'  
-            });
+				key: 'userInfo'  
+			});
 			uni.removeStorage({
-			    key: 'token'  
+				key: 'token'  
+			});
+			uni.removeStorage({
+				key: 'logoutPage'  
 			});
 			
 			// 移除购物车徽标

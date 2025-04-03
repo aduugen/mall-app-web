@@ -56,7 +56,7 @@
 			<button class="logout-btn-section" @click="logout" v-if="hasLogin">退出登录</button>
 			
 			<!-- 未登录状态下的登录提示 -->
-			<view class="login-tip" v-if="!hasLogin" @click="navTo('/pages/public/login')">
+			<view class="login-tip" v-if="!hasLogin" @click="toLogin">
 				<text class="login-tip-text">登录/注册</text>
 				<text class="yticon icon-you"></text>
 			</view>
@@ -278,7 +278,19 @@
 							});
 							
 							setTimeout(() => {
-								this.navTo('/pages/public/login');
+								// 直接跳转到登录页面
+								uni.navigateTo({
+									url: '/pages/public/login',
+									success: () => console.log('退出后跳转到登录页成功'),
+									fail: (err) => {
+										console.error('退出后跳转到登录页失败', err);
+										uni.reLaunch({
+											url: '/pages/public/login',
+											success: () => console.log('使用reLaunch跳转到登录页成功'),
+											fail: (e) => console.error('所有跳转方式都失败', e)
+										});
+									}
+								});
 							}, 1500);
 						}
 					}
@@ -286,16 +298,18 @@
 			},
 			/**
 			 * 统一跳转接口,拦截未登录路由
-			 * navigator标签现在默认没有转场动画，所以用view
 			 */
 			navTo(url){
+				console.log('导航到:', url);
 				if(!this.hasLogin){
 					if(url.indexOf('/pages/public/login') !== -1 || url.indexOf('/pages/public/register') !== -1) {
 						uni.navigateTo({  
 							url
-						})
+						});
 					} else {
 						// 对于需要登录的页面，显示提示
+						console.log('用户未登录，需要先登录');
+						
 						uni.showModal({
 							title: '提示',
 							content: '您还未登录，请先登录',
@@ -303,17 +317,34 @@
 							cancelText: '取消',
 							success: (res) => {
 								if(res.confirm) {
+									console.log('用户确认登录，将跳转到登录页');
 									uni.navigateTo({
 										url: '/pages/public/login'
-									})
+									});
+								} else {
+									console.log('用户取消登录');
 								}
 							}
-						})
+						});
 					}
 				} else {
+					// 已登录，直接跳转
+					console.log('用户已登录，直接跳转到:', url);
 					uni.navigateTo({  
-						url
-					})
+						url,
+						fail: (err) => {
+							console.error('跳转失败，尝试switchTab', err);
+							// 尝试使用switchTab
+							if(url.indexOf('/pages/index/') !== -1 || 
+							   url.indexOf('/pages/cart/') !== -1 || 
+							   url.indexOf('/pages/user/') !== -1) {
+								uni.switchTab({
+									url,
+									fail: (e) => console.error('switchTab也失败了', e)
+								});
+							}
+						}
+					});
 				}
 			}, 
 	
@@ -372,6 +403,15 @@
 					fail: (err) => {
 						console.error('二维码预览失败:', err);
 					}
+				});
+			},
+			toLogin() {
+				// 直接跳转到登录页
+				console.log('跳转到登录页');
+				uni.navigateTo({
+					url: '/pages/public/login',
+					success: () => console.log('跳转到登录页成功'),
+					fail: (err) => console.error('跳转到登录页失败', err)
 				});
 			}
         }  
