@@ -41,7 +41,46 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 	// 设置公开API标记，用于后续识别
 	config.isPublicApi = isPublicApi;
 	
+	// 检查token是否存在且是否有效
 	const token = uni.getStorageSync('token');
+	const tokenExpireTime = uni.getStorageSync('tokenExpireTime');
+	const currentTime = Date.now();
+	
+	// 如果token存在但已过期，先清除token
+	if (token && tokenExpireTime && currentTime > tokenExpireTime) {
+		console.log('Token已过期，清除token');
+		uni.removeStorageSync('token');
+		uni.removeStorageSync('tokenExpireTime');
+		
+		// 对于非公开API，可以直接取消请求
+		if (!isPublicApi) {
+			// 如果不是公开API且token已过期，显示登录提示并取消请求
+			if (!getApp().loginModalShown) {
+				getApp().loginModalShown = true;
+				
+				uni.showModal({
+					title: '提示',
+					content: '登录已过期，请重新登录',
+					showCancel: false,
+					success: function(res) {
+						getApp().loginModalShown = false;
+						if (res.confirm) {
+							uni.navigateTo({
+								url: '/pages/public/login'
+							});
+						}
+					},
+					fail: function() {
+						getApp().loginModalShown = false;
+					}
+				});
+			}
+			// 取消当前请求
+			cancel('登录已过期');
+			return;
+		}
+	}
+	
 	if(token){
 		// 检查token是否已经包含Bearer前缀
 		const tokenValue = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
@@ -202,6 +241,14 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 
 export function request (options = {}) {
 	return http.request(options);
+}
+
+export function saveToken(token) {
+	// 设置token
+	uni.setStorageSync('token', token);
+	// 设置过期时间为24小时后
+	const expireTime = Date.now() + 24 * 60 * 60 * 1000;
+	uni.setStorageSync('tokenExpireTime', expireTime);
 }
 
 export default request

@@ -35,6 +35,7 @@
 	import {
 		memberLogin,memberInfo
 	} from '@/api/member.js';
+	import request, { saveToken } from '@/utils/requestUtil.js';
 	export default {
 		data() {
 			return {
@@ -63,10 +64,12 @@
 			},
 			async toLogin() {
 				this.logining = true;
-				memberLogin({
-					username: this.username,
-					password: this.password
-				}).then(response => {
+				try {
+					const response = await memberLogin({
+						username: this.username,
+						password: this.password
+					});
+					
 					// 确保正确格式化token
 					let token = '';
 					if (response.data.tokenHead && response.data.token) {
@@ -79,33 +82,35 @@
 						token = 'Bearer ' + response.data.token;
 					}
 					
-					uni.setStorageSync('token', token);
+					// 保存token和设置过期时间
+					saveToken(token);
 					uni.setStorageSync('username', this.username);
 					uni.setStorageSync('password', this.password);
 					
-					memberInfo().then(response => {
-						this.login(response.data);
-						this.logining = false;
-						
-						// 更新购物车徽标
-						this.$store.dispatch('updateCartCount');
-						
-						// 登录成功后，根据情况进行导航
-						if (this.redirectUrl) {
-							uni.redirectTo({
-								url: '/' + this.redirectUrl
-							});
-						} else {
-							uni.navigateBack();
-						}
-					}).catch(error => {
-						console.error('获取用户信息失败', error);
-						this.logining = false;
-					});
-				}).catch((error) => {
+					const memberInfoResp = await memberInfo();
+					this.login(memberInfoResp.data);
+					
+					// 更新购物车徽标
+					this.$store.dispatch('updateCartCount');
+					
+					// 登录成功后，根据情况进行导航
+					if (this.redirectUrl) {
+						uni.redirectTo({
+							url: '/' + this.redirectUrl
+						});
+					} else {
+						uni.navigateBack();
+					}
+				} catch (error) {
 					console.error('登录失败', error);
+					uni.showToast({
+						title: '登录失败，请检查账号密码',
+						icon: 'none',
+						duration: 2000
+					});
+				} finally {
 					this.logining = false;
-				});
+				}
 			},
 		},
 

@@ -820,6 +820,34 @@
 					return;
 				}
 				
+				// 验证token有效性
+				const token = uni.getStorageSync('token');
+				const tokenExpireTime = uni.getStorageSync('tokenExpireTime');
+				const currentTime = Date.now();
+				
+				if (!token || (tokenExpireTime && currentTime > tokenExpireTime)) {
+					// token不存在或已过期
+					uni.showModal({
+						title: '提示',
+						content: '登录已过期，请重新登录',
+						confirmText: '去登录',
+						cancelText: '取消',
+						success: function(res) {
+							if (res.confirm) {
+								// 获取当前页面路径，作为登录后的重定向URL
+								const pages = getCurrentPages();
+								const currentPage = pages[pages.length - 1];
+								const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
+								
+								uni.navigateTo({
+									url: `/pages/public/login?redirect=${redirect}`
+								});
+							}
+						}
+					});
+					return;
+				}
+				
 				let productSkuStock = this.getSkuStock();
 				
 				// 确定最终价格：优先使用促销价，如果没有促销价则使用原价
@@ -884,6 +912,7 @@
 						duration: 1500
 					});
 					// 更新购物车徽标
+					this.cartCount += 1; // 本地立即更新数量
 					return this.$store.dispatch('updateCartCount');
 				}).catch(error => {
 					uni.hideLoading();
@@ -892,14 +921,23 @@
 					// 根据错误类型显示不同提示
 					if (error && error.data && error.data.code === 401) {
 						// 授权失败，提示登录
+						// 清除可能无效的token
+						uni.removeStorageSync('token');
+						uni.removeStorageSync('tokenExpireTime');
+						
 						uni.showModal({
 							title: '提示',
 							content: '登录已过期，请重新登录',
 							confirmText: '去登录',
 							success: function(res) {
 								if (res.confirm) {
+									// 获取当前页面路径，作为登录后的重定向URL
+									const pages = getCurrentPages();
+									const currentPage = pages[pages.length - 1];
+									const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
+									
 									uni.navigateTo({
-										url: '/pages/public/login'
+										url: `/pages/public/login?redirect=${redirect}`
 									});
 								}
 							}

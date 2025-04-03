@@ -96,23 +96,34 @@
 				}
 				
 				this.registering = true;
-				memberRegister({
-					username: this.username,
-					password: this.password,
-					telephone: this.mobile,
-					authCode: this.code // 使用默认验证码
-				}).then(response => {
-					uni.showToast({
-						title: '注册成功'
+				try {
+					await memberRegister({
+						username: this.username,
+						password: this.password,
+						telephone: this.mobile,
+						authCode: this.code // 使用默认验证码
 					});
+					
+					uni.showToast({
+						title: '注册成功',
+						icon: 'success'
+					});
+					
 					setTimeout(() => {
 						uni.navigateTo({
 							url: '/pages/public/login'
 						});
 					}, 1000);
-				}).catch(() => {
+				} catch (error) {
+					console.error('注册失败', error);
+					uni.showToast({
+						title: '注册失败，请稍后再试',
+						icon: 'none',
+						duration: 2000
+					});
+				} finally {
 					this.registering = false;
-				});
+				}
 			}
 		},
 	}

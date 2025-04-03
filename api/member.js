@@ -5,9 +5,9 @@ export function memberLogin(data) {
 		method: 'POST',
 		url: '/sso/login',
 		header: {
-			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+			'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
 		},
-		data: data
+		params: data
 	})
 }
 
@@ -23,9 +23,9 @@ export function memberRegister(data) {
 		method: 'POST',
 		url: '/sso/register',
 		header: {
-			'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+			'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
 		},
-		data: data
+		params: data
 	})
 }
 
