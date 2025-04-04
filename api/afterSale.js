@@ -19,9 +19,18 @@ export function fetchAfterSaleList(params) {
  * 创建售后申请
  * @param {Object} data
  * @param {number} data.orderId - 订单ID
- * @param {Array} data.orderItemIds - 订单项ID列表
- * @param {string} data.reason - 退货原因
- * @param {Array} data.pics - 图片URL列表
+ * @param {Array} data.items - 售后商品详情列表
+ * @param {number} data.items[].orderItemId - 订单项ID
+ * @param {number} data.items[].returnQuantity - 退货数量
+ * @param {string} data.items[].productId - 商品ID
+ * @param {string} data.items[].productSkuId - 商品规格ID
+ * @param {string} data.items[].productName - 商品名称
+ * @param {string} data.items[].productPic - 商品图片
+ * @param {string} data.items[].productAttr - 商品属性
+ * @param {number} data.items[].productPrice - 商品单价
+ * @param {string} data.items[].productSkuCode - 商品规格编码
+ * @param {string} data.items[].reason - 退货原因
+ * @param {string} data.items[].pics - 退货凭证图片，多个用逗号分隔
  */
 export function createAfterSale(data) {
 	return request({

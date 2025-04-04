@@ -275,6 +275,12 @@
 			}
 		},
 		{
+			"path": "pages/afterSale/afterSaleDetail",
+			"style": {
+				"navigationBarTitleText": "售后详情"
+			}
+		},
+		{
 			"path": "pages/order/invoice",
 			"style": {
 				"navigationBarTitleText": "开具发票"

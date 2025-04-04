@@ -20,11 +20,58 @@
 							<text class="state" :style="{color: item.status === 0 ? '#fa436a' : '#999'}">{{item.status | formatStatus}}</text>
 						</view>
 						
+						<!-- 售后服务ID信息 -->
+						<view class="service-id-info">
+							<text class="service-id-text">售后服务编号:{{item.id}}</text>
+						</view>
 						<!-- 待处理状态时显示订单信息 -->
-						<view class="order-info" v-if="item.status === 0">
+						<view class="service-id-info" v-if="item.status === 0">
 							<!-- 检查多种可能的订单号位置 -->
-							<text class="order-info-item">订单编号: {{getOrderSn(item)}}</text>
+							<text class="service-id-text">{{getOrderSn(item)}}</text>
 							<text class="order-info-debug" v-if="!getOrderSn(item) && isDebug">数据结构: {{JSON.stringify(item).substring(0, 100)}}...</text>
+						</view>
+						
+						<!-- 售后原因信息 -->
+						<view class="reason-info">
+							<text class="reason-label">售后原因: </text>
+							<view class="reason-content-wrapper">
+								<text class="reason-content" v-if="!item.isReasonExpanded && item.reason && item.reason.length > 30">{{item.reason.substring(0, 30)}}...</text>
+								<text class="reason-content" v-else>{{item.reason || '无'}}</text>
+								<text class="expand-btn" v-if="item.reason && item.reason.length > 30" @click="toggleReasonExpand(item)">
+									{{item.isReasonExpanded ? '收起' : '展开'}}
+								</text>
+							</view>
+						</view>
+						
+						<!-- 凭证图片 -->
+						<view class="pics-info" v-if="hasPics(item)">
+							<text class="pics-label">凭证图片:</text>
+							<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
+								<view class="pics-container">
+									<view class="pic-item" v-for="(pic, picIndex) in formatPics(item.pics)" :key="picIndex" @click="previewImage(pic, formatPics(item.pics))">
+										<image class="thumbnail" :src="pic" mode="aspectFill" 
+											@error="onImageError(item, picIndex)" 
+											@load="onImageLoad(item, picIndex)" 
+											:lazy-load="true">
+										</image>
+										<view class="loading-placeholder" v-if="isImageLoading(item, picIndex)">
+											<text class="cuIcon-loading2"></text>
+										</view>
+										<view class="error-placeholder" v-if="hasImageError(item, picIndex)">
+											<text class="error-icon">!</text>
+										</view>
+										<view class="pic-count" v-if="picIndex === 0 && formatPics(item.pics).length > 1">
+											{{formatPics(item.pics).length}}张
+										</view>
+									</view>
+								</view>
+							</scroll-view>
+							<view class="debug-info" v-if="isDebug">
+								<text>原始数据: {{item.pics && item.pics.substring ? (item.pics.length > 50 ? item.pics.substring(0, 50) + '...' : item.pics) : JSON.stringify(item.pics)}}</text>
+								<view class="debug-url" v-if="formatPics(item.pics).length > 0">
+									<text>图片URL: {{formatPics(item.pics)[0]}}</text>
+								</view>
+							</view>
 						</view>
 						
 						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList" :key="itemIndex">
@@ -44,10 +91,12 @@
 							件商品 实付款
 							<text class="price">{{item.payAmount}}</text>
 						</view>
-						
-						<view class="action-box b-t">
-							<button class="action-btn" @click="showAfterSaleDetail(item.id)">查看详情</button>
-							<button v-if="item.status === 0" class="action-btn recom" @click="applyAfterSale(item)">申请售后</button>
+
+						<view class="action-section" v-if="item.status === 0">
+							<button class="action-btn cancel" @click.stop="cancelAfterSale(item.id)">取消申请</button>
+						</view>
+						<view class="action-section" v-else>
+							<button class="action-btn detail" @click.stop="viewAfterSaleDetail(item.id)">查看详情</button>
 						</view>
 					</view>
 
@@ -67,6 +116,9 @@
 	import {
 		fetchAfterSaleList
 	} from '@/api/afterSale.js';
+	import {
+		API_BASE_URL
+	} from '@/utils/appConfig.js';
 
 	export default {
 		components: {
@@ -104,7 +156,10 @@
 						text: '已拒绝'
 					}
 				],
-				isDebug: true, // 调试模式标志
+				isDebug: false, // 调试模式标志
+				imageErrors: {}, // 记录图片加载错误
+				imageLoading: {}, // 记录图片加载状态
+				debugInfo: {} // 存储调试信息
 			};
 		},
 		onLoad(options) {
@@ -150,6 +205,176 @@
 			},
 		},
 		methods: {
+			// 检查是否有凭证图片
+			hasPics(item) {
+				return item.pics && (
+					(typeof item.pics === 'string' && item.pics.trim() !== '') ||
+					(Array.isArray(item.pics) && item.pics.length > 0) ||
+					(typeof item.pics === 'object' && item.pics !== null)
+				);
+			},
+			
+			// 检查图片是否正在加载
+			isImageLoading(item, index) {
+				if (!item || !item.id) return false;
+				if (!this.imageLoading[item.id]) {
+					this.$set(this.imageLoading, item.id, {});
+					this.$set(this.imageLoading[item.id], index, true);
+					return true;
+				}
+				return !!this.imageLoading[item.id][index];
+			},
+			
+			// 图片加载错误处理
+			onImageError(item, index) {
+				console.error('图片加载失败:', this.formatPics(item.pics)[index]);
+				// 记录错误状态便于UI处理
+				if (!this.imageErrors[item.id]) {
+					this.$set(this.imageErrors, item.id, {});
+				}
+				this.$set(this.imageErrors[item.id], index, true);
+				
+				// 设置加载状态为完成
+				if (this.imageLoading[item.id]) {
+					this.$set(this.imageLoading[item.id], index, false);
+				}
+			},
+			
+			// 图片加载完成处理
+			onImageLoad(item, index) {
+				if (!item || !item.id) return;
+				if (this.imageLoading[item.id]) {
+					this.$set(this.imageLoading[item.id], index, false);
+				}
+			},
+			
+			// 获取基础URL
+			getBaseUrl() {
+				// 使用全局配置的API基础URL作为图片服务器地址
+				// 这样可以确保图片URL与API地址一致，避免硬编码
+				return API_BASE_URL;
+			},
+			
+			// 格式化并修复图片路径
+			fixImagePath(path) {
+				if (!path) return '';
+				
+				// 已经是完整URL
+				if (path.startsWith('http')) {
+					return path;
+				}
+				
+				// 相对路径，添加基础URL
+				if (path.startsWith('/')) {
+					return this.getBaseUrl() + path;
+				}
+				
+				// 其他情况，假设是相对路径
+				return this.getBaseUrl() + '/' + path;
+			},
+			
+			// 格式化凭证图片列表
+			formatPics(picsStr) {
+				if (!picsStr) return [];
+				
+				// 调试输出原始数据
+				if (this.isDebug) {
+					console.log('原始凭证图片数据:', picsStr, '类型:', typeof picsStr);
+				}
+				
+				// 已经是数组，确保每个URL都是完整的
+				if (Array.isArray(picsStr)) {
+					return picsStr.map(url => this.fixImagePath(url));
+				}
+				
+				try {
+					// 处理字符串类型
+					if (typeof picsStr === 'string') {
+						// 直接处理逗号分隔的图片地址 - 最常见的情况
+						if (picsStr.includes(',')) {
+							const urls = picsStr.split(',')
+								.map(url => url.trim())
+								.filter(url => url)
+								.map(url => this.fixImagePath(url));
+								
+							if (this.isDebug) {
+								console.log('处理后的图片URL列表:', urls);
+							}
+							
+							return urls;
+						}
+						
+						// 如果是单个URL
+						if (picsStr.includes('/upload/') || picsStr.startsWith('/')) {
+							const url = this.fixImagePath(picsStr);
+							if (this.isDebug) {
+								console.log('处理后的单个URL:', url);
+							}
+							return [url];
+						}
+						
+						// 尝试解析JSON
+						if (picsStr.startsWith('[') || picsStr.startsWith('{')) {
+							try {
+								const parsed = JSON.parse(picsStr);
+								if (Array.isArray(parsed)) {
+									return parsed.map(url => this.fixImagePath(url));
+								} else if (typeof parsed === 'object' && parsed !== null) {
+									// 尝试从对象中提取URL
+									for (const key of ['url', 'src', 'path']) {
+										if (parsed[key]) {
+											return [this.fixImagePath(parsed[key])];
+										}
+									}
+								}
+							} catch (e) {
+								console.error('JSON解析失败:', e);
+							}
+						}
+						
+						// 作为单个URL处理
+						return [this.fixImagePath(picsStr)];
+					}
+					
+					// 处理对象类型
+					if (typeof picsStr === 'object' && picsStr !== null) {
+						for (const key of ['url', 'src', 'path', 'pics']) {
+							if (picsStr[key]) {
+								if (Array.isArray(picsStr[key])) {
+									return picsStr[key].map(url => this.fixImagePath(url));
+								}
+								return [this.fixImagePath(picsStr[key])];
+							}
+						}
+					}
+					
+					// 转换为字符串
+					return [this.fixImagePath(String(picsStr))];
+					
+				} catch (e) {
+					console.error('解析凭证图片出错:', e);
+					return [];
+				}
+			},
+			
+			// 预览图片
+			previewImage(current, urls) {
+				uni.previewImage({
+					current: current, // 当前显示图片的链接
+					urls: urls, // 所有图片的链接列表
+					indicator: 'number',
+					loop: true
+				});
+			},
+			// 切换原因展开/收起状态
+			toggleReasonExpand(item) {
+				// 使用Vue.set确保响应式更新
+				if(typeof item.isReasonExpanded === 'undefined') {
+					this.$set(item, 'isReasonExpanded', true);
+				} else {
+					item.isReasonExpanded = !item.isReasonExpanded;
+				}
+			},
 			// 获取订单编号，考虑各种可能的数据结构
 			getOrderSn(item) {
 				if (item.orderSn) {
@@ -157,9 +382,9 @@
 				} else if (item.order && item.order.orderSn) {
 					return item.order.orderSn;
 				} else if (item.orderId) {
-					return '订单ID: ' + item.orderId;
+					return '订单编号: ' + item.orderId;
 				} else if (item.order && item.order.id) {
-					return '订单ID: ' + item.order.id;
+					return '订单编号: ' + item.order.id;
 				} else {
 					return '无订单信息';
 				}
@@ -227,6 +452,17 @@
 			applyAfterSale(order) {
 				uni.navigateTo({
 					url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
+				});
+			},
+			// 检查图片是否加载错误
+			hasImageError(item, index) {
+				if (!item || !item.id || !this.imageErrors[item.id]) return false;
+				return !!this.imageErrors[item.id][index];
+			},
+			// 查看售后详情
+			viewAfterSaleDetail(id) {
+				uni.navigateTo({
+					url: `/pages/afterSale/afterSaleDetail?id=${id}`
 				});
 			}
 		}
@@ -306,6 +542,172 @@
 
 			.state {
 				color: $base-color;
+			}
+		}
+
+		.service-id-info {
+			padding: 8upx 30upx;
+			font-size: $font-sm + 2upx;
+			color: $font-color-light;
+			margin: 0 30upx 10upx 0;
+
+			.service-id-text {
+				display: block;
+				
+				.id-value {
+					color: #3366cc;
+					font-weight: bold;
+				}
+			}
+		}
+
+		.reason-info {
+			padding: 10upx 30upx;
+			font-size: $font-sm + 2upx;
+			color: $font-color-dark;
+			margin: 0 30upx 10upx 0;
+			background-color: #f9f9f9;
+			border-radius: 8upx;
+			display: flex;
+			flex-wrap: wrap;
+
+			.reason-label {
+				color: $font-color-light;
+				margin-right: 8upx;
+				padding: 4upx 0;
+			}
+			
+			.reason-content-wrapper {
+				flex: 1;
+				display: flex;
+				flex-wrap: wrap;
+				word-break: break-all;
+			}
+
+			.reason-content {
+				flex: 1;
+				min-width: 80%;
+				padding: 4upx 0;
+				word-break: break-all;
+				line-height: 1.5;
+			}
+
+			.expand-btn {
+				color: $base-color;
+				font-size: $font-sm;
+				padding: 4upx 0;
+				margin-left: 8upx;
+				background: transparent;
+				border: none;
+				outline: none;
+				cursor: pointer;
+			}
+		}
+
+		.pics-info {
+			padding: 10upx 30upx;
+			font-size: $font-sm + 2upx;
+			color: $font-color-dark;
+			margin: 0 30upx 10upx 0;
+			background-color: #f9f9f9;
+			border-radius: 8upx;
+			
+			.pics-label {
+				display: block;
+				color: $font-color-light;
+				margin-bottom: 8upx;
+				padding: 4upx 0;
+			}
+			
+			.pics-scroll {
+				width: 100%;
+				white-space: nowrap;
+				height: 160upx;
+			}
+
+			.pics-container {
+				display: inline-flex;
+				padding: 4upx 0;
+			}
+
+			.pic-item {
+				margin-right: 12upx;
+				position: relative;
+				border-radius: 6upx;
+				overflow: hidden;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+			}
+
+			.thumbnail {
+				width: 150upx;
+				height: 150upx;
+				border-radius: 8upx;
+				border: 1px solid #f0f0f0;
+				position: relative;
+				background-color: #f5f5f5;
+				object-fit: cover;
+			}
+			
+			.loading-placeholder {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				background-color: #f0f0f0;
+				
+				.cuIcon-loading2 {
+					font-size: 40upx;
+					color: #999;
+					animation: rotate 1s linear infinite;
+				}
+			}
+			
+			.error-placeholder {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				background-color: #f8f8f8;
+				
+				.error-icon {
+					font-size: 40upx;
+					color: #ff6666;
+					width: 50upx;
+					height: 50upx;
+					line-height: 50upx;
+					text-align: center;
+					border-radius: 50%;
+					border: 2upx solid #ff6666;
+				}
+			}
+			
+			.pic-count {
+				position: absolute;
+				right: 0;
+				bottom: 0;
+				background-color: rgba(0, 0, 0, 0.5);
+				color: #fff;
+				font-size: 20upx;
+				padding: 2upx 8upx;
+				border-top-left-radius: 6upx;
+			}
+			
+			.debug-info {
+				margin-top: 8upx;
+				font-size: 22upx;
+				color: #ff6600;
+				background-color: #fff9e6;
+				padding: 4upx 8upx;
+				border-radius: 4upx;
+				word-break: break-all;
 			}
 		}
 
@@ -413,38 +815,27 @@
 			}
 		}
 
-		.action-box {
+		.action-section {
+			margin-top: 20upx;
 			display: flex;
 			justify-content: flex-end;
-			align-items: center;
-			height: 100upx;
-			position: relative;
-			padding-right: 30upx;
-		}
-
-		.action-btn {
-			width: 160upx;
-			height: 60upx;
-			margin: 0;
-			margin-left: 24upx;
-			padding: 0;
-			text-align: center;
-			line-height: 60upx;
-			font-size: $font-sm + 2upx;
-			color: $font-color-dark;
-			background: #fff;
-			border-radius: 100px;
-
-			&:after {
-				border-radius: 100px;
-			}
-
-			&.recom {
-				background: #fff9f9;
-				color: $base-color;
-
-				&:after {
-					border-color: #f7bcc8;
+			
+			.action-btn {
+				padding: 10upx 20upx;
+				font-size: 24upx;
+				border-radius: 30upx;
+				margin-left: 20upx;
+				
+				&.cancel {
+					color: #666;
+					border: 1px solid #ddd;
+					background-color: #fff;
+				}
+				
+				&.detail {
+					color: #fa436a;
+					border: 1px solid #fa436a;
+					background-color: #fff;
 				}
 			}
 		}
@@ -580,5 +971,10 @@
 		100% {
 			opacity: .2
 		}
+	}
+
+	@keyframes rotate {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
 	}
 </style> 

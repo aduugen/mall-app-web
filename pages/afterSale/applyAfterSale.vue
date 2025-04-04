@@ -4,7 +4,7 @@
 			<view class="section-title">选择退货商品</view>
 			<view class="goods-list">
 				<view class="goods-item" v-for="(item, index) in orderInfo.orderItemList" :key="index">
-					<checkbox :checked="selectedItems.includes(item.id)" @tap="toggleSelect(item.id)" color="#fa436a"/>
+					<checkbox :checked="isItemSelected(item.id)" @tap="toggleSelect(item.id)" color="#fa436a"/>
 					<image class="goods-img" :src="item.productPic" mode="aspectFill"></image>
 					<view class="goods-info">
 						<text class="goods-name">{{item.productName}}</text>
@@ -13,40 +13,47 @@
 							<text class="price">￥{{item.productPrice}}</text>
 							<text class="quantity">x {{item.productQuantity}}</text>
 						</view>
+						<view class="return-quantity" v-if="isItemSelected(item.id)">
+							<text class="quantity-label">退货数量:</text>
+							<view class="quantity-selector">
+								<text class="btn minus" @tap="decreaseQuantity(item.id)">-</text>
+								<input type="number" class="num" v-model="returnQuantities[item.id]" @input="validateQuantity(item.id, item.productQuantity)" />
+								<text class="btn plus" @tap="increaseQuantity(item.id, item.productQuantity)">+</text>
+							</view>
+							<text class="max-quantity">最多{{item.productQuantity}}件</text>
+						</view>
+						<view class="item-reason-section" v-if="isItemSelected(item.id)">
+							<view class="reason-title">退货原因</view>
+							<view class="reason-picker">
+								<picker @change="changeReason(item.id, $event)" :value="getSelectedReasonIndex(item.id)" :range="reasonList">
+									<view class="reason-picker-value">
+										<text>{{getSelectedReason(item.id) || '请选择退货原因'}}</text>
+										<text class="yticon icon-you"></text>
+									</view>
+								</picker>
+							</view>
+							<view class="custom-reason" v-if="getSelectedReason(item.id) === '其他原因'">
+								<textarea class="reason-input" 
+									:value="getCustomReason(item.id)" 
+									@input="updateCustomReason(item.id, $event.detail.value)"
+									placeholder="请输入具体原因"
+									maxlength="200">
+								</textarea>
+							</view>
+						</view>
+						<view class="item-upload-section" v-if="isItemSelected(item.id)">
+							<view class="upload-title">上传凭证</view>
+							<view class="upload-list">
+								<view class="upload-item" v-for="(pic, picIndex) in getItemPics(item.id)" :key="picIndex">
+									<image :src="pic" mode="aspectFill"></image>
+									<text class="delete-btn yticon icon-shanchu4" @click="deleteItemImage(item.id, picIndex)"></text>
+								</view>
+								<view class="upload-btn" @click="chooseItemImage(item.id)" v-if="getItemPics(item.id).length < 3">
+									<text class="yticon icon-jia1"></text>
+								</view>
+							</view>
+						</view>
 					</view>
-				</view>
-			</view>
-		</view>
-		
-		<view class="reason-section">
-			<view class="section-title">退货原因</view>
-			<view class="reason-list">
-				<view class="reason-item" 
-					v-for="(reason, index) in reasonList" 
-					:key="index"
-					:class="{active: selectedReason === reason}"
-					@tap="selectReason(reason)">
-					{{reason}}
-				</view>
-			</view>
-			<view class="custom-reason" v-if="selectedReason === '其他原因'">
-				<textarea class="reason-input" 
-					v-model="customReason" 
-					placeholder="请输入具体原因"
-					maxlength="200">
-				</textarea>
-			</view>
-		</view>
-		
-		<view class="upload-section">
-			<view class="section-title">上传凭证</view>
-			<view class="upload-list">
-				<view class="upload-item" v-for="(item, index) in uploadList" :key="index">
-					<image :src="item" mode="aspectFill"></image>
-					<text class="delete-btn yticon icon-shanchu4" @click="deleteImage(index)"></text>
-				</view>
-				<view class="upload-btn" @click="chooseImage" v-if="uploadList.length < 9">
-					<text class="yticon icon-jia1"></text>
 				</view>
 			</view>
 		</view>
@@ -68,6 +75,10 @@ export default {
 			orderId: null,
 			orderInfo: {},
 			selectedItems: [],
+			returnQuantities: {}, // 存储每个商品的退货数量
+			itemReasons: {}, // 存储每个商品的退货原因
+			itemCustomReasons: {}, // 存储每个商品的自定义退货原因
+			itemPics: {}, // 存储每个商品的凭证图片
 			selectedReason: '',
 			customReason: '',
 			uploadList: [],
@@ -91,7 +102,26 @@ export default {
 		getOrderDetail() {
 			fetchOrderDetail(this.orderId).then(response => {
 				this.orderInfo = response.data;
+				// 初始化每个商品的退货数量为其购买数量
+				if (this.orderInfo.orderItemList) {
+					this.orderInfo.orderItemList.forEach(item => {
+						this.$set(this.returnQuantities, item.id, item.productQuantity);
+						// 初始化该商品的退货原因和凭证
+						if (!this.itemReasons[item.id]) {
+							this.$set(this.itemReasons, item.id, '');
+						}
+						if (!this.itemCustomReasons[item.id]) {
+							this.$set(this.itemCustomReasons, item.id, '');
+						}
+						if (!this.itemPics[item.id]) {
+							this.$set(this.itemPics, item.id, []);
+						}
+					});
+				}
 			});
+		},
+		isItemSelected(itemId) {
+			return this.selectedItems.indexOf(itemId) > -1;
 		},
 		toggleSelect(itemId) {
 			const index = this.selectedItems.indexOf(itemId);
@@ -99,6 +129,42 @@ export default {
 				this.selectedItems.splice(index, 1);
 			} else {
 				this.selectedItems.push(itemId);
+				// 默认设置退货数量为购买数量
+				const item = this.orderInfo.orderItemList.find(item => item.id === itemId);
+				if (item) {
+					this.$set(this.returnQuantities, itemId, item.productQuantity);
+					// 初始化该商品的退货原因和凭证
+					if (!this.itemReasons[itemId]) {
+						this.$set(this.itemReasons, itemId, '');
+					}
+					if (!this.itemCustomReasons[itemId]) {
+						this.$set(this.itemCustomReasons, itemId, '');
+					}
+					if (!this.itemPics[itemId]) {
+						this.$set(this.itemPics, itemId, []);
+					}
+				}
+			}
+		},
+		decreaseQuantity(itemId) {
+			if (this.returnQuantities[itemId] > 1) {
+				this.returnQuantities[itemId]--;
+			}
+		},
+		increaseQuantity(itemId, maxQuantity) {
+			if (this.returnQuantities[itemId] < maxQuantity) {
+				this.returnQuantities[itemId]++;
+			}
+		},
+		validateQuantity(itemId, maxQuantity) {
+			// 确保输入的数量是有效的整数
+			let quantity = parseInt(this.returnQuantities[itemId]);
+			if (isNaN(quantity) || quantity < 1) {
+				this.$set(this.returnQuantities, itemId, 1);
+			} else if (quantity > maxQuantity) {
+				this.$set(this.returnQuantities, itemId, maxQuantity);
+			} else {
+				this.$set(this.returnQuantities, itemId, quantity);
 			}
 		},
 		selectReason(reason) {
@@ -118,7 +184,61 @@ export default {
 		deleteImage(index) {
 			this.uploadList.splice(index, 1);
 		},
+		// 商品退货原因相关方法
+		changeReason(itemId, e) {
+			const index = e.detail.value;
+			const reason = this.reasonList[index];
+			this.$set(this.itemReasons, itemId, reason);
+			
+			// 如果不是"其他原因"，清空自定义原因
+			if (reason !== '其他原因') {
+				this.$set(this.itemCustomReasons, itemId, '');
+			}
+		},
+		
+		getSelectedReasonIndex(itemId) {
+			const reason = this.itemReasons[itemId];
+			return this.reasonList.indexOf(reason);
+		},
+		
+		getSelectedReason(itemId) {
+			return this.itemReasons[itemId] || '';
+		},
+		
+		getCustomReason(itemId) {
+			return this.itemCustomReasons[itemId] || '';
+		},
+		
+		updateCustomReason(itemId, value) {
+			this.$set(this.itemCustomReasons, itemId, value);
+		},
+		
+		// 商品凭证图片相关方法
+		getItemPics(itemId) {
+			return this.itemPics[itemId] || [];
+		},
+		
+		chooseItemImage(itemId) {
+			if (!this.itemPics[itemId]) {
+				this.$set(this.itemPics, itemId, []);
+			}
+			
+			uni.chooseImage({
+				count: 3 - this.itemPics[itemId].length,
+				success: (res) => {
+					const pics = [...this.itemPics[itemId], ...res.tempFilePaths];
+					this.$set(this.itemPics, itemId, pics);
+				}
+			});
+		},
+		
+		deleteItemImage(itemId, index) {
+			const pics = [...this.itemPics[itemId]];
+			pics.splice(index, 1);
+			this.$set(this.itemPics, itemId, pics);
+		},
 		submitAfterSale() {
+			// 验证必填信息
 			if(this.selectedItems.length === 0) {
 				uni.showToast({
 					title: '请选择要退货的商品',
@@ -127,108 +247,140 @@ export default {
 				return;
 			}
 			
-			if(!this.selectedReason) {
-				uni.showToast({
-					title: '请选择退货原因',
-					icon: 'none'
-				});
-				return;
+			// 验证每个商品的退货原因
+			for (let itemId of this.selectedItems) {
+				const reason = this.getSelectedReason(itemId);
+				if (!reason) {
+					uni.showToast({
+						title: '请选择所有商品的退货原因',
+						icon: 'none'
+					});
+					return;
+				}
+				
+				if (reason === '其他原因' && !this.getCustomReason(itemId).trim()) {
+					uni.showToast({
+						title: '请填写自定义退货原因',
+						icon: 'none'
+					});
+					return;
+				}
 			}
 			
-			if(this.selectedReason === '其他原因' && !this.customReason.trim()) {
-				uni.showToast({
-					title: '请输入具体原因',
-					icon: 'none'
-				});
-				return;
+			// 上传所有商品的凭证图片
+			const uploadTasks = [];
+			const uploadResults = {};
+			
+			for (let itemId of this.selectedItems) {
+				const pics = this.getItemPics(itemId);
+				if (pics.length > 0) {
+					uploadResults[itemId] = [];
+					
+					pics.forEach(pic => {
+						const task = this.uploadSingleImage(pic).then(url => {
+							uploadResults[itemId].push(url);
+						});
+						uploadTasks.push(task);
+					});
+				} else {
+					uploadResults[itemId] = [];
+				}
 			}
 			
-			// 先上传图片，再提交售后申请
-			if(this.uploadList.length > 0) {
+			// 等待所有图片上传完成
+			if (uploadTasks.length > 0) {
 				uni.showLoading({
 					title: '正在上传图片...'
 				});
 				
-				let uploadedImages = [];
-				let uploadPromises = [];
-				
-				this.uploadList.forEach((imagePath, index) => {
-					console.log('开始上传图片', index, imagePath);
-					let uploadPromise = new Promise((resolve, reject) => {
-						// 获取token
-						const token = uni.getStorageSync('token');
-						console.log('当前token:', token);
-						
-						// 确保token不包含Bearer前缀
-						const authToken = token.startsWith('Bearer ') ? token.substring(7) : token;
-						console.log('处理后token:', authToken);
-						
-						uni.uploadFile({
-							url: API_BASE_URL + '/upload/image',
-							filePath: imagePath,
-							name: 'file',
-							header: {
-								'Authorization': authToken
-							},
-							success: (res) => {
-								console.log('图片上传成功', res);
-								try {
-									// 对返回数据进行处理
-									let responseData;
-									if (typeof res.data === 'string') {
-										responseData = JSON.parse(res.data);
-									} else {
-										responseData = res.data;
-									}
-									
-									if(responseData.code === 200) {
-										uploadedImages.push(responseData.data);
-										resolve();
-									} else {
-										reject(responseData.message || '图片上传失败');
-									}
-								} catch(e) {
-									console.error('解析上传结果失败', e);
-									reject('图片上传异常: ' + e.message);
-								}
-							},
-							fail: (err) => {
-								console.error('图片上传失败', err);
-								reject(err.errMsg || '图片上传网络错误');
-							}
-						});
-					});
-					
-					uploadPromises.push(uploadPromise);
-				});
-				
-				Promise.all(uploadPromises).then(() => {
+				Promise.all(uploadTasks).then(() => {
 					uni.hideLoading();
-					console.log('所有图片上传完成', uploadedImages);
-					this.submitAfterSaleWithImages(uploadedImages);
+					this.submitAfterSaleData(uploadResults);
 				}).catch(err => {
 					uni.hideLoading();
-					console.error('图片上传异常', err);
 					uni.showToast({
-						title: err || '图片上传失败',
+						title: '图片上传失败: ' + err,
 						icon: 'none'
 					});
 				});
 			} else {
-				this.submitAfterSaleWithImages([]);
+				this.submitAfterSaleData(uploadResults);
 			}
 		},
 		
-		submitAfterSaleWithImages(imageUrls) {
+		// 上传单个图片
+		uploadSingleImage(imagePath) {
+			return new Promise((resolve, reject) => {
+				// 获取token
+				const token = uni.getStorageSync('token');
+				
+				// 确保token不包含Bearer前缀
+				const authToken = token.startsWith('Bearer ') ? token.substring(7) : token;
+				
+				uni.uploadFile({
+					url: API_BASE_URL + '/upload/image',
+					filePath: imagePath,
+					name: 'file',
+					header: {
+						'Authorization': authToken
+					},
+					success: (res) => {
+						try {
+							// 对返回数据进行处理
+							let responseData;
+							if (typeof res.data === 'string') {
+								responseData = JSON.parse(res.data);
+							} else {
+								responseData = res.data;
+							}
+							
+							if(responseData.code === 200) {
+								resolve(responseData.data);
+							} else {
+								reject(responseData.message || '图片上传失败');
+							}
+						} catch(e) {
+							reject('图片上传异常: ' + e.message);
+						}
+					},
+					fail: (err) => {
+						reject(err.errMsg || '图片上传网络错误');
+					}
+				});
+			});
+		},
+		
+		// 提交售后申请数据
+		submitAfterSaleData(uploadResults) {
 			uni.showLoading({
 				title: '提交申请...'
 			});
 			
+			// 准备售后商品信息
+			const afterSaleItems = this.selectedItems.map(itemId => {
+				const orderItem = this.orderInfo.orderItemList.find(item => item.id === itemId);
+				const reason = this.getSelectedReason(itemId);
+				const reasonText = reason === '其他原因' ? this.getCustomReason(itemId) : reason;
+				const pics = uploadResults[itemId] || [];
+				
+				return {
+					orderItemId: itemId,
+					returnQuantity: parseInt(this.returnQuantities[itemId]),
+					productId: orderItem.productId,
+					productSkuId: orderItem.productSkuId,
+					productName: orderItem.productName,
+					productPic: orderItem.productPic,
+					productAttr: orderItem.productAttr,
+					productPrice: orderItem.productPrice,
+					productSkuCode: orderItem.productSkuCode || '',
+					reason: reasonText,
+					pics: pics.join(',')
+				};
+			});
+			
 			const afterSaleData = {
 				orderId: this.orderId,
-				orderItemIds: this.selectedItems.join(','), // 将数组转为逗号分隔的字符串
-				reason: this.selectedReason === '其他原因' ? this.customReason : this.selectedReason,
-				pics: imageUrls.length > 0 ? imageUrls.join(',') : null // 将数组转为逗号分隔的字符串
+				items: afterSaleItems
 			};
 			
 			console.log('提交售后申请数据', afterSaleData);
@@ -251,10 +403,9 @@ export default {
 					});
 				}
 			}).catch(error => {
-				console.error('提交售后申请失败', error);
 				uni.hideLoading();
 				uni.showToast({
-					title: '申请提交失败，请重试',
+					title: '申请提交失败: ' + (error.message || '未知错误'),
 					icon: 'none'
 				});
 			});
@@ -302,33 +453,191 @@ export default {
 			
 			.goods-info {
 				flex: 1;
+				display: flex;
+				flex-direction: column;
+				padding-left: 30upx;
+				overflow: hidden;
+				position: relative;
 				
 				.goods-name {
-					font-size: 28rpx;
-					color: #333;
-					line-height: 1.4;
+					font-size: $font-base + 2upx;
+					color: $font-color-dark;
+					height: 40upx;
+					overflow: hidden;
 				}
 				
 				.goods-attr {
-					font-size: 24rpx;
-					color: #999;
-					margin-top: 10rpx;
+					font-size: $font-sm + 2upx;
+					color: $font-color-light;
+					height: 40upx;
+					overflow: hidden;
 				}
 				
 				.goods-price {
-					margin-top: 10rpx;
 					display: flex;
-					justify-content: space-between;
 					align-items: center;
+					height: 40upx;
+					margin-top: 8upx;
+					font-size: $font-sm + 2upx;
+					color: $font-color-dark;
 					
 					.price {
-						font-size: 28rpx;
-						color: #fa436a;
+						margin-right: 20upx;
 					}
 					
 					.quantity {
-						font-size: 24rpx;
+						color: $font-color-light;
+					}
+				}
+				
+				.return-quantity {
+					margin-top: 15upx;
+					display: flex;
+					flex-wrap: wrap;
+					align-items: center;
+					
+					.quantity-label {
+						font-size: $font-sm + 2upx;
+						color: $font-color-light;
+						margin-right: 10upx;
+					}
+					
+					.quantity-selector {
+						display: flex;
+						align-items: center;
+						height: 56upx;
+						border: 2upx solid #f5f5f5;
+						border-radius: 8upx;
+						overflow: hidden;
+						margin-right: 10upx;
+						
+						.btn {
+							width: 60upx;
+							height: 56upx;
+							line-height: 56upx;
+							text-align: center;
+							color: #666;
+							font-size: 32upx;
+							background-color: #f5f5f5;
+						}
+						
+						.num {
+							width: 78upx;
+							height: 56upx;
+							line-height: 56upx;
+							text-align: center;
+							font-size: 28upx;
+							color: #333;
+							background-color: #fff;
+						}
+					}
+					
+					.max-quantity {
+						font-size: 22upx;
 						color: #999;
+						margin-left: 10upx;
+					}
+				}
+
+				.item-reason-section {
+					margin-top: 15upx;
+					
+					.reason-title {
+						font-size: $font-sm + 2upx;
+						color: $font-color-light;
+						margin-bottom: 10upx;
+					}
+					
+					.reason-picker {
+						.reason-picker-value {
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+							height: 70upx;
+							padding: 0 20upx;
+							background-color: #f8f8f8;
+							border-radius: 8upx;
+							font-size: 28upx;
+							color: #333;
+							
+							.yticon {
+								color: #ccc;
+								font-size: 24upx;
+							}
+						}
+					}
+					
+					.custom-reason {
+						margin-top: 15upx;
+						
+						.reason-input {
+							width: 100%;
+							height: 150upx;
+							background: #f8f8f8;
+							padding: 20upx;
+							font-size: 28upx;
+							color: #333;
+							border-radius: 8upx;
+						}
+					}
+				}
+				
+				.item-upload-section {
+					margin-top: 15upx;
+					
+					.upload-title {
+						font-size: $font-sm + 2upx;
+						color: $font-color-light;
+						margin-bottom: 10upx;
+					}
+					
+					.upload-list {
+						display: flex;
+						flex-wrap: wrap;
+						
+						.upload-item {
+							width: 150upx;
+							height: 150upx;
+							margin-right: 15upx;
+							margin-bottom: 15upx;
+							position: relative;
+							
+							image {
+								width: 100%;
+								height: 100%;
+								border-radius: 8upx;
+							}
+							
+							.delete-btn {
+								position: absolute;
+								right: -10upx;
+								top: -10upx;
+								width: 40upx;
+								height: 40upx;
+								background: rgba(0,0,0,0.5);
+								border-radius: 50%;
+								color: #fff;
+								font-size: 24upx;
+								display: flex;
+								align-items: center;
+								justify-content: center;
+							}
+						}
+						
+						.upload-btn {
+							width: 150upx;
+							height: 150upx;
+							background: #f8f8f8;
+							border-radius: 8upx;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							
+							.yticon {
+								font-size: 60upx;
+								color: #999;
+							}
+						}
 					}
 				}
 			}
