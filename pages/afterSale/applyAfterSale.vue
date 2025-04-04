@@ -58,8 +58,14 @@
 			</view>
 		</view>
 		
-		<view class="submit-section">
-			<button class="submit-btn" @click="submitAfterSale">提交申请</button>
+		<view class="action-section">
+			<button class="action-btn submit" @click="submitAfterSale">提交申请</button>
+			<button class="action-btn cancel" @click="navigateBack">取消</button>
+		</view>
+		
+		<!-- 添加调试按钮 -->
+		<view class="debug-section" v-if="isDebugMode">
+			<button class="action-btn debug" @click="submitWithoutImages">跳过图片上传直接提交</button>
 		</view>
 	</view>
 </template>
@@ -89,7 +95,8 @@ export default {
 				'商品尺寸不合适',
 				'商品颜色不喜欢',
 				'其他原因'
-			]
+			],
+			isDebugMode: true // 开启调试模式
 		}
 	},
 	onLoad(options) {
@@ -317,6 +324,10 @@ export default {
 				// 确保token不包含Bearer前缀
 				const authToken = token.startsWith('Bearer ') ? token.substring(7) : token;
 				
+				console.log('开始上传图片', imagePath);
+				console.log('API基础URL:', API_BASE_URL);
+				console.log('上传URL:', API_BASE_URL + '/upload/image');
+				
 				uni.uploadFile({
 					url: API_BASE_URL + '/upload/image',
 					filePath: imagePath,
@@ -325,25 +336,34 @@ export default {
 						'Authorization': authToken
 					},
 					success: (res) => {
+						console.log('上传图片成功，原始响应:', res);
 						try {
 							// 对返回数据进行处理
 							let responseData;
 							if (typeof res.data === 'string') {
 								responseData = JSON.parse(res.data);
+								console.log('解析后的响应数据:', responseData);
 							} else {
 								responseData = res.data;
+								console.log('非字符串响应数据:', responseData);
 							}
 							
 							if(responseData.code === 200) {
+								console.log('上传成功，返回URL:', responseData.data);
 								resolve(responseData.data);
 							} else {
+								console.error('上传失败，错误信息:', responseData.message || '未知错误');
 								reject(responseData.message || '图片上传失败');
 							}
 						} catch(e) {
+							console.error('解析响应数据异常:', e.message, '原始数据:', res.data);
 							reject('图片上传异常: ' + e.message);
 						}
 					},
 					fail: (err) => {
+						console.error('图片上传失败:', err);
+						if (err.errMsg) console.error('错误信息:', err.errMsg);
+						if (err.statusCode) console.error('状态码:', err.statusCode);
 						reject(err.errMsg || '图片上传网络错误');
 					}
 				});
@@ -363,15 +383,16 @@ export default {
 				const reasonText = reason === '其他原因' ? this.getCustomReason(itemId) : reason;
 				const pics = uploadResults[itemId] || [];
 				
+				// 确保所有ID字段都是数字类型
 				return {
-					orderItemId: itemId,
+					orderItemId: Number(itemId),
 					returnQuantity: parseInt(this.returnQuantities[itemId]),
-					productId: orderItem.productId,
-					productSkuId: orderItem.productSkuId,
+					productId: Number(orderItem.productId),
+					productSkuId: Number(orderItem.productSkuId),
 					productName: orderItem.productName,
 					productPic: orderItem.productPic,
 					productAttr: orderItem.productAttr,
-					productPrice: orderItem.productPrice,
+					productPrice: parseFloat(orderItem.productPrice),
 					productSkuCode: orderItem.productSkuCode || '',
 					reason: reasonText,
 					pics: pics.join(',')
@@ -379,13 +400,21 @@ export default {
 			});
 			
 			const afterSaleData = {
-				orderId: this.orderId,
+				orderId: Number(this.orderId),
 				items: afterSaleItems
 			};
 			
-			console.log('提交售后申请数据', afterSaleData);
+			// 打印转换后的数据类型
+			console.log('提交售后申请数据类型检查:');
+			console.log('orderId类型:', typeof afterSaleData.orderId);
+			console.log('第一个商品orderItemId类型:', typeof afterSaleItems[0]?.orderItemId);
+			console.log('第一个商品productId类型:', typeof afterSaleItems[0]?.productId);
+			console.log('第一个商品returnQuantity类型:', typeof afterSaleItems[0]?.returnQuantity);
+			
+			console.log('提交售后申请数据:', JSON.stringify(afterSaleData));
 			
 			createAfterSale(afterSaleData).then(response => {
+				console.log('售后申请响应:', response);
 				uni.hideLoading();
 				if(response.code === 200) {
 					uni.showToast({
@@ -397,18 +426,81 @@ export default {
 						uni.navigateBack();
 					}, 1500);
 				} else {
+					console.error('申请提交失败响应:', response);
 					uni.showToast({
 						title: response.message || '申请提交失败',
 						icon: 'none'
 					});
 				}
 			}).catch(error => {
+				console.error('申请提交失败异常:', error);
+				if (error.status) console.error('状态码:', error.status);
+				if (error.data) console.error('错误数据:', error.data);
 				uni.hideLoading();
+				
+				// 尝试检查token是否有效
+				const token = uni.getStorageSync('token');
+				console.log('当前token:', token ? '存在' : '不存在');
+				
+				// 显示更详细的错误信息
+				let errorMsg = '申请提交失败: ';
+				if (error.message) {
+					errorMsg += error.message;
+				} else if (typeof error === 'string') {
+					errorMsg += error;
+				} else {
+					errorMsg += '未知错误，请检查网络连接或稍后重试';
+				}
+				
 				uni.showToast({
-					title: '申请提交失败: ' + (error.message || '未知错误'),
-					icon: 'none'
+					title: errorMsg,
+					icon: 'none',
+					duration: 2000
 				});
 			});
+		},
+		// 添加一个功能，让用户可以跳过图片上传
+		submitWithoutImages() {
+			// 验证必填信息
+			if(this.selectedItems.length === 0) {
+				uni.showToast({
+					title: '请选择要退货的商品',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			// 验证每个商品的退货原因
+			for (let itemId of this.selectedItems) {
+				const reason = this.getSelectedReason(itemId);
+				if (!reason) {
+					uni.showToast({
+						title: '请选择所有商品的退货原因',
+						icon: 'none'
+					});
+					return;
+				}
+				
+				if (reason === '其他原因' && !this.getCustomReason(itemId).trim()) {
+					uni.showToast({
+						title: '请填写自定义退货原因',
+						icon: 'none'
+					});
+					return;
+				}
+			}
+			
+			// 不上传图片，直接使用空数组
+			const uploadResults = {};
+			this.selectedItems.forEach(itemId => {
+				uploadResults[itemId] = [];
+			});
+			
+			// 直接调用提交数据的方法
+			this.submitAfterSaleData(uploadResults);
+		},
+		navigateBack() {
+			uni.navigateBack();
 		}
 	}
 }
@@ -418,7 +510,7 @@ export default {
 .content {
 	min-height: 100vh;
 	background: #f8f8f8;
-	padding-bottom: 120rpx;
+	padding-bottom: 200rpx; /* 增加底部padding，容纳两行按钮 */
 }
 
 .section-title {
@@ -739,17 +831,18 @@ export default {
 	}
 }
 
-.submit-section {
+.action-section {
 	position: fixed;
 	left: 0;
 	right: 0;
-	bottom: 0;
+	bottom: 100rpx; /* 调整位置，给debug按钮留空间 */
 	padding: 20rpx 30rpx;
 	background: #fff;
 	box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
+	z-index: 10;
 	
-	.submit-btn {
-		width: 100%;
+	.action-btn {
+		width: 48%;
 		height: 80rpx;
 		background: #fa436a;
 		color: #fff;
@@ -758,6 +851,42 @@ export default {
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		float: left;
+		
+		&.submit {
+			margin-right: 4%;
+		}
+		
+		&.cancel {
+			background: #999;
+		}
+	}
+}
+
+.debug-section {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 20rpx 30rpx;
+	background: #f1f1f1; /* 不同背景色区分调试区域 */
+	box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
+	z-index: 9;
+	
+	.action-btn {
+		width: 100%;
+		height: 80rpx;
+		background: #4a90e2; /* 使用蓝色表示调试按钮 */
+		color: #fff;
+		font-size: 32rpx;
+		border-radius: 40rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		
+		&.debug {
+			font-size: 28rpx;
+		}
 	}
 }
 </style> 
