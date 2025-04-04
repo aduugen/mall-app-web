@@ -20,12 +20,21 @@
 							<text class="state" :style="{color: item.status === 0 ? '#fa436a' : '#999'}">{{item.status | formatStatus}}</text>
 						</view>
 						
+						<!-- 待处理状态时显示订单信息 -->
+						<view class="order-info" v-if="item.status === 0">
+							<!-- 检查多种可能的订单号位置 -->
+							<text class="order-info-item">订单编号: {{getOrderSn(item)}}</text>
+							<text class="order-info-debug" v-if="!getOrderSn(item) && isDebug">数据结构: {{JSON.stringify(item).substring(0, 100)}}...</text>
+						</view>
+						
 						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList" :key="itemIndex">
 							<image class="goods-img" :src="orderItem.productPic" mode="aspectFill"></image>
 							<view class="right">
 								<text class="title clamp">{{orderItem.productName}}</text>
 								<text class="attr-box">{{orderItem.productAttr | formatProductAttr}} x {{orderItem.productQuantity}}</text>
 								<text class="price">{{orderItem.productPrice}}</text>
+								<!-- 待处理状态时显示商品条目编号 -->
+								<text class="item-info" v-if="item.status === 0">商品条目编号: {{orderItem.id || '无'}}</text>
 							</view>
 						</view>
 
@@ -95,6 +104,7 @@
 						text: '已拒绝'
 					}
 				],
+				isDebug: true, // 调试模式标志
 			};
 		},
 		onLoad(options) {
@@ -140,6 +150,20 @@
 			},
 		},
 		methods: {
+			// 获取订单编号，考虑各种可能的数据结构
+			getOrderSn(item) {
+				if (item.orderSn) {
+					return item.orderSn;
+				} else if (item.order && item.order.orderSn) {
+					return item.order.orderSn;
+				} else if (item.orderId) {
+					return '订单ID: ' + item.orderId;
+				} else if (item.order && item.order.id) {
+					return '订单ID: ' + item.order.id;
+				} else {
+					return '无订单信息';
+				}
+			},
 			//获取售后列表
 			loadData(type='refresh') {
 				if(type=='refresh'){
@@ -156,6 +180,10 @@
 				this.loadingType = 'loading';
 				fetchAfterSaleList(this.afterSaleParam).then(response => {
 					let list = response.data.list;
+					// 打印售后列表数据结构
+					if(list && list.length > 0) {
+						console.log('售后列表第一项数据结构:', JSON.stringify(list[0]));
+					}
 					if(type=='refresh'){
 						this.afterSaleList = list;
 						this.loadingType = 'more';
@@ -281,6 +309,32 @@
 			}
 		}
 
+		.order-info {
+			padding: 10upx 30upx 0;
+			font-size: $font-sm + 2upx;
+			color: $font-color-dark;
+			background-color: #f8f8f8;
+			margin: 0 30upx 10upx 0;
+			border-radius: 8upx;
+
+			.order-info-item {
+				display: block;
+				padding: 8upx 0;
+				border-bottom: 1px dashed #e5e5e5;
+			}
+			
+			.order-info-debug {
+				display: block;
+				padding: 8upx 0;
+				color: #ff6600;
+				font-size: 22upx;
+				word-break: break-all;
+				background-color: #fffbe6;
+				margin-top: 4upx;
+				border-radius: 4upx;
+			}
+		}
+
 		.goods-box-single {
 			display: flex;
 			padding: 20upx 0;
@@ -319,6 +373,17 @@
 						font-size: $font-sm;
 						margin: 0 2upx 0 8upx;
 					}
+				}
+
+				.item-info {
+					font-size: $font-sm + 2upx;
+					color: #3366cc;
+					padding: 6upx 0;
+					background-color: #f5f7fa;
+					display: inline-block;
+					margin-top: 6upx;
+					border-radius: 4upx;
+					padding: 4upx 8upx;
 				}
 			}
 		}

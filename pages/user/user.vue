@@ -128,6 +128,12 @@
 						</view>
 						<text class="service-text">我的评价</text>
 					</view>
+					<view class="service-item" @click="navTo('/pages/afterSale/afterSaleList')">
+						<view class="icon-wrapper">
+							<text class="yticon icon-shouhoutuikuan"></text>
+						</view>
+						<text class="service-text">我的售后</text>
+					</view>
 					<view class="service-item" @click="navTo('/pages/order/invoice-list')">
 						<view class="icon-wrapper">
 							<text class="yticon icon-fapiaodayin"></text>
