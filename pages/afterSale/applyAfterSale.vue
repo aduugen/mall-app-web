@@ -4,7 +4,11 @@
 			<view class="section-title">选择退货商品</view>
 			<view class="goods-list">
 				<view class="goods-item" v-for="(item, index) in orderInfo.orderItemList" :key="index">
-					<checkbox :checked="isItemSelected(item.id)" @tap="toggleSelect(item.id)" color="#fa436a"/>
+					<!-- 如果商品可申请数量为0，则禁用选择 -->
+					<view v-if="item.availableQuantity <= 0" class="unavailable-tip">
+						<text class="unavailable-text">已全部退货</text>
+					</view>
+					<checkbox v-else :checked="isItemSelected(item.id)" @tap="toggleSelect(item.id)" color="#fa436a"/>
 					<image class="goods-img" :src="item.productPic" mode="aspectFill"></image>
 					<view class="goods-info">
 						<text class="goods-name">{{item.productName}}</text>
@@ -13,14 +17,18 @@
 							<text class="price">￥{{item.productPrice}}</text>
 							<text class="quantity">x {{item.productQuantity}}</text>
 						</view>
+						<view class="applied-info" v-if="item.appliedQuantity > 0">
+							<text class="applied-text">已申请退货: {{item.appliedQuantity}}件</text>
+							<text class="available-text">可申请退货: {{item.availableQuantity}}件</text>
+						</view>
 						<view class="return-quantity" v-if="isItemSelected(item.id)">
 							<text class="quantity-label">退货数量:</text>
 							<view class="quantity-selector">
 								<text class="btn minus" @tap="decreaseQuantity(item.id)">-</text>
-								<input type="number" class="num" v-model="returnQuantities[item.id]" @input="validateQuantity(item.id, item.productQuantity)" />
-								<text class="btn plus" @tap="increaseQuantity(item.id, item.productQuantity)">+</text>
+								<input type="number" class="num" v-model="returnQuantities[item.id]" @input="validateQuantity(item.id, item.availableQuantity)" />
+								<text class="btn plus" @tap="increaseQuantity(item.id, item.availableQuantity)">+</text>
 							</view>
-							<text class="max-quantity">最多{{item.productQuantity}}件</text>
+							<text class="max-quantity">最多{{item.availableQuantity}}件</text>
 						</view>
 						<view class="item-reason-section" v-if="isItemSelected(item.id)">
 							<view class="reason-title">退货原因</view>
@@ -109,10 +117,19 @@ export default {
 		getOrderDetail() {
 			fetchOrderDetail(this.orderId).then(response => {
 				this.orderInfo = response.data;
-				// 初始化每个商品的退货数量为其购买数量
+				// 处理订单项，计算并初始化可申请退货数量
 				if (this.orderInfo.orderItemList) {
 					this.orderInfo.orderItemList.forEach(item => {
-						this.$set(this.returnQuantities, item.id, item.productQuantity);
+						// 计算可申请数量 = 购买数量 - 已申请数量
+						const appliedQuantity = item.appliedQuantity || 0;
+						const availableQuantity = item.productQuantity - appliedQuantity;
+						
+						// 为订单项添加可申请数量属性
+						this.$set(item, 'availableQuantity', availableQuantity);
+						
+						// 初始化该商品的退货数量为可申请数量
+						this.$set(this.returnQuantities, item.id, availableQuantity);
+						
 						// 初始化该商品的退货原因和凭证
 						if (!this.itemReasons[item.id]) {
 							this.$set(this.itemReasons, item.id, '');
@@ -136,10 +153,11 @@ export default {
 				this.selectedItems.splice(index, 1);
 			} else {
 				this.selectedItems.push(itemId);
-				// 默认设置退货数量为购买数量
+				// 默认设置退货数量为可申请数量
 				const item = this.orderInfo.orderItemList.find(item => item.id === itemId);
 				if (item) {
-					this.$set(this.returnQuantities, itemId, item.productQuantity);
+					// 使用可申请数量而非购买数量
+					this.$set(this.returnQuantities, itemId, item.availableQuantity);
 					// 初始化该商品的退货原因和凭证
 					if (!this.itemReasons[itemId]) {
 						this.$set(this.itemReasons, itemId, '');
@@ -159,17 +177,34 @@ export default {
 			}
 		},
 		increaseQuantity(itemId, maxQuantity) {
-			if (this.returnQuantities[itemId] < maxQuantity) {
+			// 获取当前商品的可申请数量
+			const item = this.orderInfo.orderItemList.find(item => item.id === itemId);
+			const availableQuantity = item ? item.availableQuantity : maxQuantity;
+			
+			if (this.returnQuantities[itemId] < availableQuantity) {
 				this.returnQuantities[itemId]++;
+			} else {
+				uni.showToast({
+					title: `最多可申请${availableQuantity}件`,
+					icon: 'none'
+				});
 			}
 		},
 		validateQuantity(itemId, maxQuantity) {
+			// 获取商品项和可申请数量
+			const item = this.orderInfo.orderItemList.find(item => item.id === itemId);
+			const availableQuantity = item ? item.availableQuantity : maxQuantity;
+			
 			// 确保输入的数量是有效的整数
 			let quantity = parseInt(this.returnQuantities[itemId]);
 			if (isNaN(quantity) || quantity < 1) {
 				this.$set(this.returnQuantities, itemId, 1);
-			} else if (quantity > maxQuantity) {
-				this.$set(this.returnQuantities, itemId, maxQuantity);
+			} else if (quantity > availableQuantity) {
+				this.$set(this.returnQuantities, itemId, availableQuantity);
+				uni.showToast({
+					title: `最多可申请${availableQuantity}件`,
+					icon: 'none'
+				});
 			} else {
 				this.$set(this.returnQuantities, itemId, quantity);
 			}
@@ -468,6 +503,25 @@ export default {
 				border-bottom: none;
 			}
 			
+			.unavailable-tip {
+				width: 40rpx;
+				height: 40rpx;
+				margin: 0 20rpx 0 20rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				
+				.unavailable-text {
+					font-size: 20rpx;
+					color: #999;
+					background-color: #f1f1f1;
+					padding: 4rpx 8rpx;
+					border-radius: 4rpx;
+					white-space: nowrap;
+					transform: scale(0.8);
+				}
+			}
+			
 			.goods-img {
 				width: 120rpx;
 				height: 120rpx;
@@ -511,6 +565,21 @@ export default {
 					
 					.quantity {
 						color: $font-color-light;
+					}
+				}
+				
+				.applied-info {
+					margin-top: 8upx;
+					display: flex;
+					font-size: $font-sm;
+					
+					.applied-text {
+						color: #ff6b00;
+						margin-right: 20upx;
+					}
+					
+					.available-text {
+						color: #07c160;
 					}
 				}
 				

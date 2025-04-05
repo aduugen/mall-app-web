@@ -179,3 +179,14 @@ export function checkOrderInvoice(orderId) {
 		method: 'get'
 	});
 }
+
+/**
+ * 调试接口 - 获取订单商品项详细信息
+ * @param {number} orderId - 订单ID
+ */
+export function getOrderItemsDebug(orderId) {
+	return request({
+		url: `/order/debug/orderItems/${orderId}`,
+		method: 'get'
+	});
+}
