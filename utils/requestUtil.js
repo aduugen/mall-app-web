@@ -22,6 +22,32 @@ http.validateStatus = (statusCode) => {
 	return statusCode === 200
 }
 
+// 避免重复显示登录提示
+let loginModalShowing = false;
+
+// 显示登录提示弹窗
+function showLoginModal() {
+	if (loginModalShowing) return;
+	
+	loginModalShowing = true;
+	uni.showModal({
+		title: '提示',
+		content: '登录已过期，请重新登录',
+		showCancel: false,
+		success: function(res) {
+			loginModalShowing = false;
+			if (res.confirm) {
+				uni.navigateTo({
+					url: '/pages/public/login'
+				});
+			}
+		},
+		fail: function() {
+			loginModalShowing = false;
+		}
+	});
+}
+
 http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 	// 打印完整的请求URL信息
 	console.log('请求URL:', (config.baseURL || '') + config.url);
@@ -31,6 +57,40 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 	}
 	if (config.data) {
 		console.log('请求数据(data):', config.data);
+		
+		// 特别处理，确保data中的reason字段不为null
+		if (config.data && typeof config.data === 'object') {
+			// 检查并修复reason字段
+			if (config.data.reason === null || config.data.reason === undefined) {
+				console.warn('检测到reason字段为null或undefined，自动修复为默认值');
+				config.data.reason = '用户申请退货/退款';
+			}
+			
+			// 确保reason是字符串类型
+			if (config.data.reason !== undefined && typeof config.data.reason !== 'string') {
+				config.data.reason = String(config.data.reason);
+				console.log('reason字段类型已转换为字符串:', config.data.reason);
+			}
+			
+			// 检查items数组中的reason字段
+			if (Array.isArray(config.data.items)) {
+				config.data.items.forEach((item, index) => {
+					if (item.reason === null || item.reason === undefined) {
+						console.warn(`检测到items[${index}].reason字段为null或undefined，自动修复为默认值`);
+						item.reason = config.data.reason || '用户申请退货/退款';
+					}
+					
+					// 确保item.reason是字符串类型
+					if (item.reason !== undefined && typeof item.reason !== 'string') {
+						item.reason = String(item.reason);
+						console.log(`items[${index}].reason字段类型已转换为字符串:`, item.reason);
+					}
+				});
+			}
+			
+			// 打印修复后的数据
+			console.log('请求处理后的数据:', JSON.stringify(config.data));
+		}
 	}
 	
 	// 获取请求的URL，用于判断是否为公开API
@@ -65,26 +125,7 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 		// 对于非公开API，可以直接取消请求
 		if (!isPublicApi) {
 			// 如果不是公开API且token已过期，显示登录提示并取消请求
-			if (!getApp().loginModalShown) {
-				getApp().loginModalShown = true;
-				
-				uni.showModal({
-					title: '提示',
-					content: '登录已过期，请重新登录',
-					showCancel: false,
-					success: function(res) {
-						getApp().loginModalShown = false;
-						if (res.confirm) {
-							uni.navigateTo({
-								url: '/pages/public/login'
-							});
-						}
-					},
-					fail: function() {
-						getApp().loginModalShown = false;
-					}
-				});
-			}
+			showLoginModal();
 			// 取消当前请求
 			cancel('登录已过期');
 			return;
@@ -131,6 +172,7 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 	
 	// 记录响应状态，用于调试
 	console.log(`API响应 [${url}]: 状态码=${res.code}, 公开API=${isPublicApi}`);
+	console.log('完整响应数据:', JSON.stringify(res)); // 添加完整响应信息日志
 	
 	if (res.code !== 200) {
 		// 对于公开API，即使返回错误也不要弹窗提示
@@ -150,38 +192,19 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 		
 		// 401未登录处理 - 只处理非公开API的401错误
 		if (res.code === 401) {
+			console.error('收到401未授权错误，详细信息:', JSON.stringify(res)); // 添加401错误的详细日志
 			// 清除无效token
 			uni.removeStorageSync('token');
 			// 清除用户信息
 			uni.removeStorageSync('userInfo');
 			
-			// 避免重复显示登录提示框
-			if (!getApp().loginModalShown) {
-				getApp().loginModalShown = true;
-				
-				uni.showToast({
-					title: '登录已过期，请重新登录',
-					icon: 'none',
-					duration: 1500
-				});
-				
-				setTimeout(() => {
-					// 直接跳转到登录页面
-					uni.navigateTo({
-						url: '/pages/public/login',
-						success: () => {
-							console.log('跳转到登录页成功');
-							getApp().loginModalShown = false;
-						},
-						fail: (err) => {
-							console.error('跳转到登录页失败', err);
-							getApp().loginModalShown = false;
-						}
-					});
-				}, 1500);
-			}
+			// 显示登录过期提示
+			showLoginModal();
+			
+			return Promise.reject(response);
 		} else {
 			// 提示错误信息，对于非关键错误不要过度打扰用户
+			console.error('API返回错误:', res.code, res.message); // 添加错误码和错误信息日志
 			uni.showToast({
 				title: res.message || '请求出错',
 				icon: 'none',
@@ -195,10 +218,22 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 }, (response) => {
 	//提示错误信息
 	console.log('response error', response);
+	console.error('请求错误详情:', JSON.stringify(response)); // 添加更详细的错误日志
 	
 	// 获取请求的URL和公开API标记
 	const url = response.config ? (response.config.url || '') : '';
 	const isPublicApi = response.config ? (response.config.isPublicApi || false) : false;
+    
+	// 记录错误请求的详细信息
+    if (response.config) {
+        console.log('错误请求详情:', {
+            url: response.config.url,
+            method: response.config.method,
+            data: response.config.data,
+            params: response.config.params,
+            headers: response.config.header
+        });
+    }
 	
 	// 处理500等服务器错误，可能是由无效token引起的
 	if (response.statusCode === 500 || response.statusCode === 401) {
@@ -213,77 +248,36 @@ http.interceptor.response((response) => { /* 请求之后拦截器 */
 		
 		// 只有在token存在的情况下才提示登录过期
 		const token = uni.getStorageSync('token');
-		if (token) {
+		if (token && response.statusCode === 401) {
 			// 清除相关数据
 			uni.removeStorageSync('token');
 			uni.removeStorageSync('userInfo');
 			
-			// 避免重复显示登录提示框
-			if (!getApp().loginModalShown) {
-				getApp().loginModalShown = true;
-				
-				// 登录过期提示
-				uni.showModal({
-					title: '提示',
-					content: '登录已过期，请重新登录',
-					showCancel: false,
-					success: function(res) {
-						getApp().loginModalShown = false;
-						if (res.confirm) {
-							uni.navigateTo({
-								url: '/pages/public/login'
-							});
-						}
-					},
-					fail: function() {
-						getApp().loginModalShown = false;
-					}
+			// 显示登录过期提示
+			showLoginModal();
+		} else {
+			// 如果没有token或者是其他服务器错误
+			console.error('服务器错误:', response.statusCode);
+			
+			// 对于500错误，显示友好提示
+			if (response.statusCode === 500) {
+				uni.showToast({
+					title: '服务器错误，请稍后再试',
+					icon: 'none',
+					duration: 2000
 				});
 			}
-		} else {
-			// 如果没有token，可能是其他服务器错误，只在控制台输出
-			console.error('服务器错误:', response.statusCode);
 		}
 	} else {
 		// 其他错误提示
 		console.error('请求错误:', response.errMsg);
-	}
-	
-	// 401: 未授权，可能是token过期或无效，清除token并跳转登录页
-	if (response.statusCode === 401) {
-		console.log('检测到401错误，跳转到登录页');
 		
-		// 清除失效的token
-		uni.removeStorageSync('token');
-		
-		// 延迟执行，确保UI消息能够显示
-		setTimeout(() => {
-			uni.showToast({
-				title: '登录已过期，请重新登录',
-				icon: 'none',
-				duration: 1500
-			});
-			
-			// 跳转到登录页面
-			setTimeout(() => {
-				uni.navigateTo({
-					url: '/pages/public/login',
-					success: () => console.log('跳转到登录页成功'),
-					fail: (err) => {
-						console.error('跳转到登录页失败', err);
-						// 如果navigateTo失败，尝试使用reLaunch
-						uni.reLaunch({
-							url: '/pages/public/login',
-							success: () => console.log('使用reLaunch跳转到登录页成功'),
-							fail: (e) => console.error('所有跳转方式都失败', e)
-						});
-					}
-				});
-			}, 1500);
-		}, 0);
-		
-		// 返回一个拒绝的Promise，中断后续操作
-		return Promise.reject('登录已过期');
+		// 显示网络错误提示
+		uni.showToast({
+			title: '网络请求失败，请检查网络连接',
+			icon: 'none',
+			duration: 2000
+		});
 	}
 	
 	return Promise.reject(response);

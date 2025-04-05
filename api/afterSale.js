@@ -1,4 +1,5 @@
 import request from '@/utils/requestUtil'
+import { API_BASE_URL } from '@/utils/appConfig.js'
 
 /**
  * 获取售后列表
@@ -29,15 +30,109 @@ export function fetchAfterSaleList(params) {
  * @param {string} data.items[].productAttr - 商品属性
  * @param {number} data.items[].productPrice - 商品单价
  * @param {string} data.items[].productSkuCode - 商品规格编码
- * @param {string} data.items[].reason - 退货原因
- * @param {string} data.items[].pics - 退货凭证图片，多个用逗号分隔
+ * @param {string} data.items[].returnReason - 退货原因
+ * @param {string} data.items[].proofPics - 退货凭证图片，多个用逗号分隔
  */
 export function createAfterSale(data) {
-	return request({
-		method: 'POST',
-		url: '/member/afterSale/create',
-		data: data
-	})
+	try {
+		console.log('调用createAfterSale API，原始数据:', JSON.stringify(data));
+		
+		// 构造安全的请求数据
+		const safeData = {
+			orderId: Number(data.orderId) || 0,
+			items: []
+		};
+		
+		// 处理items数组
+		if (data.items && Array.isArray(data.items)) {
+			safeData.items = data.items.map(item => {
+				// 处理旧版API可能还在使用reason和pics的情况
+				const returnReason = item.returnReason || item.reason || '商品退货原因';
+				const proofPics = item.proofPics || item.pics || '';
+				
+				console.log(`商品项 ${item.productName} 的退货原因:`, returnReason);
+				
+				return {
+					orderItemId: Number(item.orderItemId || 0),
+					returnQuantity: Number(item.returnQuantity || 1),
+					productId: Number(item.productId || 0),
+					productSkuId: Number(item.productSkuId || 0),
+					productName: String(item.productName || ''),
+					productPic: String(item.productPic || ''),
+					productAttr: String(item.productAttr || ''),
+					productPrice: Number(item.productPrice || 0),
+					productSkuCode: String(item.productSkuCode || ''),
+					returnReason: String(returnReason),
+					proofPics: String(proofPics)
+				}
+			});
+		}
+		
+		// 最终请求数据检查和打印
+		console.log('最终请求数据:', JSON.stringify(safeData));
+		
+		return new Promise((resolve, reject) => {
+			// 获取token
+			const token = uni.getStorageSync('token');
+			if (!token) {
+				uni.showToast({
+					title: '请先登录',
+					icon: 'none'
+				});
+				reject({message: '未登录'});
+				return;
+			}
+			
+			// 设置请求URL
+			const apiUrl = API_BASE_URL + '/member/afterSale/create';
+			
+			// 发送请求
+			uni.request({
+				url: apiUrl,
+				method: 'POST',
+				data: safeData,
+				header: {
+					'Content-Type': 'application/json',
+					'Authorization': token
+				},
+				success: (res) => {
+					console.log('售后申请响应:', res);
+					if (res.statusCode === 200) {
+						if (res.data && res.data.code === 200) {
+							console.log('售后申请成功');
+							resolve(res.data);
+						} else {
+							console.error('服务器返回错误:', res.data);
+							reject({
+								message: (res.data && res.data.message) || '服务器处理失败',
+								data: res.data
+							});
+						}
+					} else {
+						console.error('请求状态码错误:', res.statusCode);
+						reject({
+							statusCode: res.statusCode,
+							message: '请求失败，状态码：' + res.statusCode,
+							data: res.data
+						});
+					}
+				},
+				fail: (err) => {
+					console.error('网络请求失败:', err);
+					reject({
+						message: '网络请求失败',
+						error: err
+					});
+				}
+			});
+		});
+	} catch (e) {
+		console.error('createAfterSale处理异常:', e);
+		return Promise.reject({
+			message: '系统异常',
+			error: e
+		});
+	}
 }
 
 /**
