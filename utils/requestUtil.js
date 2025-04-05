@@ -60,36 +60,42 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 		
 		// 特别处理，确保data中的reason字段不为null
 		if (config.data && typeof config.data === 'object') {
-			// 检查并修复reason字段
-			if (config.data.reason === null || config.data.reason === undefined) {
-				console.warn('检测到reason字段为null或undefined，自动修复为默认值');
-				config.data.reason = '用户申请退货/退款';
-			}
+			// 检查并修复reason字段 - 只对特定URL进行处理，避免对所有请求都检查
+			const url = config.url || '';
+			const isAfterSaleRequest = url.includes('/afterSale') || url.includes('/member/afterSale');
 			
-			// 确保reason是字符串类型
-			if (config.data.reason !== undefined && typeof config.data.reason !== 'string') {
-				config.data.reason = String(config.data.reason);
-				console.log('reason字段类型已转换为字符串:', config.data.reason);
+			if (isAfterSaleRequest) {
+				if (config.data.reason === null || config.data.reason === undefined) {
+					// 只对售后相关接口静默设置默认值，不打印警告
+					config.data.reason = '用户申请退货/退款';
+				}
+				
+				// 确保reason是字符串类型
+				if (config.data.reason !== undefined && typeof config.data.reason !== 'string') {
+					config.data.reason = String(config.data.reason);
+				}
+				
+				// 检查items数组中的reason字段
+				if (Array.isArray(config.data.items)) {
+					config.data.items.forEach((item, index) => {
+						if (item.reason === null || item.reason === undefined && item.returnReason === undefined) {
+							// 静默修复，不打印警告
+							item.reason = config.data.reason || '用户申请退货/退款';
+						} else if (item.returnReason && !item.reason) {
+							// 如果存在returnReason字段但没有reason字段，则使用returnReason
+							item.reason = item.returnReason;
+						}
+						
+						// 确保item.reason是字符串类型
+						if (item.reason !== undefined && typeof item.reason !== 'string') {
+							item.reason = String(item.reason);
+						}
+					});
+				}
+				
+				// 只对售后相关请求打印处理后的数据
+				console.log('售后请求处理后的数据:', JSON.stringify(config.data));
 			}
-			
-			// 检查items数组中的reason字段
-			if (Array.isArray(config.data.items)) {
-				config.data.items.forEach((item, index) => {
-					if (item.reason === null || item.reason === undefined) {
-						console.warn(`检测到items[${index}].reason字段为null或undefined，自动修复为默认值`);
-						item.reason = config.data.reason || '用户申请退货/退款';
-					}
-					
-					// 确保item.reason是字符串类型
-					if (item.reason !== undefined && typeof item.reason !== 'string') {
-						item.reason = String(item.reason);
-						console.log(`items[${index}].reason字段类型已转换为字符串:`, item.reason);
-					}
-				});
-			}
-			
-			// 打印修复后的数据
-			console.log('请求处理后的数据:', JSON.stringify(config.data));
 		}
 	}
 	

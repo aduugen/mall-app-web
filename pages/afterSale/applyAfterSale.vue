@@ -92,6 +92,13 @@ export default {
 			]
 		}
 	},
+	filters: {
+		formatProductAttr(jsonAttr) {
+			if(!jsonAttr || jsonAttr === '[]') return '';
+			let attrObj = JSON.parse(jsonAttr);
+			return attrObj.map(item => item.key + ":" + item.value).join('; ');
+		}
+	},
 	onLoad(options) {
 		if(options.orderId) {
 			this.orderId = options.orderId;
@@ -361,8 +368,16 @@ export default {
 			const afterSaleItems = this.selectedItems.map(itemId => {
 				const orderItem = this.orderInfo.orderItemList.find(item => item.id === itemId);
 				const reason = this.getSelectedReason(itemId);
-				const reasonText = reason === '其他原因' ? this.getCustomReason(itemId) : reason;
+				let reasonText = reason === '其他原因' ? this.getCustomReason(itemId) : reason;
+				
+				// 确保reasonText不为null或undefined
+				if (!reasonText || reasonText.trim() === '') {
+					console.warn(`检测到商品${orderItem.productName}的退货原因为空，设置为默认值`);
+					reasonText = '用户申请退货/退款';
+				}
+				
 				const pics = uploadResults[itemId] || [];
+				console.log(`商品${orderItem.productName}的退货原因:`, reasonText);
 				
 				return {
 					orderItemId: itemId,
@@ -382,7 +397,9 @@ export default {
 			// 构建售后申请数据
 			const afterSaleData = {
 				orderId: this.orderId,
-				items: afterSaleItems
+				items: afterSaleItems,
+				// 添加一个顶级reason字段作为备份
+				reason: '用户申请退货/退款'
 			};
 			
 			// 打印完整数据
