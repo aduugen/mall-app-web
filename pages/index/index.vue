@@ -239,14 +239,11 @@
 			this.loadCartItems();
 		},
 		updated() {
-			console.log('Data loaded');
-			if (this.homeFlashPromotion && this.homeFlashPromotion.endTime) {
+			// 只有当homeFlashPromotion状态改变时才执行逻辑，避免重复打印警告
+			if (this.homeFlashPromotion && this.homeFlashPromotion.endTime && !this.firstFlag) {
 				console.log('endtime:', this.homeFlashPromotion.endTime);
 				this.startCountdown();
 				console.log('homeFlashPromotion:', this.homeFlashPromotion);
-			} else {
-				console.warn('Flash promotion data not loaded yet.');
-				console.log('homeFlashPromotion:', this.homeFlashPromotion); // 检查是否有数据
 			}
 		},
 		onUnload () {
@@ -309,6 +306,11 @@
 			        
 			        // 处理商品价格逻辑
 			        await this.processProductPrices();
+			        
+			        // 数据加载完成后，初始化秒杀倒计时
+			        if (this.homeFlashPromotion && this.homeFlashPromotion.endTime && !this.firstFlag) {
+			            this.startCountdown();
+			        }
 			        
 			        uni.stopPullDownRefresh();
 					console.log('API response:', response); // 检查API返回的内容
@@ -503,8 +505,8 @@
 				})
 			},
 			startCountdown() {
-				if (this.firstFlag == true) {
-					console.log('firstFlag is', this.firstFlag);
+				if (this.firstFlag === true) {
+					console.log('倒计时已经初始化，跳过重复初始化');
 					return;
 				}
 				this.firstFlag = true;
