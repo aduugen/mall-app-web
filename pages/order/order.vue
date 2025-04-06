@@ -72,7 +72,10 @@
 							<!-- 在"已开票"状态下显示查看按钮 -->
 							<button class="action-btn" v-if="item.invoiceStatus === 2" @click="viewInvoice(item)">查看发票</button>
 							
-							<button class="action-btn" v-if="item.afterSaleStatus !== 2" @click="applyAfterSale(item)">申请售后</button>
+							<!-- 售后按钮逻辑 -->
+							<button class="action-btn" v-if="item.afterSaleStatus === 0" @click="applyAfterSale(item)">申请售后</button>
+							<button class="action-btn" v-else-if="item.afterSaleStatus === 1 || item.afterSaleStatus === 2" @click="checkAfterSale(item)">查询售后</button>
+							
 							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
 						</view>
@@ -194,10 +197,12 @@
 				});
 			}
 			
-			// 监听评价成功事件
-			uni.$on('orderListRefresh', () => {
-				this.loadData();
-			});
+			// 监听评价成功事件以及售后申请成功的事件
+			uni.$on('orderListRefresh', this.loadData);
+		},
+		destroyed() {
+			// 移除事件监听，避免内存泄漏
+			uni.$off('orderListRefresh', this.loadData);
 		},
 		onUnload() {
 			// 页面卸载时移除事件监听
@@ -653,6 +658,38 @@
 			clearSearch() {
 				this.searchKeyword = '';
 				this.filteredOrderList = [];
+			},
+			// 查询售后状态
+			checkAfterSale(order) {
+				// 查询订单的售后状态并跳转到售后列表页面
+				uni.showLoading({
+					title: '查询中'
+				});
+				
+				checkOrderAfterSaleStatus(order.id).then(response => {
+					uni.hideLoading();
+					
+					if (response.code === 200) {
+						// 成功获取售后状态，跳转到售后列表页面
+						uni.navigateTo({
+							url: `/pages/afterSale/afterSaleList?orderId=${order.id}`
+						});
+					} else {
+						uni.showToast({
+							title: response.message || '查询售后状态失败',
+							icon: 'none',
+							duration: 2000
+						});
+					}
+				}).catch(error => {
+					uni.hideLoading();
+					console.error('查询售后状态失败:', error);
+					uni.showToast({
+						title: '查询售后状态失败',
+						icon: 'none',
+						duration: 2000
+					});
+				});
 			},
 		},
 	}

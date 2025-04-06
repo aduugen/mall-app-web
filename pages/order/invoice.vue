@@ -77,7 +77,7 @@
 					<text class="value">{{orderSn}}</text>
 				</view>
 				<view class="info-item">
-					<text class="label">订单金额</text>
+					<text class="label">实际支付金额</text>
 					<text class="value price">¥{{orderAmount}}</text>
 				</view>
 			</view>
@@ -192,9 +192,9 @@
 						if (res && res.code === 200) { 
 							const orderDetail = res.data;
 							this.orderSn = orderDetail.orderSn;
-							this.orderAmount = orderDetail.totalAmount;
+							this.orderAmount = orderDetail.payAmount || orderDetail.totalAmount || '0.00';
 							
-							console.log('订单信息处理成功，orderSn:', this.orderSn);
+							console.log('订单信息处理成功，orderSn:', this.orderSn, '实际支付金额:', this.orderAmount);
 							
 							// 自动填充用户信息
 							if (orderDetail.memberUsername) {
@@ -282,6 +282,25 @@
 					}
 				}
 				
+				// 检查用户登录状态
+				const token = uni.getStorageSync('token');
+				if (!token) {
+					uni.showModal({
+						title: '提示',
+						content: '您尚未登录或登录已过期，请先登录',
+						confirmText: '去登录',
+						success: (res) => {
+							if (res.confirm) {
+								// 跳转到登录页
+								uni.navigateTo({
+									url: '/pages/public/login'
+								});
+							}
+						}
+					});
+					return;
+				}
+				
 				// 提交表单数据
 				uni.showLoading({
 					title: '提交中'
@@ -299,14 +318,17 @@
 					receiverEmail: this.invoiceForm.email,
 					receiverName: this.invoiceForm.receiverName,
 					receiverPhone: this.invoiceForm.receiverPhone,
-					receiverAddress: this.invoiceForm.receiverAddress
+					receiverAddress: this.invoiceForm.receiverAddress,
+					// 添加发票金额字段，使用订单金额
+					invoiceAmount: this.orderAmount
 				};
 				
-				console.log('提交发票申请参数:', params);
+				console.log('提交发票申请参数:', JSON.stringify(params));
 				
 				// 调用申请发票API
 				applyInvoice(params).then(res => {
 					uni.hideLoading();
+					console.log('发票申请响应:', JSON.stringify(res));
 					if (res.code === 200) {
 						// 通知订单列表页刷新
 						uni.$emit('orderListRefresh');
@@ -323,17 +345,64 @@
 							}
 						});
 					} else {
-						uni.showToast({
-							title: res.message || '申请失败',
-							icon: 'none'
-						});
+						console.error('发票申请失败:', res.message);
+						// 处理登录过期的情况
+						if (res.message && (res.message.includes('登录') || res.message.includes('未登录') || res.code === 401)) {
+							uni.showModal({
+								title: '登录已过期',
+								content: '您的登录已过期，请重新登录',
+								confirmText: '去登录',
+								success: (result) => {
+									if (result.confirm) {
+										// 清除本地存储的token
+										uni.removeStorageSync('token');
+										uni.removeStorageSync('userInfo');
+										
+										// 跳转到登录页
+										uni.navigateTo({
+											url: '/pages/public/login'
+										});
+									}
+								}
+							});
+						} else {
+							uni.showToast({
+								title: res.message || '申请失败',
+								icon: 'none'
+							});
+						}
 					}
 				}).catch(err => {
 					uni.hideLoading();
-					uni.showToast({
-						title: '申请发票失败',
-						icon: 'none'
-					});
+					console.error('发票申请异常:', JSON.stringify(err));
+					
+					// 判断是否为登录问题
+					let errorMsg = err.message || '服务器异常';
+					if (errorMsg.includes('登录') || errorMsg.includes('token') || errorMsg.includes('认证')) {
+						uni.showModal({
+							title: '登录已过期',
+							content: '您的登录已过期，请重新登录',
+							confirmText: '去登录',
+							success: (result) => {
+								if (result.confirm) {
+									// 清除本地存储的token
+									uni.removeStorageSync('token');
+									uni.removeStorageSync('userInfo');
+									
+									// 跳转到登录页
+									uni.navigateTo({
+										url: '/pages/public/login'
+									});
+								}
+							}
+						});
+					} else {
+						uni.showToast({
+							title: '申请发票失败: ' + errorMsg,
+							icon: 'none',
+							duration: 3000
+						});
+					}
 				});
 			},
 			

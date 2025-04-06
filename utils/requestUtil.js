@@ -56,7 +56,7 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 		console.log('请求参数(params):', config.params);
 	}
 	if (config.data) {
-		console.log('请求数据(data):', config.data);
+		console.log('请求数据(data):', typeof config.data === 'object' ? JSON.stringify(config.data) : config.data);
 		
 		// 特别处理，确保data中的reason字段不为null
 		if (config.data && typeof config.data === 'object') {
@@ -95,6 +95,14 @@ http.interceptor.request((config, cancel) => { /* 请求之前拦截器 */
 				
 				// 只对售后相关请求打印处理后的数据
 				console.log('售后请求处理后的数据:', JSON.stringify(config.data));
+			}
+			
+			// 针对发票申请接口，确保member_id字段不为null
+			const isInvoiceRequest = url.includes('/invoice/apply');
+			if (isInvoiceRequest) {
+				// 为请求添加时间戳，避免缓存问题
+				config.data._timestamp = Date.now();
+				console.log('发票申请请求处理后的数据:', JSON.stringify(config.data));
 			}
 		}
 	}

@@ -167,7 +167,8 @@ export function cancelAfterSale(params) {
  */
 export function checkOrderAfterSaleStatus(orderId) {
 	return request({
-		url: `/afterSale/checkOrderAfterSaleStatus?orderId=${orderId}`,
-		method: 'get'
+		url: `/member/afterSale/checkOrderAfterSaleStatus`,
+		method: 'get',
+		params: { orderId }
 	});
 } 
