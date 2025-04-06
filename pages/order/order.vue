@@ -63,8 +63,16 @@
 							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
-							<button class="action-btn" v-if="!isInvoiced(item.id)" @click="invoiceOrder(item)">开具发票</button>
-							<button class="action-btn" @click="applyAfterSale(item)">申请售后</button>
+							<!-- 开具发票按钮，根据后端返回的invoiceStatus状态来判断 -->
+							<button class="action-btn" v-if="item.invoiceStatus === 0 || item.invoiceStatus === 3" @click="invoiceOrder(item)">开具发票</button>
+							
+							<!-- 在"申请中"状态下显示查询按钮 -->
+							<button class="action-btn" v-if="item.invoiceStatus === 1" @click="checkInvoiceStatus(item)">查询发票</button>
+							
+							<!-- 在"已开票"状态下显示查看按钮 -->
+							<button class="action-btn" v-if="item.invoiceStatus === 2" @click="viewInvoice(item)">查看发票</button>
+							
+							<button class="action-btn" v-if="item.afterSaleStatus !== 2" @click="applyAfterSale(item)">申请售后</button>
 							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
 						</view>
@@ -90,6 +98,12 @@
 		confirmReceiveOrder,
 		deleteUserOrder
 	} from '@/api/order.js';
+	import {
+		checkOrderAfterSaleStatus
+	} from '@/api/afterSale.js';
+	import {
+		fetchInvoiceByOrderId
+	} from '@/api/invoice.js';
 	export default {
 		components: {
 			uniLoadMore,
@@ -127,8 +141,7 @@
 						state: 3,
 						text: '已完成'
 					}
-				],
-				invoicedOrderList: [],
+				]
 			};
 		},
 		onLoad(options) {
@@ -185,28 +198,16 @@
 			uni.$on('orderListRefresh', () => {
 				this.loadData();
 			});
-			
-			// 监听发票申请成功事件
-			uni.$on('orderInvoiceApplied', (orderId) => {
-				this.updateInvoiceStatus(orderId);
-			});
 		},
 		onUnload() {
 			// 页面卸载时移除事件监听
 			uni.$off('orderListRefresh');
-			uni.$off('orderInvoiceApplied');
 		},
 		onShow() {
-			// 从本地缓存中读取已申请发票的订单ID列表
-			this.invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
-			console.log('订单列表页面 - 已申请发票订单列表:', this.invoicedOrderList);
-			
-			// 检查可能需要隐藏的开具发票按钮
+			// 页面显示时刷新数据
 			if (this.orderList && this.orderList.length > 0) {
-				for (let i = 0; i < this.orderList.length; i++) {
-					let orderId = parseInt(this.orderList[i].id);
-					console.log(`检查订单${orderId}是否已申请发票:`, this.invoicedOrderList.includes(orderId));
-				}
+				console.log('订单列表页面显示，刷新数据');
+				this.loadData();
 			}
 		},
 		filters: {
@@ -416,90 +417,120 @@
 			},
 			//申请售后
 			applyAfterSale(order) {
-				uni.navigateTo({
-					url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
-				});
-			},
-			//开具发票
-			invoiceOrder(order) {
-				// 从本地缓存中获取已申请发票的订单列表
-				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
-				const orderId = parseInt(order.id);
-				
-				console.log('开具发票检查 - 订单ID:', orderId, '类型:', typeof orderId);
-				console.log('已申请发票订单列表:', invoicedOrderList);
-				console.log('是否包含该订单ID:', invoicedOrderList.includes(orderId));
-				
-				// 如果该订单已申请过发票，则提示用户
-				if (invoicedOrderList.includes(orderId)) {
-					uni.showModal({
-						title: '温馨提示',
-						content: '该订单发票申请已提交，请前往我的发票查看申请进展',
-						confirmText: '查看发票',
-						cancelText: '返回',
-						success: (result) => {
-							if (result.confirm) {
-								// 跳转到我的发票页面
-								uni.navigateTo({
-									url: '/pages/order/invoice-list'
-								});
-							}
-						}
+				// 已经全部申请售后的订单直接拦截
+				if (order.afterSaleStatus === 2) {
+					uni.showToast({
+						title: '该订单商品已全部申请售后',
+						icon: 'none',
+						duration: 2000
 					});
 					return;
 				}
 				
-				// 否则跳转到发票申请页面
+				// 对于未申请或部分申请的订单，先检查详细状态
+				uni.showLoading({
+					title: '检查订单状态'
+				});
+				
+				checkOrderAfterSaleStatus(order.id).then(response => {
+					uni.hideLoading();
+					
+					if (response.code === 200) {
+						const result = response.data;
+						
+						// 再次确认是否可申请售后
+						if (!result.canApplyAfterSale) {
+							uni.showToast({
+								title: '该订单商品已全部申请售后',
+								icon: 'none',
+								duration: 2000
+							});
+							return;
+						}
+						
+						// 如果有可申请的商品，则跳转到售后申请页面
+							uni.navigateTo({
+								url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
+							});
+						} else {
+							uni.showToast({
+								title: response.message || '检查订单状态失败',
+								icon: 'none',
+								duration: 2000
+							});
+						}
+					}).catch(error => {
+						uni.hideLoading();
+						console.error('检查订单售后状态失败:', error);
+						
+						// 出错时也允许进入申请页面，由申请页面再次检查
+						uni.navigateTo({
+							url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
+						});
+					});
+				},
+			//开具发票
+			invoiceOrder(order) {
+				// 跳转到发票申请页面
 				uni.navigateTo({
-					url: `/pages/order/invoice?orderId=${orderId}`
+					url: `/pages/order/invoice?orderId=${order.id}`
 				});
 			},
-			// 更新订单的发票状态
-			updateInvoiceStatus(orderId) {
-				if (!this.orderList || this.orderList.length === 0) return;
+			// 查询发票状态
+			checkInvoiceStatus(order) {
+				// 根据订单ID查询发票
+				uni.showLoading({
+					title: '查询中'
+				});
 				
-				// 确保orderId是数字类型
-				orderId = parseInt(orderId);
-				
-				// 获取最新的已申请发票订单列表
-				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
-				
-				// 如果当前订单列表中包含了刚申请过发票的订单，则更新UI
-				for (let i = 0; i < this.orderList.length; i++) {
-					if (parseInt(this.orderList[i].id) === orderId) {
-						// 由于无法直接修改订单对象添加一个新属性，我们使用整个列表的重新赋值来触发视图更新
-						const updatedOrderList = [...this.orderList];
-						updatedOrderList[i] = { ...updatedOrderList[i], invoiceApplied: true };
-						this.orderList = updatedOrderList;
-						
-						// 刷新已申请发票订单列表
-						this.invoicedOrderList = invoicedOrderList;
-						break;
+				fetchInvoiceByOrderId(order.id).then(res => {
+					uni.hideLoading();
+					if (res.code === 200 && res.data) {
+						// 有发票记录，跳转到发票详情页
+						uni.navigateTo({
+							url: `/pages/order/invoice-detail?id=${res.data.id}`
+						});
+					} else {
+						uni.showToast({
+							title: '未找到发票记录',
+							icon: 'none'
+						});
 					}
-				}
+				}).catch(err => {
+					uni.hideLoading();
+					uni.showToast({
+						title: '查询发票状态失败',
+						icon: 'none'
+					});
+				});
 			},
-			// 更新订单的发票状态
-			updateOrderInvoiceStatus() {
-				if (!this.orderList || this.orderList.length === 0) return;
+			
+			// 查看发票
+			viewInvoice(order) {
+				// 直接查询并跳转到发票详情
+				uni.showLoading({
+					title: '加载中'
+				});
 				
-				// 获取最新的已申请发票订单列表
-				const invoicedOrderList = uni.getStorageSync('invoicedOrders') || [];
-				
-				// 如果当前订单列表中包含了刚申请过发票的订单，则更新UI
-				for (let i = 0; i < this.orderList.length; i++) {
-					if (invoicedOrderList.includes(parseInt(this.orderList[i].id))) {
-						// 由于无法直接修改订单对象添加一个新属性，我们使用整个列表的重新赋值来触发视图更新
-						const updatedOrderList = [...this.orderList];
-						updatedOrderList[i] = { ...updatedOrderList[i], invoiceApplied: true };
-						this.orderList = updatedOrderList;
-						
-						// 刷新已申请发票订单列表
-						this.invoicedOrderList = invoicedOrderList;
+				fetchInvoiceByOrderId(order.id).then(res => {
+					uni.hideLoading();
+					if (res.code === 200 && res.data) {
+						uni.navigateTo({
+							url: `/pages/order/invoice-detail?id=${res.data.id}`
+						});
+					} else {
+						uni.showToast({
+							title: '未找到发票记录',
+							icon: 'none'
+						});
 					}
-				}
-			},
-			isInvoiced(orderId) {
-				return this.invoicedOrderList.includes(parseInt(orderId));
+				}).catch(err => {
+					uni.hideLoading();
+					uni.showToast({
+						title: '获取发票详情失败',
+						icon: 'none'
+					});
+				});
 			},
 			// 搜索订单
 			searchOrders() {

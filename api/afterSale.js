@@ -159,4 +159,15 @@ export function cancelAfterSale(params) {
 		url: '/member/afterSale/cancel',
 		params: params
 	})
+}
+
+/**
+ * 检查订单售后状态
+ * @param {number} orderId - 订单ID
+ */
+export function checkOrderAfterSaleStatus(orderId) {
+	return request({
+		url: `/afterSale/checkOrderAfterSaleStatus?orderId=${orderId}`,
+		method: 'get'
+	});
 } 

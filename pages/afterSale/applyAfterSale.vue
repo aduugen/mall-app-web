@@ -76,6 +76,7 @@
 import { fetchOrderDetail } from '@/api/order.js';
 import { createAfterSale } from '@/api/afterSale.js';
 import { API_BASE_URL } from '@/utils/appConfig.js';
+import { checkOrderAfterSaleStatus } from '@/api/afterSale.js';
 
 export default {
 	data() {
@@ -97,7 +98,8 @@ export default {
 				'商品尺寸不合适',
 				'商品颜色不喜欢',
 				'其他原因'
-			]
+			],
+			orderItemAppliedStatusMap: {}
 		}
 	},
 	filters: {
@@ -110,38 +112,73 @@ export default {
 	onLoad(options) {
 		if(options.orderId) {
 			this.orderId = options.orderId;
-			this.getOrderDetail();
+			
+			// 加载前检查订单售后状态
+			this.checkOrderAfterSaleStatus().then(() => {
+				this.getOrderDetail();
+			}).catch(() => {
+				// 状态检查失败也尝试加载订单详情
+				this.getOrderDetail();
+			});
 		}
 	},
 	methods: {
 		getOrderDetail() {
+			console.log("开始获取订单详情");
+			uni.showLoading({
+				title: '加载中...',
+				mask: true
+			});
 			fetchOrderDetail(this.orderId).then(response => {
-				this.orderInfo = response.data;
-				// 处理订单项，计算并初始化可申请退货数量
-				if (this.orderInfo.orderItemList) {
-					this.orderInfo.orderItemList.forEach(item => {
-						// 计算可申请数量 = 购买数量 - 已申请数量
-						const appliedQuantity = item.appliedQuantity || 0;
-						const availableQuantity = item.productQuantity - appliedQuantity;
+				uni.hideLoading();
+				if(response.data) {
+					this.orderInfo = response.data;
+					console.log("订单详情:", this.orderInfo);
+					
+					// 使用过滤方法过滤掉已全部申请售后的商品
+					if (this.orderInfo.orderItemList && this.orderInfo.orderItemList.length > 0) {
+						this.orderInfo.orderItemList = this.filterOrderItems(this.orderInfo.orderItemList);
 						
-						// 为订单项添加可申请数量属性
-						this.$set(item, 'availableQuantity', availableQuantity);
+						// 如果过滤后没有可申请售后的商品，提示用户并返回
+						if (this.orderInfo.orderItemList.length === 0) {
+							uni.showModal({
+								title: '提示',
+								content: '该订单商品已全部申请售后，无法再次申请',
+								showCancel: false,
+								success: () => {
+									uni.navigateBack();
+								}
+							});
+							return;
+						}
 						
-						// 初始化该商品的退货数量为可申请数量
-						this.$set(this.returnQuantities, item.id, availableQuantity);
-						
-						// 初始化该商品的退货原因和凭证
-						if (!this.itemReasons[item.id]) {
-							this.$set(this.itemReasons, item.id, '');
-						}
-						if (!this.itemCustomReasons[item.id]) {
-							this.$set(this.itemCustomReasons, item.id, '');
-						}
-						if (!this.itemPics[item.id]) {
-							this.$set(this.itemPics, item.id, []);
-						}
+						// 初始化选中商品和申请数量
+						this.orderInfo.orderItemList.forEach(item => {
+							item.checked = false;
+							item.returnQuantity = 1;
+							
+							// 如果有售后状态记录，则限制可申请数量
+							if (this.orderItemAppliedStatusMap && this.orderItemAppliedStatusMap[item.id]) {
+								const status = this.orderItemAppliedStatusMap[item.id];
+								item.maxReturnQuantity = status.availableQuantity;
+							} else {
+								item.maxReturnQuantity = item.productQuantity;
+							}
+						});
+					}
+				} else {
+					uni.showToast({
+						title: '获取订单详情失败',
+						icon: 'none'
 					});
 				}
+			}).catch(err => {
+				uni.hideLoading();
+				console.error("获取订单详情失败:", err);
+				uni.showToast({
+					title: '获取订单详情失败',
+					icon: 'none'
+				});
 			});
 		},
 		isItemSelected(itemId) {
@@ -468,6 +505,67 @@ export default {
 					duration: 3000
 				});
 			});
+		},
+		/**
+		 * 检查订单售后状态
+		 */
+		checkOrderAfterSaleStatus() {
+			return new Promise((resolve, reject) => {
+				checkOrderAfterSaleStatus(this.orderId).then(response => {
+					if (response.code === 200) {
+						const result = response.data;
+						
+						// 如果订单不可申请售后，则返回订单列表页
+						if (!result.canApplyAfterSale) {
+							uni.showModal({
+								title: '提示',
+								content: '该订单商品已全部申请售后，无法再次申请',
+								showCancel: false,
+								success: () => {
+									uni.navigateBack();
+								}
+							});
+							reject(new Error('订单商品已全部申请售后'));
+							return;
+						}
+						
+						// 记录每个订单项的可申请数量
+						if (result.items && result.items.length > 0) {
+							this.orderItemAppliedStatusMap = {};
+							result.items.forEach(item => {
+								this.orderItemAppliedStatusMap[item.orderItemId] = {
+									appliedQuantity: item.appliedQuantity,
+									availableQuantity: item.availableQuantity,
+									isFullyApplied: item.isFullyApplied
+								};
+							});
+						}
+						
+						resolve();
+					} else {
+						console.error('检查订单售后状态失败:', response.message);
+						resolve(); // 失败也继续加载
+					}
+				}).catch(error => {
+					console.error('检查订单售后状态异常:', error);
+					resolve(); // 异常也继续加载
+				});
+			});
+		},
+		
+		// 修改商品项过滤方法，过滤掉已全部申请售后的商品
+		filterOrderItems(orderItems) {
+			if (!orderItems || !orderItems.length) return [];
+			
+			// 如果有售后状态记录，则过滤已全部申请售后的商品
+			if (this.orderItemAppliedStatusMap) {
+				return orderItems.filter(item => {
+					const status = this.orderItemAppliedStatusMap[item.id];
+					return !status || !status.isFullyApplied;
+				});
+			}
+			
+			return orderItems;
 		}
 	}
 }
