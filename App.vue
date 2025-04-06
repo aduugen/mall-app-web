@@ -348,6 +348,10 @@
 		content: "\e697";
 	}
 
+	.icon-yiwancheng:before {
+		content: "\e695";
+	}
+
 	.icon-gouwuche:before {
 		content: "\e609";
 	}
@@ -406,6 +410,10 @@
 
 	.icon-fapiaodayin:before {
 		content: "\e696";
+	}
+
+	.icon-wodeshouhou:before {
+		content: "\e694";
 	}
 
 	.uni-input-input:disabled {  

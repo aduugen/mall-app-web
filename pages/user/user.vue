@@ -84,7 +84,7 @@
 						<text>待收货</text>
 					</view>
 					<view class="order-item" @click="navTo('/pages/order/order?state=4')" hover-class="common-hover"  :hover-stay-time="50">
-						<text class="yticon icon-shouhoutuikuan"></text>
+						<text class="yticon icon-yiwancheng"></text>
 						<text>已完成</text>
 					</view>
 				</view>
@@ -130,7 +130,7 @@
 					</view>
 					<view class="service-item" @click="navTo('/pages/afterSale/afterSaleList')">
 						<view class="icon-wrapper">
-							<text class="yticon icon-shouhoutuikuan"></text>
+							<text class="yticon icon-wodeshouhou"></text>
 						</view>
 						<text class="service-text">我的售后</text>
 					</view>

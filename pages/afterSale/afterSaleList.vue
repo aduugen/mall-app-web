@@ -20,102 +20,90 @@
 			<swiper-item class="swiper-item" v-for="(tabItem, tabIndex) in navList" :key="tabIndex">
 				<scroll-view 
 					class="swiper-item-scroll" 
-					scroll-y
-					enableBackToTop="true"
-					@scrolltolower="onScrolltolower"
-					@refresherrefresh="refreshData(tabIndex)"
+					scroll-y 
+					@scrolltolower="onScrolltolower" 
+					@refresherrefresh="onRefresh" 
 					:refresher-enabled="true"
 					:refresher-triggered="tabItem.refreshing"
 				>
-					<!-- 加载中状态 -->
-					<view v-if="tabItem.loadingType === 'loading' && tabItem.afterSaleList.length === 0" class="loading-box">
-						<view class="loading-spinner"></view>
-						<text class="loading-text">数据加载中...</text>
+					<!-- 加载状态 -->
+					<view v-if="tabItem.loading && !tabItem.refreshing" class="loading-box">
+						<uni-load-more iconType="snow" status="loading" :contentText="loadMoreText" />
 					</view>
 					
 					<!-- 无数据状态 -->
 					<view v-else-if="tabItem.afterSaleList.length === 0" class="empty-box">
-						<empty src="empty"></empty>
-						<text class="empty-text">暂无售后记录</text>
+						<empty :info="'暂无售后记录'" />
 					</view>
 					
-					<!-- 售后列表 -->
-					<view v-else class="after-sale-list">
-						<view 
-							class="after-sale-item" 
-							v-for="item in tabItem.afterSaleList" 
-							:key="item.id"
-						>
-							<!-- 订单信息区 -->
+					<!-- 售后列表区 -->
+					<view class="after-sale-list" v-else>
+						<view class="after-sale-item" v-for="(item, idx) in tabItem.afterSaleList" :key="idx" @click="viewDetails(item)">
 							<view class="order-info">
 								<view class="item-top">
-									<text class="order-no">{{getOrderSn(item)}}</text>
-									<text class="status" :class="'status-'+item.status">
-										{{item.status == 0 ? '待处理' : item.status == 1 ? '处理中' : item.status == 2 ? '已完成' : '已拒绝'}}
-									</text>
+									<text class="service-id">售后单号: {{item.id}}</text>
+									<text class="status" :class="'status-' + item.status">{{getStatusText(item.status)}}</text>
 								</view>
-								
-								<!-- 售后单信息 -->
+								<view class="order-num">
+									<text>订单号: {{item.orderSn}}</text>
+									<text class="create-time">{{formatDate(item.createTime)}}</text>
+								</view>
 								<view class="item-main">
-									<view class="order-goods-box">
-										<view class="goods-info">
-											<view class="goods-title">
-												<text>申请类型: </text>
-												<text>{{item.type == 0 ? '退款' : item.type == 1 ? '退货退款' : '换货'}}</text>
-											</view>
-											<view class="goods-price">退款金额: ¥{{item.returnAmount}}</view>
-											<view class="goods-attrs">
-												<text>申请数量: {{item.productCount}}件</text>
-											</view>
-											
-											<!-- 申请原因 -->
-											<view class="reason-box">
-												<view class="reason-title" @click="toggleReasonExpand(item)">
-													申请原因: 
-													<text class="reason-text" :class="{'reason-expanded': item.isReasonExpanded}">
-														{{item.reason || '暂无原因'}}
-													</text>
-													<text class="expand-btn" v-if="item.reason && item.reason.length > 20">
-														{{item.isReasonExpanded ? '收起' : '展开'}}
-													</text>
+									<view class="product-list" v-if="item.orderItemList && item.orderItemList.length > 0">
+										<view class="product-item" v-for="(product, productIndex) in item.orderItemList" :key="productIndex">
+											<image class="product-img" :src="fixImagePath(product.productPic)" mode="aspectFill"></image>
+											<view class="product-info">
+												<view class="product-name">{{product.productName}}</view>
+												<view class="product-attr" v-if="product.productAttr">{{formatProductAttr(product.productAttr)}}</view>
+												<view class="product-price-qty">
+													<text>单价: ¥{{product.productPrice}}</text>
+													<text>退货数量: {{product.returnQuantity || product.productQuantity}}</text>
+												</view>
+												<view class="product-reason" v-if="product.returnReason">
+													退货原因: {{product.returnReason}}
 												</view>
 											</view>
 										</view>
 									</view>
 									
-									<!-- 凭证图片 -->
-									<view class="pics-area" v-if="hasPics(item)">
+									<view class="refund-info">
+										<view class="refund-item">
+											<text>退货总数:</text>
+											<text>{{calcTotalQuantity(item)}}件</text>
+										</view>
+										<view class="refund-item">
+											<text>退款金额:</text>
+											<text class="amount">¥{{item.returnAmount || 0}}</text>
+										</view>
+										<view class="refund-item" v-if="item.handleTime">
+											<text>处理时间:</text>
+											<text>{{formatDate(item.handleTime)}}</text>
+										</view>
+									</view>
+									
+									<view class="pics-area" v-if="item.pics && formatPics(item.pics).length > 0">
 										<view class="pics-title">凭证图片:</view>
-										<scroll-view class="pics-scroll" scroll-x>
+										<scroll-view class="pics-scroll" scroll-x="true">
 											<view class="pics-list">
-												<view 
-													class="pic-item" 
-													v-for="(pic, picIndex) in formatPics(item.pics)" 
-													:key="picIndex"
-													@click="previewImage(pic, formatPics(item.pics))"
-												>
-													<image 
-														:src="pic" 
-														mode="aspectFill"
-														:class="{'image-loading': isImageLoading(item, picIndex)}"
-														@load="onImageLoad(item, picIndex)"
-														@error="onImageError(item, picIndex)"
-													></image>
+												<view class="pic-item" v-for="(pic, picIndex) in formatPics(item.pics)" :key="picIndex" @click.stop="previewImage(formatPics(item.pics), picIndex)">
+													<image :src="fixImagePath(pic)" mode="aspectFill"></image>
 												</view>
 											</view>
 										</scroll-view>
 									</view>
 									
 									<view class="action-box">
-										<view class="action-btn cancel" @click="cancelAfterSale(item)" v-if="item.status === 0">取消申请</view>
-										<view class="action-btn view-details" @click="viewDetail(item)">查看详情</view>
+										<text class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item)">取消申请</text>
+										<text class="action-btn view-details">查看详情</text>
 									</view>
 								</view>
 							</view>
 						</view>
 						
 						<!-- 上拉加载更多 -->
-						<uni-load-more :status="tabItem.loadingType" :contentText="loadMoreText"></uni-load-more>
+						<view class="loading-more" v-if="tabItem.afterSaleList.length > 0">
+							<uni-load-more iconType="snow" :status="tabItem.loadingType" :contentText="loadMoreText" />
+						</view>
 					</view>
 				</scroll-view>
 			</swiper-item>
@@ -698,14 +686,14 @@
 				}
 			},
 			//计算商品总数量
-			calcTotalQuantity(order){
-				let totalQuantity = 0;
-				if(order.orderItemList!=null&&order.orderItemList.length>0){
-					for(let item of order.orderItemList){
-						totalQuantity+=item.productQuantity
-					}
+			calcTotalQuantity(item) {
+				if (!item.orderItemList || item.orderItemList.length === 0) {
+					return item.returnCount || 0;
 				}
-				return totalQuantity;
+				
+				return item.orderItemList.reduce((total, product) => {
+					return total + (parseInt(product.returnQuantity || product.productQuantity || 0));
+				}, 0);
 			},
 			//查看售后详情
 			showAfterSaleDetail(id) {
@@ -773,6 +761,29 @@
 							});
 						}
 					}
+				});
+			},
+			// 获取状态文本
+			getStatusText(status) {
+				const statusMap = {
+					0: '待处理',
+					1: '处理中',
+					2: '已完成',
+					3: '已拒绝'
+				};
+				return statusMap[status] || '未知状态';
+			},
+			// 格式化日期
+			formatDate(dateStr) {
+				if (!dateStr) return 'N/A';
+				const date = new Date(dateStr);
+				return formatDate(date, 'yyyy-MM-dd hh:mm:ss');
+			},
+			// 查看详情
+			viewDetails(item) {
+				// 跳转到售后详情页面
+				uni.navigateTo({
+					url: '/pages/afterSale/afterSaleDetail?id=' + item.id
 				});
 			}
 		}
@@ -875,7 +886,7 @@
 					padding-bottom: 20rpx;
 					border-bottom: 1px solid #f5f5f5;
 					
-					.order-no {
+					.service-id {
 						font-size: 26rpx;
 						color: $font-color-dark;
 					}
@@ -907,72 +918,124 @@
 					}
 				}
 				
+				.order-num {
+					padding: 16rpx 0;
+					font-size: 26rpx;
+					color: $font-color-dark;
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					border-bottom: 1px solid #f5f5f5;
+					
+					.create-time {
+						font-size: 24rpx;
+						color: $font-color-light;
+					}
+				}
+				
 				.item-main {
 					padding-top: 20rpx;
 					
-					.order-goods-box {
-						.goods-info {
-							.goods-title {
-								font-size: 28rpx;
-								color: $font-color-dark;
-								margin-bottom: 10rpx;
+					.product-list {
+						margin-bottom: 20rpx;
+						
+						.product-item {
+							display: flex;
+							padding: 16rpx;
+							margin-bottom: 16rpx;
+							border-radius: 8rpx;
+							background: #f8f8f8;
+							
+							.product-img {
+								width: 120rpx;
+								height: 120rpx;
+								border-radius: 8rpx;
+								object-fit: cover;
+								background: #fff;
+								border: 1px solid #f0f0f0;
 							}
 							
-							.goods-price {
+							.product-info {
+								flex: 1;
+								margin-left: 20rpx;
+								overflow: hidden;
+								
+								.product-name {
+									font-size: 28rpx;
+									color: $font-color-dark;
+									margin-bottom: 8rpx;
+									line-height: 1.3;
+									display: -webkit-box;
+									-webkit-box-orient: vertical;
+									-webkit-line-clamp: 2;
+									overflow: hidden;
+								}
+								
+								.product-attr {
+									font-size: 24rpx;
+									color: $font-color-light;
+									margin-bottom: 8rpx;
+									line-height: 1.3;
+								}
+								
+								.product-price-qty {
+									display: flex;
+									justify-content: space-between;
+									font-size: 26rpx;
+									color: $base-color;
+									margin-bottom: 8rpx;
+								}
+								
+								.product-reason {
+									font-size: 24rpx;
+									color: $font-color-light;
+									background: rgba(0, 0, 0, 0.03);
+									padding: 8rpx 12rpx;
+									border-radius: 4rpx;
+									margin-top: 8rpx;
+								}
+							}
+						}
+					}
+					
+					.refund-info {
+						margin-top: 16rpx;
+						margin-bottom: 16rpx;
+						padding: 16rpx;
+						background: #f8f8f8;
+						border-radius: 8rpx;
+						
+						.refund-item {
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+							margin-bottom: 8rpx;
+							
+							&:last-child {
+								margin-bottom: 0;
+							}
+							
+							text {
+								font-size: 26rpx;
+								color: $font-color-dark;
+							}
+							
+							.amount {
 								font-size: 28rpx;
 								color: $base-color;
-								margin-bottom: 10rpx;
-							}
-							
-							.goods-attrs {
-								font-size: 24rpx;
-								color: $font-color-light;
-								margin-bottom: 16rpx;
-							}
-							
-							.reason-box {
-								margin-top: 16rpx;
-								padding: 16rpx;
-								background: #f8f8f8;
-								border-radius: 8rpx;
-								
-								.reason-title {
-									font-size: 26rpx;
-									color: $font-color-dark;
-									line-height: 1.5;
-									
-									.reason-text {
-										color: $font-color-light;
-										display: inline-block;
-										max-width: 400rpx;
-										overflow: hidden;
-										text-overflow: ellipsis;
-										white-space: nowrap;
-										vertical-align: middle;
-										
-										&.reason-expanded {
-											white-space: normal;
-											word-break: break-all;
-										}
-									}
-									
-									.expand-btn {
-										color: $base-color;
-										margin-left: 10rpx;
-										font-size: 24rpx;
-									}
-								}
+								font-weight: bold;
 							}
 						}
 					}
 					
 					.pics-area {
 						margin-top: 20rpx;
+						margin-bottom: 20rpx;
 						
 						.pics-title {
 							font-size: 26rpx;
 							color: $font-color-dark;
-							margin-bottom: 16rpx;
+							margin-bottom: 12rpx;
 						}
 						
 						.pics-scroll {
@@ -981,7 +1044,7 @@
 							
 							.pics-list {
 								display: flex;
-								padding: 10rpx 0;
+								padding: 8rpx 0;
 								
 								.pic-item {
 									width: 160rpx;
@@ -990,6 +1053,12 @@
 									position: relative;
 									border-radius: 8rpx;
 									overflow: hidden;
+									box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+									border: 1px solid #f0f0f0;
+									
+									&:last-child {
+										margin-right: 0;
+									}
 									
 									image {
 										width: 100%;
@@ -1008,11 +1077,11 @@
 					.action-box {
 						display: flex;
 						justify-content: flex-end;
-						margin-top: 30rpx;
+						margin-top: 24rpx;
 						
 						.action-btn {
 							display: inline-block;
-							padding: 10rpx 30rpx;
+							padding: 12rpx 30rpx;
 							font-size: 26rpx;
 							border-radius: 30rpx;
 							
