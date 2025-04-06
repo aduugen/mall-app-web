@@ -1,106 +1,122 @@
 <template>
 	<view class="content">
+		<!-- 顶部导航栏 -->
 		<view class="navbar">
-			<view v-for="(item, index) in navList" :key="index" class="nav-item" :class="{current: tabCurrentIndex === index}"
-			 @click="tabClick(index)">
+			<view 
+				v-for="(item, index) in navList" :key="index" 
+				class="nav-item" 
+				:class="{current: tabCurrentIndex === index}"
+				@click="tabClick(index)"
+			>
 				{{item.text}}
 			</view>
+			<!-- 刷新按钮 -->
+			<view class="refresh-btn" @click="refreshCurrentTab">刷新</view>
 		</view>
-
-		<swiper :current="tabCurrentIndex" class="swiper-box" duration="300" @change="changeTab">
-			<swiper-item class="tab-content" v-for="(tabItem,tabIndex) in navList" :key="tabIndex">
-				<scroll-view class="list-scroll-content" scroll-y @scrolltolower="loadData('add')">
-					<!-- 空白页 -->
-					<empty v-if="afterSaleList==null||afterSaleList.length === 0"></empty>
-
+		
+		<!-- 内容区域 -->
+		<swiper class="swiper-box" :current="tabCurrentIndex" @change="changeTab">
+			<!-- 循环渲染每个标签页 -->
+			<swiper-item class="swiper-item" v-for="(tabItem, tabIndex) in navList" :key="tabIndex">
+				<scroll-view 
+					class="swiper-item-scroll" 
+					scroll-y
+					enableBackToTop="true"
+					@scrolltolower="onScrolltolower"
+					@refresherrefresh="refreshData(tabIndex)"
+					:refresher-enabled="true"
+					:refresher-triggered="tabItem.refreshing"
+				>
+					<!-- 加载中状态 -->
+					<view v-if="tabItem.loadingType === 'loading' && tabItem.afterSaleList.length === 0" class="loading-box">
+						<view class="loading-spinner"></view>
+						<text class="loading-text">数据加载中...</text>
+					</view>
+					
+					<!-- 无数据状态 -->
+					<view v-else-if="tabItem.afterSaleList.length === 0" class="empty-box">
+						<empty src="empty"></empty>
+						<text class="empty-text">暂无售后记录</text>
+					</view>
+					
 					<!-- 售后列表 -->
-					<view v-for="(item,index) in afterSaleList" :key="index" class="after-sale-item">
-						<view class="i-top b-b">
-							<text class="time">{{item.createTime | formatDateTime}}</text>
-							<text class="state" :style="{color: item.status === 0 ? '#fa436a' : '#999'}">{{item.status | formatStatus}}</text>
-						</view>
-						
-						<!-- 售后服务ID信息 -->
-						<view class="service-id-info">
-							<text class="service-id-text">售后服务编号:{{item.id}}</text>
-						</view>
-						<!-- 待处理状态时显示订单信息 -->
-						<view class="service-id-info" v-if="item.status === 0">
-							<!-- 检查多种可能的订单号位置 -->
-							<text class="service-id-text">{{getOrderSn(item)}}</text>
-							<text class="order-info-debug" v-if="!getOrderSn(item) && isDebug">数据结构: {{JSON.stringify(item).substring(0, 100)}}...</text>
-						</view>
-						
-						<!-- 售后原因信息 -->
-						<view class="reason-info">
-							<text class="reason-label">售后原因: </text>
-							<view class="reason-content-wrapper">
-								<text class="reason-content" v-if="!item.isReasonExpanded && item.reason && item.reason.length > 30">{{item.reason.substring(0, 30)}}...</text>
-								<text class="reason-content" v-else>{{item.reason || '无'}}</text>
-								<text class="expand-btn" v-if="item.reason && item.reason.length > 30" @click="toggleReasonExpand(item)">
-									{{item.isReasonExpanded ? '收起' : '展开'}}
-								</text>
-							</view>
-						</view>
-						
-						<!-- 凭证图片 -->
-						<view class="pics-info" v-if="hasPics(item)">
-							<text class="pics-label">凭证图片:</text>
-							<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
-								<view class="pics-container">
-									<view class="pic-item" v-for="(pic, picIndex) in formatPics(item.pics)" :key="picIndex" @click="previewImage(pic, formatPics(item.pics))">
-										<image class="thumbnail" :src="pic" mode="aspectFill" 
-											@error="onImageError(item, picIndex)" 
-											@load="onImageLoad(item, picIndex)" 
-											:lazy-load="true">
-										</image>
-										<view class="loading-placeholder" v-if="isImageLoading(item, picIndex)">
-											<text class="cuIcon-loading2"></text>
-										</view>
-										<view class="error-placeholder" v-if="hasImageError(item, picIndex)">
-											<text class="error-icon">!</text>
-										</view>
-										<view class="pic-count" v-if="picIndex === 0 && formatPics(item.pics).length > 1">
-											{{formatPics(item.pics).length}}张
+					<view v-else class="after-sale-list">
+						<view 
+							class="after-sale-item" 
+							v-for="item in tabItem.afterSaleList" 
+							:key="item.id"
+						>
+							<!-- 订单信息区 -->
+							<view class="order-info">
+								<view class="item-top">
+									<text class="order-no">{{getOrderSn(item)}}</text>
+									<text class="status" :class="'status-'+item.status">
+										{{item.status == 0 ? '待处理' : item.status == 1 ? '处理中' : item.status == 2 ? '已完成' : '已拒绝'}}
+									</text>
+								</view>
+								
+								<!-- 售后单信息 -->
+								<view class="item-main">
+									<view class="order-goods-box">
+										<view class="goods-info">
+											<view class="goods-title">
+												<text>申请类型: </text>
+												<text>{{item.type == 0 ? '退款' : item.type == 1 ? '退货退款' : '换货'}}</text>
+											</view>
+											<view class="goods-price">退款金额: ¥{{item.returnAmount}}</view>
+											<view class="goods-attrs">
+												<text>申请数量: {{item.productCount}}件</text>
+											</view>
+											
+											<!-- 申请原因 -->
+											<view class="reason-box">
+												<view class="reason-title" @click="toggleReasonExpand(item)">
+													申请原因: 
+													<text class="reason-text" :class="{'reason-expanded': item.isReasonExpanded}">
+														{{item.reason || '暂无原因'}}
+													</text>
+													<text class="expand-btn" v-if="item.reason && item.reason.length > 20">
+														{{item.isReasonExpanded ? '收起' : '展开'}}
+													</text>
+												</view>
+											</view>
 										</view>
 									</view>
-								</view>
-							</scroll-view>
-							<view class="debug-info" v-if="isDebug">
-								<text>原始数据: {{item.pics && item.pics.substring ? (item.pics.length > 50 ? item.pics.substring(0, 50) + '...' : item.pics) : JSON.stringify(item.pics)}}</text>
-								<view class="debug-url" v-if="formatPics(item.pics).length > 0">
-									<text>图片URL: {{formatPics(item.pics)[0]}}</text>
+									
+									<!-- 凭证图片 -->
+									<view class="pics-area" v-if="hasPics(item)">
+										<view class="pics-title">凭证图片:</view>
+										<scroll-view class="pics-scroll" scroll-x>
+											<view class="pics-list">
+												<view 
+													class="pic-item" 
+													v-for="(pic, picIndex) in formatPics(item.pics)" 
+													:key="picIndex"
+													@click="previewImage(pic, formatPics(item.pics))"
+												>
+													<image 
+														:src="pic" 
+														mode="aspectFill"
+														:class="{'image-loading': isImageLoading(item, picIndex)}"
+														@load="onImageLoad(item, picIndex)"
+														@error="onImageError(item, picIndex)"
+													></image>
+												</view>
+											</view>
+										</scroll-view>
+									</view>
+									
+									<view class="action-box">
+										<view class="action-btn cancel" @click="cancelAfterSale(item)" v-if="item.status === 0">取消申请</view>
+										<view class="action-btn view-details" @click="viewDetail(item)">查看详情</view>
+									</view>
 								</view>
 							</view>
 						</view>
 						
-						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList" :key="itemIndex">
-							<image class="goods-img" :src="orderItem.productPic" mode="aspectFill"></image>
-							<view class="right">
-								<text class="title clamp">{{orderItem.productName}}</text>
-								<text class="attr-box">{{orderItem.productAttr | formatProductAttr}} x {{orderItem.productQuantity}}</text>
-								<text class="price">{{orderItem.productPrice}}</text>
-								<!-- 待处理状态时显示商品条目编号 -->
-								<text class="item-info" v-if="item.status === 0">商品条目编号: {{orderItem.id || '无'}}</text>
-							</view>
-						</view>
-
-						<view class="price-box">
-							共
-							<text class="num">{{calcTotalQuantity(item)}}</text>
-							件商品 实付款
-							<text class="price">{{item.payAmount}}</text>
-						</view>
-
-						<view class="action-section" v-if="item.status === 0">
-							<button class="action-btn cancel" @click.stop="cancelAfterSale(item.id)">取消申请</button>
-						</view>
-						<view class="action-section" v-else>
-							<button class="action-btn detail" @click.stop="viewAfterSaleDetail(item.id)">查看详情</button>
-						</view>
+						<!-- 上拉加载更多 -->
+						<uni-load-more :status="tabItem.loadingType" :contentText="loadMoreText"></uni-load-more>
 					</view>
-
-					<uni-load-more :status="loadingType"></uni-load-more>
 				</scroll-view>
 			</swiper-item>
 		</swiper>
@@ -114,7 +130,8 @@
 		formatDate
 	} from '@/utils/date';
 	import {
-		fetchAfterSaleList
+		fetchAfterSaleList,
+		cancelAfterSale
 	} from '@/api/afterSale.js';
 	import {
 		API_BASE_URL
@@ -137,34 +154,85 @@
 				loadingType: 'more',
 				navList: [{
 						state: -1,
-						text: '全部'
+						text: '全部',
+						loadingType: 'more',
+						afterSaleList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 0,
-						text: '待处理'
+						text: '待处理',
+						loadingType: 'more',
+						afterSaleList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 1,
-						text: '处理中'
+						text: '处理中',
+						loadingType: 'more',
+						afterSaleList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 2,
-						text: '已完成'
+						text: '已完成',
+						loadingType: 'more',
+						afterSaleList: [],
+						pageNum: 1,
+						refreshing: false
 					},
 					{
 						state: 3,
-						text: '已拒绝'
+						text: '已拒绝',
+						loadingType: 'more',
+						afterSaleList: [],
+						pageNum: 1,
+						refreshing: false
 					}
 				],
 				isDebug: false, // 调试模式标志
 				imageErrors: {}, // 记录图片加载错误
 				imageLoading: {}, // 记录图片加载状态
-				debugInfo: {} // 存储调试信息
+				debugInfo: {}, // 存储调试信息
+				loadMoreText: {
+					contentdown: "上拉加载更多",
+					contentrefresh: "正在加载...",
+					contentnomore: "没有更多数据了"
+				}
 			};
 		},
 		onLoad(options) {
-			this.tabCurrentIndex = +options.state || 0;
-			this.loadData();
+			// 设置页面标题
+			uni.setNavigationBarTitle({
+				title: '售后服务'
+			});
+			
+			// 如果有传入状态参数，则切换到对应选项卡
+			if(options.state){
+				this.tabCurrentIndex = parseInt(options.state, 10);
+			}
+			
+			// 显示加载中提示
+			uni.showLoading({
+				title: '加载中'
+			});
+			
+			// 初始化加载数据
+			this.loadData(true, false)
+				.then(() => {
+					uni.hideLoading();
+				})
+				.catch(() => {
+					uni.hideLoading();
+					// 显示错误提示
+					uni.showToast({
+						title: '加载失败，请下拉刷新重试',
+						icon: 'none'
+					});
+				});
 		},
 		filters: {
 			formatStatus(status) {
@@ -389,48 +457,245 @@
 					return '无订单信息';
 				}
 			},
-			//获取售后列表
-			loadData(type='refresh') {
-				if(type=='refresh'){
-					this.afterSaleParam.pageNum=1;
-				}else{
-					this.afterSaleParam.pageNum++;
+			
+			//加载数据
+			loadData(isRefresh = false, showLoading = false) {
+				// 当前选中的选项卡
+				const currentTab = this.navList[this.tabCurrentIndex];
+				
+				// 如果是刷新操作，重置页码
+				if (isRefresh) {
+					currentTab.pageNum = 1;
+				} else {
+					// 否则页码加1
+					currentTab.pageNum++;
 				}
-				let index = this.tabCurrentIndex;
-				let navItem = this.navList[index];
-				if (this.loadingType === 'loading') {
-					return;
+				
+				// 已经在加载中，则不重复请求
+				if (currentTab.loadingType === 'loading') {
+					return Promise.reject(new Error('已经在加载中'));
 				}
-				this.afterSaleParam.status = navItem.state;
-				this.loadingType = 'loading';
-				fetchAfterSaleList(this.afterSaleParam).then(response => {
-					let list = response.data.list;
-					// 打印售后列表数据结构
-					if(list && list.length > 0) {
-						console.log('售后列表第一项数据结构:', JSON.stringify(list[0]));
-					}
-					if(type=='refresh'){
-						this.afterSaleList = list;
-						this.loadingType = 'more';
-					}else{
-						if(list!=null&&list.length>0){
-							this.afterSaleList = this.afterSaleList.concat(list);
-							this.loadingType = 'more';
-						}else{
-							this.afterSaleParam.pageNum--;
-							this.loadingType = 'noMore';
-						}
-					}
+				
+				// 显示加载提示
+				if (showLoading) {
+					uni.showLoading({
+						title: '加载中'
+					});
+				}
+				
+				// 更新加载状态
+				currentTab.loadingType = 'loading';
+				
+				// 构建请求参数
+				const params = {
+					pageNum: currentTab.pageNum,
+					pageSize: this.afterSaleParam.pageSize
+				};
+				
+				// 只有当状态不是全部时才添加状态过滤
+				if (currentTab.state !== -1) {
+					params.status = currentTab.state;
+				}
+				
+				console.log('请求售后列表参数:', JSON.stringify(params));
+				
+				// 发起请求并返回Promise
+				return new Promise((resolve, reject) => {
+					fetchAfterSaleList(params)
+						.then(response => {
+							// 请求完成后关闭loading
+							if (showLoading) {
+								uni.hideLoading();
+							}
+							
+							console.log('售后列表响应:', JSON.stringify(response.data));
+							
+							// 处理响应数据
+							if (response.code === 200 && response.data) {
+								const list = response.data.list || [];
+								
+								// 打印售后列表数据结构
+								if (list.length > 0) {
+									console.log('售后列表第一项数据结构:', JSON.stringify(list[0]));
+								} else {
+									console.log('售后列表为空');
+								}
+								
+								// 如果是刷新操作，替换现有数据
+								if (isRefresh) {
+									currentTab.afterSaleList = list;
+								} else {
+									// 追加数据
+									if (list.length > 0) {
+										currentTab.afterSaleList = currentTab.afterSaleList.concat(list);
+									}
+								}
+								
+								// 根据返回数据量判断是否还有更多数据
+								if (list.length < this.afterSaleParam.pageSize) {
+									currentTab.loadingType = 'noMore';
+								} else {
+									currentTab.loadingType = 'more';
+								}
+								
+								resolve(list);
+							} else {
+								// 请求失败
+								currentTab.loadingType = 'more';
+								
+								if (isRefresh) {
+									// 刷新时如果失败，清空数据
+									currentTab.afterSaleList = [];
+								}
+								
+								// 提示用户
+								uni.showToast({
+									title: response.message || '获取售后列表失败',
+									icon: 'none'
+								});
+								
+								reject(new Error(response.message || '获取售后列表失败'));
+							}
+						})
+						.catch(error => {
+							// 请求完成后关闭loading
+							if (showLoading) {
+								uni.hideLoading();
+							}
+							
+							console.error('获取售后列表失败:', error);
+							currentTab.loadingType = 'more';
+							
+							if (isRefresh) {
+								// 刷新时如果失败，清空数据
+								currentTab.afterSaleList = [];
+							}
+							
+							// 提示用户
+							uni.showToast({
+								title: '获取售后列表失败',
+								icon: 'none'
+							});
+							
+							reject(error);
+						});
 				});
 			},
+			
+			// 下拉刷新
+			refreshData(tabIndex) {
+				console.log('下拉刷新选项卡', tabIndex);
+				
+				// 设置刷新状态
+				this.navList[tabIndex].refreshing = true;
+				
+				// 切换到当前选项卡
+				this.tabCurrentIndex = tabIndex;
+				
+				// 重置当前选项卡数据
+				const currentTab = this.navList[tabIndex];
+				currentTab.pageNum = 1;
+				currentTab.afterSaleList = [];
+				currentTab.loadingType = 'loading';
+				
+				// 加载数据
+				this.loadData(true)
+					.then(() => {
+						// 延迟关闭刷新状态
+						setTimeout(() => {
+							this.navList[tabIndex].refreshing = false;
+						}, 300);
+					})
+					.catch(() => {
+						// 延迟关闭刷新状态（即使出错）
+						setTimeout(() => {
+							this.navList[tabIndex].refreshing = false;
+						}, 300);
+					});
+			},
+			
+			// 滚动到底部加载更多
+			onScrolltolower() {
+				console.log('滚动到底部，加载更多数据');
+				const currentTab = this.navList[this.tabCurrentIndex];
+				
+				// 如果不是加载中且不是没有更多数据，则加载更多
+				if (currentTab.loadingType !== 'loading' && currentTab.loadingType !== 'noMore') {
+					this.loadData();
+				}
+			},
+			
+			// 刷新当前标签页
+			refreshCurrentTab() {
+				console.log('刷新当前选项卡', this.tabCurrentIndex);
+				
+				// 显示loading提示
+				uni.showLoading({
+					title: '刷新中...'
+				});
+				
+				// 重置当前选项卡数据
+				const currentTab = this.navList[this.tabCurrentIndex];
+				currentTab.pageNum = 1;
+				currentTab.afterSaleList = [];
+				currentTab.loadingType = 'loading';
+				
+				// 加载数据
+				this.loadData(true, false)
+					.then(() => {
+						// 延迟关闭loading
+						setTimeout(() => {
+							uni.hideLoading();
+							uni.showToast({
+								title: '刷新成功',
+								icon: 'none',
+								duration: 1000
+							});
+						}, 500);
+					})
+					.catch(() => {
+						// 延迟关闭loading（即使出错）
+						setTimeout(() => {
+							uni.hideLoading();
+							uni.showToast({
+								title: '刷新失败',
+								icon: 'none',
+								duration: 1000
+							});
+						}, 500);
+					});
+			},
+			
 			//swiper 切换
 			changeTab(e) {
-				this.tabCurrentIndex = e.target.current;
-				this.loadData();
+				const newTabIndex = e.target.current;
+				console.log(`标签页从 ${this.tabCurrentIndex} 切换到 ${newTabIndex}`);
+				this.tabCurrentIndex = newTabIndex;
+				
+				const currentTab = this.navList[this.tabCurrentIndex];
+				
+				// 如果当前选项卡没有数据，则加载数据
+				if (currentTab.afterSaleList.length === 0) {
+					this.loadData(true, true);
+				}
 			},
+			
 			//顶部tab点击
 			tabClick(index) {
-				this.tabCurrentIndex = index;
+				if (this.tabCurrentIndex === index) {
+					// 如果点击当前选项卡，则刷新
+					this.refreshCurrentTab();
+				} else {
+					// 否则切换选项卡
+					this.tabCurrentIndex = index;
+					
+					const currentTab = this.navList[this.tabCurrentIndex];
+					
+					// 如果当前选项卡没有数据，则加载数据
+					if (currentTab.afterSaleList.length === 0) {
+						this.loadData(true, true);
+					}
+				}
 			},
 			//计算商品总数量
 			calcTotalQuantity(order){
@@ -464,517 +729,353 @@
 				uni.navigateTo({
 					url: `/pages/afterSale/afterSaleDetail?id=${id}`
 				});
+			},
+			// 查看详情
+			viewDetail(item) {
+				// 跳转到售后详情页面
+				uni.navigateTo({
+					url: '/pages/afterSale/afterSaleDetail?id=' + item.id
+				});
+			},
+			// 取消售后申请
+			cancelAfterSale(item) {
+				uni.showModal({
+					title: '提示',
+					content: '确定要取消该售后申请吗？',
+					success: (res) => {
+						if (res.confirm) {
+							uni.showLoading({
+								title: '处理中...'
+							});
+							
+							cancelAfterSale(item.id).then(response => {
+								uni.hideLoading();
+								if (response.code === 200) {
+									uni.showToast({
+										title: '取消成功',
+										icon: 'success'
+									});
+									// 刷新当前页
+									this.refreshCurrentTab();
+								} else {
+									uni.showToast({
+										title: response.message || '取消失败',
+										icon: 'none'
+									});
+								}
+							}).catch(error => {
+								uni.hideLoading();
+								uni.showToast({
+									title: '取消失败',
+									icon: 'none'
+								});
+								console.error('取消售后申请失败:', error);
+							});
+						}
+					}
+				});
 			}
 		}
 	}
 </script>
 
 <style lang="scss">
-	page,
-	.content {
+	page {
 		background: $page-color-base;
+	}
+	
+	.content {
+		position: relative;
+		width: 100%;
 		height: 100%;
 	}
-
-	.swiper-box {
-		height: calc(100% - 40px);
-	}
-
-	.list-scroll-content {
-		height: 100%;
-	}
-
+	
+	/* 顶部导航栏 */
 	.navbar {
 		display: flex;
-		height: 40px;
-		padding: 0 5px;
+		align-items: center;
+		height: 80rpx;
 		background: #fff;
-		box-shadow: 0 1px 5px rgba(0, 0, 0, .06);
+		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
 		position: relative;
 		z-index: 10;
-
+		
 		.nav-item {
 			flex: 1;
 			display: flex;
 			justify-content: center;
 			align-items: center;
 			height: 100%;
-			font-size: 15px;
+			font-size: 28rpx;
 			color: $font-color-dark;
 			position: relative;
-
+			
 			&.current {
 				color: $base-color;
-
+				
 				&:after {
 					content: '';
 					position: absolute;
 					left: 50%;
 					bottom: 0;
 					transform: translateX(-50%);
-					width: 44px;
-					height: 0;
-					border-bottom: 2px solid $base-color;
+					width: 120rpx;
+					height: 4rpx;
+					background: $base-color;
 				}
+			}
+		}
+		
+		.refresh-btn {
+			position: absolute;
+			right: 20rpx;
+			top: 50%;
+			transform: translateY(-50%);
+			font-size: 26rpx;
+			color: $base-color;
+			padding: 6rpx 16rpx;
+			border: 1px solid $base-color;
+			border-radius: 30rpx;
+			background: #fff;
+		}
+	}
+	
+	/* 滑动区域 */
+	.swiper-box {
+		height: calc(100vh - 80rpx);
+		
+		.swiper-item {
+			height: 100%;
+			
+			.swiper-item-scroll {
+				height: 100%;
+				box-sizing: border-box;
 			}
 		}
 	}
-
-	.after-sale-item {
-		display: flex;
-		flex-direction: column;
-		padding-left: 30upx;
-		background: #fff;
-		margin-top: 16upx;
-
-		.i-top {
-			display: flex;
-			align-items: center;
-			height: 80upx;
-			padding-right: 30upx;
-			font-size: $font-base;
-			color: $font-color-dark;
-			position: relative;
-
-			.time {
-				flex: 1;
-			}
-
-			.state {
-				color: $base-color;
-			}
-		}
-
-		.service-id-info {
-			padding: 8upx 30upx;
-			font-size: $font-sm + 2upx;
-			color: $font-color-light;
-			margin: 0 30upx 10upx 0;
-
-			.service-id-text {
-				display: block;
+	
+	/* 售后列表 */
+	.after-sale-list {
+		padding: 20rpx;
+		
+		.after-sale-item {
+			margin-bottom: 20rpx;
+			border-radius: 12rpx;
+			background: #fff;
+			box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.05);
+			overflow: hidden;
+			
+			.order-info {
+				padding: 20rpx;
 				
-				.id-value {
-					color: #3366cc;
-					font-weight: bold;
-				}
-			}
-		}
-
-		.reason-info {
-			padding: 10upx 30upx;
-			font-size: $font-sm + 2upx;
-			color: $font-color-dark;
-			margin: 0 30upx 10upx 0;
-			background-color: #f9f9f9;
-			border-radius: 8upx;
-			display: flex;
-			flex-wrap: wrap;
-
-			.reason-label {
-				color: $font-color-light;
-				margin-right: 8upx;
-				padding: 4upx 0;
-			}
-			
-			.reason-content-wrapper {
-				flex: 1;
-				display: flex;
-				flex-wrap: wrap;
-				word-break: break-all;
-			}
-
-			.reason-content {
-				flex: 1;
-				min-width: 80%;
-				padding: 4upx 0;
-				word-break: break-all;
-				line-height: 1.5;
-			}
-
-			.expand-btn {
-				color: $base-color;
-				font-size: $font-sm;
-				padding: 4upx 0;
-				margin-left: 8upx;
-				background: transparent;
-				border: none;
-				outline: none;
-				cursor: pointer;
-			}
-		}
-
-		.pics-info {
-			padding: 10upx 30upx;
-			font-size: $font-sm + 2upx;
-			color: $font-color-dark;
-			margin: 0 30upx 10upx 0;
-			background-color: #f9f9f9;
-			border-radius: 8upx;
-			
-			.pics-label {
-				display: block;
-				color: $font-color-light;
-				margin-bottom: 8upx;
-				padding: 4upx 0;
-			}
-			
-			.pics-scroll {
-				width: 100%;
-				white-space: nowrap;
-				height: 160upx;
-			}
-
-			.pics-container {
-				display: inline-flex;
-				padding: 4upx 0;
-			}
-
-			.pic-item {
-				margin-right: 12upx;
-				position: relative;
-				border-radius: 6upx;
-				overflow: hidden;
-				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-			}
-
-			.thumbnail {
-				width: 150upx;
-				height: 150upx;
-				border-radius: 8upx;
-				border: 1px solid #f0f0f0;
-				position: relative;
-				background-color: #f5f5f5;
-				object-fit: cover;
-			}
-			
-			.loading-placeholder {
-				position: absolute;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				background-color: #f0f0f0;
-				
-				.cuIcon-loading2 {
-					font-size: 40upx;
-					color: #999;
-					animation: rotate 1s linear infinite;
-				}
-			}
-			
-			.error-placeholder {
-				position: absolute;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				background-color: #f8f8f8;
-				
-				.error-icon {
-					font-size: 40upx;
-					color: #ff6666;
-					width: 50upx;
-					height: 50upx;
-					line-height: 50upx;
-					text-align: center;
-					border-radius: 50%;
-					border: 2upx solid #ff6666;
-				}
-			}
-			
-			.pic-count {
-				position: absolute;
-				right: 0;
-				bottom: 0;
-				background-color: rgba(0, 0, 0, 0.5);
-				color: #fff;
-				font-size: 20upx;
-				padding: 2upx 8upx;
-				border-top-left-radius: 6upx;
-			}
-			
-			.debug-info {
-				margin-top: 8upx;
-				font-size: 22upx;
-				color: #ff6600;
-				background-color: #fff9e6;
-				padding: 4upx 8upx;
-				border-radius: 4upx;
-				word-break: break-all;
-			}
-		}
-
-		.order-info {
-			padding: 10upx 30upx 0;
-			font-size: $font-sm + 2upx;
-			color: $font-color-dark;
-			background-color: #f8f8f8;
-			margin: 0 30upx 10upx 0;
-			border-radius: 8upx;
-
-			.order-info-item {
-				display: block;
-				padding: 8upx 0;
-				border-bottom: 1px dashed #e5e5e5;
-			}
-			
-			.order-info-debug {
-				display: block;
-				padding: 8upx 0;
-				color: #ff6600;
-				font-size: 22upx;
-				word-break: break-all;
-				background-color: #fffbe6;
-				margin-top: 4upx;
-				border-radius: 4upx;
-			}
-		}
-
-		.goods-box-single {
-			display: flex;
-			padding: 20upx 0;
-
-			.goods-img {
-				display: block;
-				width: 120upx;
-				height: 120upx;
-			}
-
-			.right {
-				flex: 1;
-				display: flex;
-				flex-direction: column;
-				padding: 0 30upx 0 24upx;
-				overflow: hidden;
-
-				.title {
-					font-size: $font-base + 2upx;
-					color: $font-color-dark;
-					line-height: 1;
-				}
-
-				.attr-box {
-					font-size: $font-sm + 2upx;
-					color: $font-color-light;
-					padding: 10upx 12upx;
-				}
-
-				.price {
-					font-size: $font-base + 2upx;
-					color: $font-color-dark;
-
-					&:before {
-						content: '￥';
-						font-size: $font-sm;
-						margin: 0 2upx 0 8upx;
+				.item-top {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					padding-bottom: 20rpx;
+					border-bottom: 1px solid #f5f5f5;
+					
+					.order-no {
+						font-size: 26rpx;
+						color: $font-color-dark;
+					}
+					
+					.status {
+						font-size: 24rpx;
+						padding: 4rpx 12rpx;
+						border-radius: 20rpx;
+						
+						&.status-0 {
+							color: #ff9500;
+							background: rgba(255, 149, 0, 0.1);
+						}
+						
+						&.status-1 {
+							color: #007aff;
+							background: rgba(0, 122, 255, 0.1);
+						}
+						
+						&.status-2 {
+							color: #4cd964;
+							background: rgba(76, 217, 100, 0.1);
+						}
+						
+						&.status-3 {
+							color: #ff3b30;
+							background: rgba(255, 59, 48, 0.1);
+						}
 					}
 				}
-
-				.item-info {
-					font-size: $font-sm + 2upx;
-					color: #3366cc;
-					padding: 6upx 0;
-					background-color: #f5f7fa;
-					display: inline-block;
-					margin-top: 6upx;
-					border-radius: 4upx;
-					padding: 4upx 8upx;
-				}
-			}
-		}
-
-		.price-box {
-			display: flex;
-			justify-content: flex-end;
-			align-items: baseline;
-			padding: 20upx 30upx;
-			font-size: $font-sm + 2upx;
-			color: $font-color-light;
-
-			.num {
-				margin: 0 8upx;
-				color: $font-color-dark;
-			}
-
-			.price {
-				font-size: $font-lg;
-				color: $font-color-dark;
-
-				&:before {
-					content: '￥';
-					font-size: $font-sm;
-					margin: 0 2upx 0 8upx;
-				}
-			}
-		}
-
-		.action-section {
-			margin-top: 20upx;
-			display: flex;
-			justify-content: flex-end;
-			
-			.action-btn {
-				padding: 10upx 20upx;
-				font-size: 24upx;
-				border-radius: 30upx;
-				margin-left: 20upx;
 				
-				&.cancel {
-					color: #666;
-					border: 1px solid #ddd;
-					background-color: #fff;
-				}
-				
-				&.detail {
-					color: #fa436a;
-					border: 1px solid #fa436a;
-					background-color: #fff;
+				.item-main {
+					padding-top: 20rpx;
+					
+					.order-goods-box {
+						.goods-info {
+							.goods-title {
+								font-size: 28rpx;
+								color: $font-color-dark;
+								margin-bottom: 10rpx;
+							}
+							
+							.goods-price {
+								font-size: 28rpx;
+								color: $base-color;
+								margin-bottom: 10rpx;
+							}
+							
+							.goods-attrs {
+								font-size: 24rpx;
+								color: $font-color-light;
+								margin-bottom: 16rpx;
+							}
+							
+							.reason-box {
+								margin-top: 16rpx;
+								padding: 16rpx;
+								background: #f8f8f8;
+								border-radius: 8rpx;
+								
+								.reason-title {
+									font-size: 26rpx;
+									color: $font-color-dark;
+									line-height: 1.5;
+									
+									.reason-text {
+										color: $font-color-light;
+										display: inline-block;
+										max-width: 400rpx;
+										overflow: hidden;
+										text-overflow: ellipsis;
+										white-space: nowrap;
+										vertical-align: middle;
+										
+										&.reason-expanded {
+											white-space: normal;
+											word-break: break-all;
+										}
+									}
+									
+									.expand-btn {
+										color: $base-color;
+										margin-left: 10rpx;
+										font-size: 24rpx;
+									}
+								}
+							}
+						}
+					}
+					
+					.pics-area {
+						margin-top: 20rpx;
+						
+						.pics-title {
+							font-size: 26rpx;
+							color: $font-color-dark;
+							margin-bottom: 16rpx;
+						}
+						
+						.pics-scroll {
+							width: 100%;
+							white-space: nowrap;
+							
+							.pics-list {
+								display: flex;
+								padding: 10rpx 0;
+								
+								.pic-item {
+									width: 160rpx;
+									height: 160rpx;
+									margin-right: 16rpx;
+									position: relative;
+									border-radius: 8rpx;
+									overflow: hidden;
+									
+									image {
+										width: 100%;
+										height: 100%;
+										object-fit: cover;
+										
+										&.image-loading {
+											opacity: 0.6;
+										}
+									}
+								}
+							}
+						}
+					}
+					
+					.action-box {
+						display: flex;
+						justify-content: flex-end;
+						margin-top: 30rpx;
+						
+						.action-btn {
+							display: inline-block;
+							padding: 10rpx 30rpx;
+							font-size: 26rpx;
+							border-radius: 30rpx;
+							
+							&.view-details {
+								color: $base-color;
+								border: 1px solid $base-color;
+								background: #fff;
+							}
+							
+							&.cancel {
+								color: #666;
+								border: 1px solid #ddd;
+								background: #fff;
+								margin-right: 16rpx;
+							}
+						}
+					}
 				}
 			}
 		}
 	}
-
-	/* load-more */
-	.uni-load-more {
+	
+	/* 加载状态 */
+	.loading-box {
 		display: flex;
-		flex-direction: row;
-		height: 80upx;
+		flex-direction: column;
+		justify-content: center;
 		align-items: center;
-		justify-content: center
-	}
-
-	.uni-load-more__text {
-		font-size: 28upx;
-		color: #999
-	}
-
-	.uni-load-more__img {
-		height: 24px;
-		width: 24px;
-		margin-right: 10px
-	}
-
-	.uni-load-more__img>view {
-		position: absolute
-	}
-
-	.uni-load-more__img>view view {
-		width: 6px;
-		height: 2px;
-		border-top-left-radius: 1px;
-		border-bottom-left-radius: 1px;
-		background: #999;
-		position: absolute;
-		opacity: .2;
-		transform-origin: 50%;
-		animation: load 1.56s ease infinite
-	}
-
-	.uni-load-more__img>view view:nth-child(1) {
-		transform: rotate(90deg);
-		top: 2px;
-		left: 9px
-	}
-
-	.uni-load-more__img>view view:nth-child(2) {
-		transform: rotate(180deg);
-		top: 11px;
-		right: 0
-	}
-
-	.uni-load-more__img>view view:nth-child(3) {
-		transform: rotate(270deg);
-		bottom: 2px;
-		left: 9px
-	}
-
-	.uni-load-more__img>view view:nth-child(4) {
-		top: 11px;
-		left: 0
-	}
-
-	.load1,
-	.load2,
-	.load3 {
-		height: 24px;
-		width: 24px
-	}
-
-	.load2 {
-		transform: rotate(30deg)
-	}
-
-	.load3 {
-		transform: rotate(60deg)
-	}
-
-	.load1 view:nth-child(1) {
-		animation-delay: 0s
-	}
-
-	.load2 view:nth-child(1) {
-		animation-delay: .13s
-	}
-
-	.load3 view:nth-child(1) {
-		animation-delay: .26s
-	}
-
-	.load1 view:nth-child(2) {
-		animation-delay: .39s
-	}
-
-	.load2 view:nth-child(2) {
-		animation-delay: .52s
-	}
-
-	.load3 view:nth-child(2) {
-		animation-delay: .65s
-	}
-
-	.load1 view:nth-child(3) {
-		animation-delay: .78s
-	}
-
-	.load2 view:nth-child(3) {
-		animation-delay: .91s
-	}
-
-	.load3 view:nth-child(3) {
-		animation-delay: 1.04s
-	}
-
-	.load1 view:nth-child(4) {
-		animation-delay: 1.17s
-	}
-
-	.load2 view:nth-child(4) {
-		animation-delay: 1.3s
-	}
-
-	.load3 view:nth-child(4) {
-		animation-delay: 1.43s
-	}
-
-	@-webkit-keyframes load {
-		0% {
-			opacity: 1
+		height: 300rpx;
+		
+		.loading-spinner {
+			width: 60rpx;
+			height: 60rpx;
+			border: 4rpx solid #f3f3f3;
+			border-top: 4rpx solid $base-color;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
 		}
-
-		100% {
-			opacity: .2
+		
+		.loading-text {
+			font-size: 28rpx;
+			color: $font-color-light;
+			margin-top: 20rpx;
 		}
 	}
-
-	@keyframes rotate {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
+	
+	/* 空状态 */
+	.empty-box {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding-top: 200rpx;
+		
+		.empty-text {
+			font-size: 28rpx;
+			color: $font-color-light;
+			margin-top: 20rpx;
+		}
+	}
+	
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 </style> 
