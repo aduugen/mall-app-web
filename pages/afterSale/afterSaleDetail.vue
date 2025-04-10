@@ -186,13 +186,20 @@ export default {
 		cancelAfterSale() {
 			uni.showModal({
 				title: '提示',
-				content: '确定要取消此售后申请吗？',
+				content: '确定要取消此售后申请吗？\n取消后记录将被删除',
 				success: (res) => {
 					if(res.confirm) {
+						uni.showLoading({
+							title: '处理中...'
+						});
+						
 						cancelAfterSale({id: this.afterSaleId}).then(response => {
+							uni.hideLoading();
+							
 							if(response.code === 200) {
 								uni.showToast({
-									title: '取消成功'
+									title: '售后申请已取消',
+									icon: 'success'
 								});
 								// 通知售后列表刷新
 								uni.$emit('afterSaleListRefresh');
@@ -201,10 +208,17 @@ export default {
 								}, 1500);
 							} else {
 								uni.showToast({
-									title: response.message || '取消失败',
+									title: response.message || '取消失败，请重试',
 									icon: 'none'
 								});
 							}
+						}).catch(error => {
+							uni.hideLoading();
+							console.error('取消售后申请失败:', error);
+							uni.showToast({
+								title: '取消失败: ' + (error.message || '未知错误'),
+								icon: 'none'
+							});
 						});
 					}
 				}

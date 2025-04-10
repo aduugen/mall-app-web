@@ -124,7 +124,7 @@
 								</view>
 								
 								<view class="i-action">
-									<view class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item)">取消申请</view>
+									<view class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item.id)">取消申请</view>
 									<view class="action-btn">查看详情</view>
 								</view>
 							</view>
@@ -769,13 +769,50 @@
 			},
 			//计算商品总数量
 			calcTotalQuantity(item) {
-				if (!item.orderItemList || item.orderItemList.length === 0) {
-					return item.returnCount || 0;
+				// 添加调试日志
+				console.log('计算退货总数，商品数据:', JSON.stringify(item));
+				
+				// 检查afterSaleItemList是否存在且有数据
+				if (item.afterSaleItemList && item.afterSaleItemList.length > 0) {
+					console.log('使用afterSaleItemList计算总数');
+					
+					// 使用afterSaleItemList计算总数
+					const total = item.afterSaleItemList.reduce((sum, product) => {
+						const quantity = parseInt(product.returnQuantity || 0);
+						console.log(`商品 ${product.productName} 退货数量: ${quantity}`);
+						return sum + quantity;
+					}, 0);
+					
+					console.log('计算得到的总退货数量:', total);
+					return total;
 				}
 				
-				return item.orderItemList.reduce((total, product) => {
-					return total + (parseInt(product.returnQuantity || product.productQuantity || 0));
-				}, 0);
+				// 如果orderItemList存在，按订单项计算
+				if (item.orderItemList && item.orderItemList.length > 0) {
+					console.log('使用orderItemList计算总数');
+					
+					const total = item.orderItemList.reduce((total, product) => {
+						return total + (parseInt(product.returnQuantity || product.productQuantity || 0));
+					}, 0);
+					
+					console.log('计算得到的总退货数量:', total);
+					return total;
+				}
+				
+				// 退回商品总数字段
+				if (item.returnCount !== undefined && item.returnCount !== null) {
+					console.log('使用returnCount字段:', item.returnCount);
+					return item.returnCount;
+				}
+				
+				// 直接使用项上的值（如果存在）
+				if (item.returnQuantity !== undefined && item.returnQuantity !== null) {
+					console.log('使用returnQuantity字段:', item.returnQuantity);
+					return item.returnQuantity;
+				}
+				
+				console.log('无法获取退货数量，返回默认值0');
+				return 0;
 			},
 			//查看售后详情
 			showAfterSaleDetail(id) {
@@ -808,38 +845,43 @@
 				});
 			},
 			// 取消售后申请
-			cancelAfterSale(item) {
+			cancelAfterSale(itemId) {
 				uni.showModal({
 					title: '提示',
-					content: '确定要取消该售后申请吗？',
+					content: '确定要取消该售后申请吗？\n取消后记录将被删除',
 					success: (res) => {
 						if (res.confirm) {
 							uni.showLoading({
 								title: '处理中...'
 							});
 							
-							cancelAfterSale(item.id).then(response => {
+							console.log('准备取消售后申请:', itemId);
+							
+							// 确保id参数正确传递
+							cancelAfterSale({id: itemId}).then(response => {
 								uni.hideLoading();
+								console.log('取消售后申请响应:', response);
+								
 								if (response.code === 200) {
 									uni.showToast({
-										title: '取消成功',
+										title: '售后申请已取消',
 										icon: 'success'
 									});
 									// 刷新当前页
 									this.refreshCurrentTab();
 								} else {
 									uni.showToast({
-										title: response.message || '取消失败',
+										title: response.message || '取消失败，请重试',
 										icon: 'none'
 									});
 								}
 							}).catch(error => {
 								uni.hideLoading();
+								console.error('取消售后申请失败:', error);
 								uni.showToast({
-									title: '取消失败',
+									title: '取消失败: ' + (error.message || '未知错误'),
 									icon: 'none'
 								});
-								console.error('取消售后申请失败:', error);
 							});
 						}
 					}
