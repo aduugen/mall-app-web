@@ -81,7 +81,13 @@
 						</view>
 					</view>
 
-					<uni-load-more :status="loadingType"></uni-load-more>
+					<view class="loading-more">
+						<view v-if="loadingType === 'loading'" class="loading-spinner"></view>
+						<text class="loading-text">
+							{{loadingType === 'more' ? '上拉加载更多' : 
+							  (loadingType === 'loading' ? '正在加载...' : '没有更多数据了')}}
+						</text>
+					</view>
 
 				</scroll-view>
 			</swiper-item>
@@ -90,7 +96,6 @@
 </template>
 
 <script>
-	import uniLoadMore from '@/components/uni-load-more/uni-load-more.vue';
 	import empty from "@/components/empty";
 	import {
 		formatDate
@@ -105,11 +110,11 @@
 		checkOrderAfterSaleStatus
 	} from '@/api/afterSale.js';
 	import {
-		fetchInvoiceByOrderId
+		fetchInvoiceByOrderId,
+		checkOrderInvoice
 	} from '@/api/invoice.js';
 	export default {
 		components: {
-			uniLoadMore,
 			empty
 		},
 		data() {
@@ -691,6 +696,38 @@
 					});
 				});
 			},
+			// 更新订单发票状态
+			updateOrderInvoiceStatus() {
+				// 只处理已完成的订单
+				const completedOrders = this.orderList.filter(order => order.status === 3);
+				if (completedOrders.length === 0) return;
+				
+				// 对每个订单检查发票状态
+				Promise.all(completedOrders.map(order => {
+					// 如果已有发票状态且不是未申请或申请失败，则跳过
+					if (order.invoiceStatus !== undefined && 
+						order.invoiceStatus !== 0 && 
+						order.invoiceStatus !== 3) {
+						return Promise.resolve();
+					}
+					
+					// 查询发票状态
+					return checkOrderInvoice(order.id)
+						.then(response => {
+							if (response.code === 200 && response.data !== null) {
+								// 更新订单的发票状态
+								this.$set(order, 'invoiceStatus', response.data.invoiceStatus || 0);
+							}
+						})
+						.catch(error => {
+							console.error('获取订单发票状态失败:', error);
+						});
+				})).then(() => {
+					console.log('所有订单发票状态已更新');
+				}).catch(error => {
+					console.error('更新发票状态过程出错:', error);
+				});
+			},
 		},
 	}
 </script>
@@ -920,135 +957,32 @@
 
 
 	/* load-more */
-	.uni-load-more {
+	.loading-more {
 		display: flex;
 		flex-direction: row;
 		height: 80upx;
 		align-items: center;
-		justify-content: center
+		justify-content: center;
 	}
 
-	.uni-load-more__text {
+	.loading-text {
 		font-size: 28upx;
-		color: #999
+		color: $font-color-light;
 	}
 
-	.uni-load-more__img {
-		height: 24px;
-		width: 24px;
-		margin-right: 10px
+	.loading-spinner {
+		width: 36rpx;
+		height: 36rpx;
+		margin-right: 20rpx;
+		border: 3rpx solid #f3f3f3;
+		border-top: 3rpx solid $base-color;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
 	}
 
-	.uni-load-more__img>view {
-		position: absolute
-	}
-
-	.uni-load-more__img>view view {
-		width: 6px;
-		height: 2px;
-		border-top-left-radius: 1px;
-		border-bottom-left-radius: 1px;
-		background: #999;
-		position: absolute;
-		opacity: .2;
-		transform-origin: 50%;
-		animation: load 1.56s ease infinite
-	}
-
-	.uni-load-more__img>view view:nth-child(1) {
-		transform: rotate(90deg);
-		top: 2px;
-		left: 9px
-	}
-
-	.uni-load-more__img>view view:nth-child(2) {
-		transform: rotate(180deg);
-		top: 11px;
-		right: 0
-	}
-
-	.uni-load-more__img>view view:nth-child(3) {
-		transform: rotate(270deg);
-		bottom: 2px;
-		left: 9px
-	}
-
-	.uni-load-more__img>view view:nth-child(4) {
-		top: 11px;
-		left: 0
-	}
-
-	.load1,
-	.load2,
-	.load3 {
-		height: 24px;
-		width: 24px
-	}
-
-	.load2 {
-		transform: rotate(30deg)
-	}
-
-	.load3 {
-		transform: rotate(60deg)
-	}
-
-	.load1 view:nth-child(1) {
-		animation-delay: 0s
-	}
-
-	.load2 view:nth-child(1) {
-		animation-delay: .13s
-	}
-
-	.load3 view:nth-child(1) {
-		animation-delay: .26s
-	}
-
-	.load1 view:nth-child(2) {
-		animation-delay: .39s
-	}
-
-	.load2 view:nth-child(2) {
-		animation-delay: .52s
-	}
-
-	.load3 view:nth-child(2) {
-		animation-delay: .65s
-	}
-
-	.load1 view:nth-child(3) {
-		animation-delay: .78s
-	}
-
-	.load2 view:nth-child(3) {
-		animation-delay: .91s
-	}
-
-	.load3 view:nth-child(3) {
-		animation-delay: 1.04s
-	}
-
-	.load1 view:nth-child(4) {
-		animation-delay: 1.17s
-	}
-
-	.load2 view:nth-child(4) {
-		animation-delay: 1.3s
-	}
-
-	.load3 view:nth-child(4) {
-		animation-delay: 1.43s
-	}
-
-	@-webkit-keyframes load {
-		0% {
-			opacity: 1
-		}
-
-		100% {
-			opacity: .2
-		}
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 
 	.inner-list-logo {

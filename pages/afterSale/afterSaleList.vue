@@ -28,12 +28,19 @@
 				>
 					<!-- 加载状态 -->
 					<view v-if="tabItem.loading && !tabItem.refreshing" class="loading-box">
-						<uni-load-more iconType="snow" status="loading" :contentText="loadMoreText" />
+						<view class="loading-spinner"></view>
+						<text class="loading-text">正在加载...</text>
 					</view>
 					
 					<!-- 无数据状态 -->
-					<view v-else-if="tabItem.afterSaleList.length === 0" class="empty-box">
-						<empty :info="'暂无售后记录'" />
+					<view v-else-if="tabItem.afterSaleList.length === 0 && !tabItem.loading" class="empty-box">
+						<image class="empty-icon" src="/static/images/empty.png" mode="aspectFit"></image>
+						<view class="empty-text">
+							{{ tabCurrentIndex === 0 ? '暂无售后申请记录' : 
+							   tabCurrentIndex === 1 ? '暂无处理中的售后记录' :
+							   tabCurrentIndex === 2 ? '暂无已完成的售后记录' : '暂无售后记录' }}
+						</view>
+						<view class="retry-btn" @click="refreshCurrentTab">重新加载</view>
 					</view>
 					
 					<!-- 售后列表区 -->
@@ -102,7 +109,11 @@
 						
 						<!-- 上拉加载更多 -->
 						<view class="loading-more" v-if="tabItem.afterSaleList.length > 0">
-							<uni-load-more iconType="snow" :status="tabItem.loadingType" :contentText="loadMoreText" />
+							<view v-if="tabItem.loadingType === 'loading'" class="loading-spinner"></view>
+							<text class="loading-text">
+								{{tabItem.loadingType === 'more' ? '上拉加载更多' : 
+								  (tabItem.loadingType === 'loading' ? '正在加载...' : '没有更多数据了')}}
+							</text>
 						</view>
 					</view>
 				</scroll-view>
@@ -112,7 +123,6 @@
 </template>
 
 <script>
-	import uniLoadMore from '@/components/uni-load-more/uni-load-more.vue';
 	import empty from "@/components/empty";
 	import {
 		formatDate
@@ -127,7 +137,6 @@
 
 	export default {
 		components: {
-			uniLoadMore,
 			empty
 		},
 		data() {
@@ -1185,16 +1194,18 @@
 		.loading-spinner {
 			width: 60rpx;
 			height: 60rpx;
-			border: 4rpx solid #f3f3f3;
+			border: 4rpx solid rgba(243, 243, 243, 0.8);
 			border-top: 4rpx solid $base-color;
 			border-radius: 50%;
-			animation: spin 1s linear infinite;
+			animation: spin 1.2s cubic-bezier(0.5, 0.1, 0.5, 1) infinite;
+			box-shadow: 0 0 10rpx rgba(0, 0, 0, 0.05);
 		}
 		
 		.loading-text {
 			font-size: 28rpx;
 			color: $font-color-light;
 			margin-top: 20rpx;
+			letter-spacing: 2rpx;
 		}
 	}
 	
@@ -1204,17 +1215,67 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding-top: 200rpx;
+		padding: 100rpx 0;
+		width: 100%;
+	}
+	
+	.empty-icon {
+		width: 200rpx;
+		height: 200rpx;
+		margin-bottom: 20rpx;
+	}
+	
+	.empty-text {
+		font-size: 28rpx;
+		color: #999;
+		text-align: center;
+		line-height: 1.5;
+		letter-spacing: 1rpx;
+	}
+	
+	.retry-btn {
+		margin-top: 30rpx;
+		padding: 10rpx 40rpx;
+		background-color: #f8f8f8;
+		color: #666;
+		font-size: 24rpx;
+		border-radius: 30rpx;
+		box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
+		transition: all 0.2s ease;
+	}
+	
+	.retry-btn:active {
+		background-color: #e8e8e8;
+		transform: scale(0.98);
+	}
+	
+	/* 底部加载更多 */
+	.loading-more {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		height: 80rpx;
 		
-		.empty-text {
+		.loading-spinner {
+			width: 36rpx;
+			height: 36rpx;
+			margin-right: 20rpx;
+			border: 3rpx solid #f3f3f3;
+			border-top: 3rpx solid $base-color;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+		}
+		
+		.loading-text {
 			font-size: 28rpx;
 			color: $font-color-light;
-			margin-top: 20rpx;
 		}
 	}
 	
 	@keyframes spin {
 		0% { transform: rotate(0deg); }
+		50% { transform: rotate(180deg); }
 		100% { transform: rotate(360deg); }
 	}
 </style> 

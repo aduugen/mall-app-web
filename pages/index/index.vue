@@ -173,7 +173,13 @@
 				</view>
 			</view>
 		</view>
-		<uni-load-more :status="loadingType"></uni-load-more>
+		<view class="loading-more">
+			<view v-if="loadingType === 'loading'" class="loading-spinner"></view>
+			<text class="loading-text">
+				{{loadingType === 'more' ? '上拉加载更多' : 
+				  (loadingType === 'loading' ? '正在加载...' : '没有更多数据了')}}
+			</text>
+		</view>
 	</view>
 </template>
 
@@ -185,7 +191,6 @@
 	import {
 		formatDate
 	} from '@/utils/date';
-	import uniLoadMore from '@/components/uni-load-more/uni-load-more.vue';
 	import {
 		mapState
 	} from 'vuex';
@@ -197,7 +202,6 @@
 
 	export default {
 		components: {
-			uniLoadMore	
 		},
 		data() {
 			return {
@@ -1635,6 +1639,36 @@
 				font-size: 28upx;
 				color: #909399;
 			}
+		}
+	}
+
+	.loading-more {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 20upx 0;
+		background: #fff;
+		width: 100%;
+		box-sizing: border-box;
+
+		.loading-spinner {
+			width: 40upx;
+			height: 40upx;
+			border: 4upx solid #ddd;
+			border-top: 4upx solid $uni-color-primary;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+		}
+
+		.loading-text {
+			font-size: 28upx;
+			color: $font-color-light;
+			margin-left: 20upx;
+		}
+
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
 		}
 	}
 </style>

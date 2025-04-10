@@ -1,24 +1,6 @@
 <template>
 	<view class="uni-load-more">
-		<view class="uni-load-more__img" v-show="status === 'loading' && showIcon">
-			<view class="load1">
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-			</view>
-			<view class="load2">
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-			</view>
-			<view class="load3">
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-				<view :style="{background:color}"></view>
-			</view>
+		<view class="uni-load-more__spinner" v-show="status === 'loading' && showIcon">
 		</view>
 		<text class="uni-load-more__text" :style="{color:color}">{{status === 'more' ? contentText.contentdown : (status === 'loading' ? contentText.contentrefresh : contentText.contentnomore)}}</text>
 	</view>
@@ -66,129 +48,27 @@
 		flex-direction: row;
 		height: 80upx;
 		align-items: center;
-		justify-content: center
+		justify-content: center;
 	}
 
 	.uni-load-more__text {
 		font-size: 28upx;
-		color: #999
+		color: #999;
+		margin-left: 8upx;
 	}
 
-	.uni-load-more__img {
-		height: 24px;
-		width: 24px;
-		margin-right: 10px
+	.uni-load-more__spinner {
+		width: 36upx;
+		height: 36upx;
+		margin-right: 12upx;
+		border-radius: 50%;
+		border: 3upx solid #f3f3f3;
+		border-top: 3upx solid #007AFF;
+		animation: spin 1s linear infinite;
 	}
 
-	.uni-load-more__img>view {
-		position: absolute
-	}
-
-	.uni-load-more__img>view view {
-		width: 6px;
-		height: 2px;
-		border-top-left-radius: 1px;
-		border-bottom-left-radius: 1px;
-		background: #999;
-		position: absolute;
-		opacity: .2;
-		transform-origin: 50%;
-		animation: load 1.56s ease infinite
-	}
-
-	.uni-load-more__img>view view:nth-child(1) {
-		transform: rotate(90deg);
-		top: 2px;
-		left: 9px
-	}
-
-	.uni-load-more__img>view view:nth-child(2) {
-		transform: rotate(180deg);
-		top: 11px;
-		right: 0
-	}
-
-	.uni-load-more__img>view view:nth-child(3) {
-		transform: rotate(270deg);
-		bottom: 2px;
-		left: 9px
-	}
-
-	.uni-load-more__img>view view:nth-child(4) {
-		top: 11px;
-		left: 0
-	}
-
-	.load1,
-	.load2,
-	.load3 {
-		height: 24px;
-		width: 24px
-	}
-
-	.load2 {
-		transform: rotate(30deg)
-	}
-
-	.load3 {
-		transform: rotate(60deg)
-	}
-
-	.load1 view:nth-child(1) {
-		animation-delay: 0s
-	}
-
-	.load2 view:nth-child(1) {
-		animation-delay: .13s
-	}
-
-	.load3 view:nth-child(1) {
-		animation-delay: .26s
-	}
-
-	.load1 view:nth-child(2) {
-		animation-delay: .39s
-	}
-
-	.load2 view:nth-child(2) {
-		animation-delay: .52s
-	}
-
-	.load3 view:nth-child(2) {
-		animation-delay: .65s
-	}
-
-	.load1 view:nth-child(3) {
-		animation-delay: .78s
-	}
-
-	.load2 view:nth-child(3) {
-		animation-delay: .91s
-	}
-
-	.load3 view:nth-child(3) {
-		animation-delay: 1.04s
-	}
-
-	.load1 view:nth-child(4) {
-		animation-delay: 1.17s
-	}
-
-	.load2 view:nth-child(4) {
-		animation-delay: 1.3s
-	}
-
-	.load3 view:nth-child(4) {
-		animation-delay: 1.43s
-	}
-
-	@-webkit-keyframes load {
-		0% {
-			opacity: 1
-		}
-
-		100% {
-			opacity: .2
-		}
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 </style>
