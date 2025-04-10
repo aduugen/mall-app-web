@@ -11,25 +11,33 @@
 				{{item.text}}
 			</view>
 			<!-- 刷新按钮 -->
-			<view class="refresh-btn" @click="refreshCurrentTab">刷新</view>
+			<view class="refresh-btn" @click="refreshCurrentTab">
+				<text class="iconfont icon-refresh">刷新</text>
+			</view>
 		</view>
 		
 		<!-- 内容区域 -->
 		<swiper class="swiper-box" :current="tabCurrentIndex" @change="changeTab">
 			<!-- 循环渲染每个标签页 -->
-			<swiper-item class="swiper-item" v-for="(tabItem, tabIndex) in navList" :key="tabIndex">
+			<swiper-item class="tab-content" v-for="(tabItem, tabIndex) in navList" :key="tabIndex">
 				<scroll-view 
-					class="swiper-item-scroll" 
+					class="list-scroll-content" 
 					scroll-y 
 					@scrolltolower="onScrolltolower" 
 					@refresherrefresh="onRefresh" 
 					:refresher-enabled="true"
 					:refresher-triggered="tabItem.refreshing"
+					refresher-background="#f8f8f8"
 				>
 					<!-- 加载状态 -->
-					<view v-if="tabItem.loading && !tabItem.refreshing" class="loading-box">
+					<view v-if="tabItem.loading && !tabItem.refreshing" class="loading-container">
 						<view class="loading-spinner"></view>
-						<text class="loading-text">正在加载...</text>
+						<text class="loading-text">加载中...</text>
+					</view>
+					
+					<!-- 显示调试信息 -->
+					<view class="debug-info" v-if="tabItem.afterSaleList.length === 0 && isDebug">
+						<text>当前选项卡: {{tabIndex}}, 当前索引: {{tabCurrentIndex}}</text>
 					</view>
 					
 					<!-- 无数据状态 -->
@@ -46,63 +54,61 @@
 					<!-- 售后列表区 -->
 					<view class="after-sale-list" v-else>
 						<view class="after-sale-item" v-for="(item, idx) in tabItem.afterSaleList" :key="idx" @click="viewDetails(item)">
-							<view class="order-info">
-								<view class="item-top">
-									<text class="service-id">售后单号: {{item.id}}</text>
-									<text class="status" :class="'status-' + item.status">{{getStatusText(item.status)}}</text>
-								</view>
-								<view class="order-num">
-									<text>订单号: {{item.orderSn}}</text>
-									<text class="create-time">{{formatDate(item.createTime)}}</text>
-								</view>
-								<view class="item-main">
-									<view class="product-list" v-if="item.afterSaleItemList && item.afterSaleItemList.length > 0">
-										<view class="product-item" v-for="(product, productIndex) in item.afterSaleItemList" :key="productIndex">
-											<image class="product-img" :src="fixImagePath(product.productPic)" mode="aspectFill"></image>
-											<view class="product-info">
-												<view class="product-name">{{product.productName}}</view>
-												<view class="product-attr" v-if="product.productAttr">{{formatProductAttr(product.productAttr)}}</view>
-												<view class="product-price-qty">
-													<text>单价: ¥{{product.productPrice}}</text>
-													<text>退货数量: {{product.returnQuantity || 0}}</text>
-												</view>
-												<view class="product-reason" v-if="product.returnReason">
-													退货原因: {{product.returnReason}}
-												</view>
+							<view class="i-top b-b">
+								<text class="service-id">售后单号: {{item.id}}</text>
+								<text class="state" :class="'status-' + item.status">{{getStatusText(item.status)}}</text>
+							</view>
+							<view class="order-num b-b">
+								<text>订单号: {{item.orderSn}}</text>
+								<text class="create-time">{{formatDate(item.createTime)}}</text>
+							</view>
+							<view class="i-content">
+								<view class="product-list" v-if="item.afterSaleItemList && item.afterSaleItemList.length > 0">
+									<view class="product-item" v-for="(product, productIndex) in item.afterSaleItemList" :key="productIndex">
+										<image class="product-img" :src="fixImagePath(product.productPic)" mode="aspectFill"></image>
+										<view class="product-info">
+											<view class="product-name">{{product.productName}}</view>
+											<view class="product-attr" v-if="product.productAttr">{{formatProductAttr(product.productAttr)}}</view>
+											<view class="product-price-qty">
+												<text>单价: ¥{{product.productPrice}}</text>
+												<text>退货数量: {{product.returnQuantity || 0}}</text>
+											</view>
+											<view class="product-reason" v-if="product.returnReason">
+												退货原因: {{product.returnReason}}
 											</view>
 										</view>
 									</view>
-									
-									<view class="refund-info">
-										<view class="refund-item">
-											<text>退货总数:</text>
-											<text>{{calcTotalQuantity(item)}}件</text>
-										</view>
-										<view class="refund-item">
-											<text>退款金额:</text>
-											<text class="amount">¥{{calcTotalAmount(item)}}</text>
-										</view>
-										<view class="refund-item" v-if="item.handleTime">
-											<text>处理时间:</text>
-											<text>{{formatDate(item.handleTime)}}</text>
-										</view>
+								</view>
+								
+								<view class="i-info b-b">
+									<view class="info-item">
+										<text class="title">退货总数:</text>
+										<text class="content">{{calcTotalQuantity(item)}}件</text>
 									</view>
-									
-									<view class="pics-area" v-if="item.proofPics || hasProofPics(item)">
-										<view class="pics-title">凭证图片:</view>
-										<scroll-view class="pics-scroll" scroll-x="true">
-											<view class="pics-list">
-												<view class="pic-item" v-for="(pic, picIndex) in getAfterSaleProofPics(item)" :key="picIndex" @click.stop="previewImage(getAfterSaleProofPics(item), picIndex)">
-													<image :src="fixImagePath(pic)" mode="aspectFill"></image>
-												</view>
+									<view class="info-item">
+										<text class="title">退款金额:</text>
+										<text class="content price">¥{{calcTotalAmount(item)}}</text>
+									</view>
+									<view class="info-item" v-if="item.handleTime">
+										<text class="title">处理时间:</text>
+										<text class="content">{{formatDate(item.handleTime)}}</text>
+									</view>
+								</view>
+								
+								<view class="pics-area" v-if="item.proofPics || hasProofPics(item)">
+									<view class="pics-title">凭证图片:</view>
+									<scroll-view class="pics-scroll" scroll-x="true">
+										<view class="pics-list">
+											<view class="pic-item" v-for="(pic, picIndex) in getAfterSaleProofPics(item)" :key="picIndex" @click.stop="previewImage(getAfterSaleProofPics(item), picIndex)">
+												<image :src="fixImagePath(pic)" mode="aspectFill"></image>
 											</view>
-										</scroll-view>
-									</view>
-									
-									<view class="action-box">
-										<text class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item)">取消申请</text>
-										<text class="action-btn view-details">查看详情</text>
-									</view>
+										</view>
+									</scroll-view>
+								</view>
+								
+								<view class="i-action">
+									<view class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item)">取消申请</view>
+									<view class="action-btn">查看详情</view>
 								</view>
 							</view>
 						</view>
@@ -870,21 +876,15 @@
 </script>
 
 <style lang="scss">
-	page {
-		background: $page-color-base;
-	}
-	
 	.content {
-		position: relative;
-		width: 100%;
-		height: 100%;
+		background-color: #f8f8f8;
+		min-height: 100vh;
 	}
 	
-	/* 顶部导航栏 */
 	.navbar {
 		display: flex;
-		align-items: center;
 		height: 80rpx;
+		padding: 0 5px;
 		background: #fff;
 		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
 		position: relative;
@@ -897,11 +897,11 @@
 			align-items: center;
 			height: 100%;
 			font-size: 28rpx;
-			color: $font-color-dark;
+			color: #303133;
 			position: relative;
 			
 			&.current {
-				color: $base-color;
+				color: #3366cc;
 				
 				&:after {
 					content: '';
@@ -909,274 +909,255 @@
 					left: 50%;
 					bottom: 0;
 					transform: translateX(-50%);
-					width: 120rpx;
+					width: 44rpx;
 					height: 4rpx;
-					background: $base-color;
+					background: linear-gradient(to right, #2255aa, #3366cc);
 				}
 			}
 		}
 		
 		.refresh-btn {
-			position: absolute;
-			right: 20rpx;
-			top: 50%;
-			transform: translateY(-50%);
-			font-size: 26rpx;
-			color: $base-color;
-			padding: 6rpx 16rpx;
-			border: 1px solid $base-color;
-			border-radius: 30rpx;
-			background: #fff;
+			padding: 0 20rpx;
+			font-size: 28rpx;
+			color: #909399;
 		}
 	}
 	
-	/* 滑动区域 */
+	/* swiper相关样式 */
 	.swiper-box {
 		height: calc(100vh - 80rpx);
-		
-		.swiper-item {
-			height: 100%;
-			
-			.swiper-item-scroll {
-				height: 100%;
-				box-sizing: border-box;
-			}
-		}
 	}
 	
-	/* 售后列表 */
+	.tab-content {
+		height: 100%;
+	}
+	
+	.list-scroll-content {
+		height: 100%;
+		box-sizing: border-box;
+	}
+	
+	/* 售后列表区域 */
 	.after-sale-list {
 		padding: 20rpx;
+	}
+	
+	/* 售后服务项目 */
+	.after-sale-item {
+		margin-bottom: 20rpx;
+		border-radius: 12rpx;
+		background: #fff;
+		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.1);
+		overflow: hidden;
 		
-		.after-sale-item {
-			margin-bottom: 20rpx;
-			border-radius: 12rpx;
-			background: #fff;
-			box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.05);
-			overflow: hidden;
+		.i-top {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 20rpx;
+			border-bottom: 1rpx solid #eee;
 			
-			.order-info {
-				padding: 20rpx;
+			.service-id {
+				font-size: 26rpx;
+				color: #333;
+			}
+			
+			.state {
+				font-size: 24rpx;
+				padding: 4rpx 12rpx;
+				border-radius: 20rpx;
 				
-				.item-top {
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					padding-bottom: 20rpx;
-					border-bottom: 1px solid #f5f5f5;
-					
-					.service-id {
-						font-size: 26rpx;
-						color: $font-color-dark;
-					}
-					
-					.status {
-						font-size: 24rpx;
-						padding: 4rpx 12rpx;
-						border-radius: 20rpx;
-						
-						&.status-0 {
-							color: #ff9500;
-							background: rgba(255, 149, 0, 0.1);
-						}
-						
-						&.status-1 {
-							color: #007aff;
-							background: rgba(0, 122, 255, 0.1);
-						}
-						
-						&.status-2 {
-							color: #4cd964;
-							background: rgba(76, 217, 100, 0.1);
-						}
-						
-						&.status-3 {
-							color: #ff3b30;
-							background: rgba(255, 59, 48, 0.1);
-						}
-					}
+				&.status-0 {
+					color: #ff9500;
+					background: rgba(255, 149, 0, 0.1);
 				}
 				
-				.order-num {
-					padding: 16rpx 0;
-					font-size: 26rpx;
-					color: $font-color-dark;
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					border-bottom: 1px solid #f5f5f5;
-					
-					.create-time {
-						font-size: 24rpx;
-						color: $font-color-light;
-					}
+				&.status-1 {
+					color: #007aff;
+					background: rgba(0, 122, 255, 0.1);
 				}
 				
-				.item-main {
-					padding-top: 20rpx;
+				&.status-2 {
+					color: #4cd964;
+					background: rgba(76, 217, 100, 0.1);
+				}
+				
+				&.status-3 {
+					color: #ff3b30;
+					background: rgba(255, 59, 48, 0.1);
+				}
+			}
+		}
+		
+		.order-num {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 16rpx 20rpx;
+			font-size: 26rpx;
+			color: #666;
+			border-bottom: 1rpx solid #f5f5f5;
+			
+			.create-time {
+				color: #999;
+				font-size: 24rpx;
+			}
+		}
+		
+		.i-content {
+			padding: 20rpx;
+			
+			.product-list {
+				margin-bottom: 20rpx;
+				
+				.product-item {
+					display: flex;
+					margin-bottom: 16rpx;
+					padding: 16rpx;
+					background: #f8f8f8;
+					border-radius: 8rpx;
 					
-					.product-list {
-						margin-bottom: 20rpx;
-						
-						.product-item {
-							display: flex;
-							padding: 16rpx;
-							margin-bottom: 16rpx;
-							border-radius: 8rpx;
-							background: #f8f8f8;
-							
-							.product-img {
-								width: 120rpx;
-								height: 120rpx;
-								border-radius: 8rpx;
-								object-fit: cover;
-								background: #fff;
-								border: 1px solid #f0f0f0;
-							}
-							
-							.product-info {
-								flex: 1;
-								margin-left: 20rpx;
-								overflow: hidden;
-								
-								.product-name {
-									font-size: 28rpx;
-									color: $font-color-dark;
-									margin-bottom: 8rpx;
-									line-height: 1.3;
-									display: -webkit-box;
-									-webkit-box-orient: vertical;
-									-webkit-line-clamp: 2;
-									overflow: hidden;
-								}
-								
-								.product-attr {
-									font-size: 24rpx;
-									color: $font-color-light;
-									margin-bottom: 8rpx;
-									line-height: 1.3;
-								}
-								
-								.product-price-qty {
-									display: flex;
-									justify-content: space-between;
-									font-size: 26rpx;
-									color: $base-color;
-									margin-bottom: 8rpx;
-								}
-								
-								.product-reason {
-									font-size: 24rpx;
-									color: $font-color-light;
-									background: rgba(0, 0, 0, 0.03);
-									padding: 8rpx 12rpx;
-									border-radius: 4rpx;
-									margin-top: 8rpx;
-								}
-							}
-						}
+					&:last-child {
+						margin-bottom: 0;
 					}
 					
-					.refund-info {
-						margin-top: 16rpx;
-						margin-bottom: 16rpx;
-						padding: 16rpx;
-						background: #f8f8f8;
+					.product-img {
+						width: 120rpx;
+						height: 120rpx;
 						border-radius: 8rpx;
+						background: #fff;
+						border: 1rpx solid #eee;
+					}
+					
+					.product-info {
+						flex: 1;
+						margin-left: 20rpx;
+						overflow: hidden;
 						
-						.refund-item {
+						.product-name {
+							font-size: 28rpx;
+							color: #333;
+							margin-bottom: 8rpx;
+							line-height: 1.3;
+							display: -webkit-box;
+							-webkit-box-orient: vertical;
+							-webkit-line-clamp: 2;
+							overflow: hidden;
+						}
+						
+						.product-attr {
+							font-size: 24rpx;
+							color: #999;
+							margin-bottom: 8rpx;
+						}
+						
+						.product-price-qty {
 							display: flex;
 							justify-content: space-between;
-							align-items: center;
+							font-size: 26rpx;
+							color: #3366cc;
 							margin-bottom: 8rpx;
-							
-							&:last-child {
-								margin-bottom: 0;
-							}
-							
-							text {
-								font-size: 26rpx;
-								color: $font-color-dark;
-							}
-							
-							.amount {
-								font-size: 28rpx;
-								color: $base-color;
-								font-weight: bold;
-							}
-						}
-					}
-					
-					.pics-area {
-						margin-top: 20rpx;
-						margin-bottom: 20rpx;
-						
-						.pics-title {
-							font-size: 26rpx;
-							color: $font-color-dark;
-							margin-bottom: 12rpx;
 						}
 						
-						.pics-scroll {
-							width: 100%;
-							white-space: nowrap;
-							
-							.pics-list {
-								display: flex;
-								padding: 8rpx 0;
-								
-								.pic-item {
-									width: 160rpx;
-									height: 160rpx;
-									margin-right: 16rpx;
-									position: relative;
-									border-radius: 8rpx;
-									overflow: hidden;
-									box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
-									border: 1px solid #f0f0f0;
-									
-									&:last-child {
-										margin-right: 0;
-									}
-									
-									image {
-										width: 100%;
-										height: 100%;
-										object-fit: cover;
-										
-										&.image-loading {
-											opacity: 0.6;
-										}
-									}
-								}
-							}
+						.product-reason {
+							font-size: 24rpx;
+							color: #999;
+							background: rgba(0, 0, 0, 0.03);
+							padding: 8rpx 12rpx;
+							border-radius: 4rpx;
 						}
 					}
+				}
+			}
+			
+			.i-info {
+				margin: 16rpx 0;
+				padding: 16rpx;
+				background: #f8f8f8;
+				border-radius: 8rpx;
+				border-bottom: 1rpx solid #eee;
+				
+				.info-item {
+					justify-content: space-between;
+					align-items: center;
+					margin-bottom: 12rpx;
 					
-					.action-box {
+					&:last-child {
+						margin-bottom: 0;
+					}
+					
+					.title {
+						font-size: 26rpx;
+						color: #666;
+					}
+					
+					.content {
+						font-size: 26rpx;
+						color: #333;
+					}
+					
+					.price {
+						font-size: 28rpx;
+						color: #ff3b30;
+						font-weight: 500;
+					}
+				}
+			}
+			
+			.pics-area {
+				margin: 16rpx 0;
+				
+				.pics-title {
+					font-size: 26rpx;
+					color: #666;
+					margin-bottom: 12rpx;
+				}
+				
+				.pics-scroll {
+					width: 100%;
+					white-space: nowrap;
+					
+					.pics-list {
 						display: flex;
-						justify-content: flex-end;
-						margin-top: 24rpx;
 						
-						.action-btn {
-							display: inline-block;
-							padding: 12rpx 30rpx;
-							font-size: 26rpx;
-							border-radius: 30rpx;
+						.pic-item {
+							width: 160rpx;
+							height: 160rpx;
+							margin-right: 16rpx;
+							border-radius: 8rpx;
+							overflow: hidden;
+							box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 							
-							&.view-details {
-								color: $base-color;
-								border: 1px solid $base-color;
-								background: #fff;
-							}
-							
-							&.cancel {
-								color: #666;
-								border: 1px solid #ddd;
-								background: #fff;
-								margin-right: 16rpx;
+							image {
+								width: 100%;
+								height: 100%;
+								object-fit: cover;
 							}
 						}
+					}
+				}
+			}
+			
+			.i-action {
+				display: flex;
+				justify-content: flex-end;
+				margin-top: 20rpx;
+				padding-top: 16rpx;
+				border-top: 1rpx solid #f5f5f5;
+				
+				.action-btn {
+					display: inline-block;
+					padding: 12rpx 30rpx;
+					font-size: 26rpx;
+					color: #3366cc;
+					border: 1rpx solid #3366cc;
+					border-radius: 30rpx;
+					background: #fff;
+					
+					&.cancel {
+						color: #999;
+						border: 1rpx solid #ddd;
+						margin-right: 16rpx;
 					}
 				}
 			}
@@ -1184,7 +1165,7 @@
 	}
 	
 	/* 加载状态 */
-	.loading-box {
+	.loading-container {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -1195,7 +1176,7 @@
 			width: 60rpx;
 			height: 60rpx;
 			border: 4rpx solid rgba(243, 243, 243, 0.8);
-			border-top: 4rpx solid $base-color;
+			border-top: 4rpx solid #3366cc;
 			border-radius: 50%;
 			animation: spin 1.2s cubic-bezier(0.5, 0.1, 0.5, 1) infinite;
 			box-shadow: 0 0 10rpx rgba(0, 0, 0, 0.05);
@@ -1203,7 +1184,7 @@
 		
 		.loading-text {
 			font-size: 28rpx;
-			color: $font-color-light;
+			color: #999;
 			margin-top: 20rpx;
 			letter-spacing: 2rpx;
 		}
@@ -1213,40 +1194,40 @@
 	.empty-box {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
 		justify-content: center;
+		align-items: center;
 		padding: 100rpx 0;
 		width: 100%;
-	}
-	
-	.empty-icon {
-		width: 200rpx;
-		height: 200rpx;
-		margin-bottom: 20rpx;
-	}
-	
-	.empty-text {
-		font-size: 28rpx;
-		color: #999;
-		text-align: center;
-		line-height: 1.5;
-		letter-spacing: 1rpx;
-	}
-	
-	.retry-btn {
-		margin-top: 30rpx;
-		padding: 10rpx 40rpx;
-		background-color: #f8f8f8;
-		color: #666;
-		font-size: 24rpx;
-		border-radius: 30rpx;
-		box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
-		transition: all 0.2s ease;
-	}
-	
-	.retry-btn:active {
-		background-color: #e8e8e8;
-		transform: scale(0.98);
+		
+		.empty-icon {
+			width: 200rpx;
+			height: 200rpx;
+			margin-bottom: 20rpx;
+		}
+		
+		.empty-text {
+			font-size: 28rpx;
+			color: #999;
+			text-align: center;
+			line-height: 1.5;
+			letter-spacing: 1rpx;
+		}
+		
+		.retry-btn {
+			margin-top: 30rpx;
+			padding: 10rpx 40rpx;
+			background-color: #f8f8f8;
+			color: #666;
+			font-size: 24rpx;
+			border-radius: 30rpx;
+			box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
+			transition: all 0.2s ease;
+			
+			&:active {
+				background-color: #e8e8e8;
+				transform: scale(0.98);
+			}
+		}
 	}
 	
 	/* 底部加载更多 */
@@ -1256,20 +1237,21 @@
 		align-items: center;
 		justify-content: center;
 		height: 80rpx;
+		padding: 20rpx 0;
 		
 		.loading-spinner {
 			width: 36rpx;
 			height: 36rpx;
 			margin-right: 20rpx;
 			border: 3rpx solid #f3f3f3;
-			border-top: 3rpx solid $base-color;
+			border-top: 3rpx solid #3366cc;
 			border-radius: 50%;
 			animation: spin 1s linear infinite;
 		}
 		
 		.loading-text {
 			font-size: 28rpx;
-			color: $font-color-light;
+			color: #999;
 		}
 	}
 	
