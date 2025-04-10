@@ -674,8 +674,8 @@
 				
 				const currentTab = this.navList[this.tabCurrentIndex];
 				
-				// 如果当前选项卡没有数据，则加载数据
-				if (currentTab.afterSaleList.length === 0) {
+				// 如果当前选项卡没有数据且不在加载中，则加载数据
+				if (currentTab.afterSaleList.length === 0 && currentTab.loadingType !== 'loading') {
 					this.loadData(true, true);
 				}
 			},
