@@ -72,9 +72,9 @@
 							<!-- 在"已开票"状态下显示查看按钮 -->
 							<button class="action-btn" v-if="item.invoiceStatus === 2" @click="viewInvoice(item)">查看发票</button>
 							
-							<!-- 售后按钮逻辑 -->
-							<button class="action-btn" v-if="item.afterSaleStatus === 0" @click="applyAfterSale(item)">申请售后</button>
-							<button class="action-btn" v-else-if="item.afterSaleStatus === 1 || item.afterSaleStatus === 2" @click="checkAfterSale(item)">查询售后</button>
+							<!-- 售后按钮逻辑 - 改进版 -->
+							<button class="action-btn after-sale-btn" v-if="item.canApplyAfterSale" @click="applyAfterSale(item)">申请售后</button>
+							<button class="action-btn after-sale-btn" v-if="item.hasAfterSaleRecords" @click="checkAfterSale(item)">查询售后</button>
 							
 							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
@@ -295,6 +295,10 @@
 						
 						// 加载完数据后处理订单发票状态
 						this.updateOrderInvoiceStatus();
+						
+						// 处理已完成订单的售后状态
+						this.updateOrderAfterSaleStatus();
+						
 						resolve(this.orderList);
 					}).catch(error => {
 						this.loadingType = 'more';
@@ -427,28 +431,19 @@
 			},
 			//申请售后
 			applyAfterSale(order) {
-				// 已经全部申请售后的订单直接拦截
-				if (order.afterSaleStatus === 2) {
-					uni.showToast({
-						title: '该订单商品已全部申请售后',
-						icon: 'none',
-						duration: 2000
-					});
-					return;
-				}
-				
-				// 对于未申请或部分申请的订单，先检查详细状态
+				// 开始跳转前提示加载
 				uni.showLoading({
-					title: '检查订单状态'
+					title: '准备中...'
 				});
 				
+				// 先检查订单售后状态
 				checkOrderAfterSaleStatus(order.id).then(response => {
 					uni.hideLoading();
 					
 					if (response.code === 200) {
 						const result = response.data;
 						
-						// 再次确认是否可申请售后
+						// 确认是否可申请售后
 						if (!result.canApplyAfterSale) {
 							uni.showToast({
 								title: '该订单商品已全部申请售后',
@@ -459,26 +454,26 @@
 						}
 						
 						// 如果有可申请的商品，则跳转到售后申请页面
-							uni.navigateTo({
-								url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
-							});
-						} else {
-							uni.showToast({
-								title: response.message || '检查订单状态失败',
-								icon: 'none',
-								duration: 2000
-							});
-						}
-					}).catch(error => {
-						uni.hideLoading();
-						console.error('检查订单售后状态失败:', error);
-						
-						// 出错时也允许进入申请页面，由申请页面再次检查
 						uni.navigateTo({
 							url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
 						});
+					} else {
+						uni.showToast({
+							title: response.message || '检查订单状态失败',
+							icon: 'none',
+							duration: 2000
+						});
+					}
+				}).catch(error => {
+					uni.hideLoading();
+					console.error('检查订单售后状态失败:', error);
+					
+					// 出错时也允许进入申请页面，由申请页面再次检查
+					uni.navigateTo({
+						url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
 					});
-				},
+				});
+			},
 			//开具发票
 			invoiceOrder(order) {
 				// 跳转到发票申请页面
@@ -675,33 +670,11 @@
 					uni.hideLoading();
 					
 					if (response.code === 200) {
-						const afterSaleStatus = response.data.afterSaleStatus;
-						
-						// 根据返回的售后状态更新订单的售后状态
-						this.$set(order, 'afterSaleStatus', afterSaleStatus);
-						
-						// 成功获取售后状态，跳转到售后列表页面 
-						// 传递状态参数，以便售后列表页面可以选择正确的标签页
-						let state = -1; // 默认显示全部标签
-						
-						if (afterSaleStatus === 0) {
-							// 未申请售后，说明可能是已取消或已删除的售后申请
-							// 直接跳转到申请售后页面
-							uni.navigateTo({
-								url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
-							});
-							return;
-						} else if (afterSaleStatus === 1 || afterSaleStatus === 2) {
-							// 已申请售后，跳转到售后列表页面
-							uni.navigateTo({
-								url: `/pages/afterSale/afterSaleList?state=${state}&orderId=${order.id}`
-							});
-						} else {
-							// 未知状态，跳转到售后列表页面
-							uni.navigateTo({
-								url: `/pages/afterSale/afterSaleList?state=${state}&orderId=${order.id}`
-							});
-						}
+						// 跳转到售后列表页面 - 默认显示全部标签
+						const state = -1;
+						uni.navigateTo({
+							url: `/pages/afterSale/afterSaleList?state=${state}&orderId=${order.id}`
+						});
 					} else {
 						uni.showToast({
 							title: response.message || '查询售后状态失败',
@@ -749,6 +722,57 @@
 					console.log('所有订单发票状态已更新');
 				}).catch(error => {
 					console.error('更新发票状态过程出错:', error);
+				});
+			},
+			// 更新订单售后状态
+			updateOrderAfterSaleStatus() {
+				// 只处理已完成的订单
+				const completedOrders = this.orderList.filter(order => order.status === 3);
+				if (completedOrders.length === 0) return;
+				
+				// 对每个订单检查售后状态
+				Promise.all(completedOrders.map(order => {
+					// 如果已经检查过售后状态，无需重复检查
+					if (order.afterSaleStatusChecked === true) {
+						return Promise.resolve();
+					}
+					
+					// 查询售后状态
+					return checkOrderAfterSaleStatus(order.id)
+						.then(response => {
+							if (response.code === 200 && response.data) {
+								const afterSaleData = response.data;
+								
+								// 更新订单的售后状态基本信息
+								this.$set(order, 'afterSaleStatus', afterSaleData.afterSaleStatus || 0);
+								
+								// 检查是否可以申请售后
+								const canApply = afterSaleData.canApplyAfterSale === true;
+								this.$set(order, 'canApplyAfterSale', canApply);
+								
+								// 检查是否有售后记录
+								const hasRecords = afterSaleData.isApplied === true;
+								this.$set(order, 'hasAfterSaleRecords', hasRecords);
+								
+								// 保存售后商品详情信息
+								this.$set(order, 'afterSaleItems', afterSaleData.items || []);
+								
+								// 标记为已检查
+								this.$set(order, 'afterSaleStatusChecked', true);
+								
+								console.log(`订单 ${order.id} 售后状态更新：状态=${afterSaleData.afterSaleStatus}, 可申请=${canApply}, 有记录=${hasRecords}`);
+							}
+						})
+						.catch(error => {
+							console.error('获取订单售后状态失败:', error);
+							// 出错时设置默认值
+							this.$set(order, 'canApplyAfterSale', true);
+							this.$set(order, 'hasAfterSaleRecords', false);
+						});
+				})).then(() => {
+					console.log('所有订单售后状态已更新');
+				}).catch(error => {
+					console.error('更新售后状态过程出错:', error);
 				});
 			},
 		},
@@ -945,20 +969,23 @@
 			display: flex;
 			justify-content: flex-end;
 			align-items: center;
-			height: 100upx;
+			flex-wrap: wrap; /* 允许按钮换行 */
+			min-height: 100upx;
 			position: relative;
 			padding-right: 30upx;
+			padding-bottom: 10upx; /* 底部添加内边距，避免按钮过于贴近底部 */
 		}
 
 		.action-btn {
 			width: 160upx;
 			height: 60upx;
 			margin: 0;
-			margin-left: 24upx;
+			margin-left: 16upx; /* 减小按钮之间的间距 */
+			margin-bottom: 10upx; /* 按钮底部加间距，适应换行情况 */
 			padding: 0;
 			text-align: center;
 			line-height: 60upx;
-			font-size: $font-sm + 2upx;
+			font-size: 24upx; /* 稍微减小字体，保证文字能完整显示 */
 			color: $font-color-dark;
 			background: #fff;
 			border-radius: 100px;
@@ -973,6 +1000,16 @@
 
 				&:after {
 					border-color: #f7bcc8;
+				}
+			}
+			
+			/* 售后按钮专用样式 */
+			&.after-sale-btn {
+				width: 150upx; /* 售后按钮宽度稍窄 */
+				background-color: #f0f9ff; /* 使用蓝色色调区分 */
+				color: #3366cc;
+				&:after {
+					border-color: #a8ccee;
 				}
 			}
 		}
