@@ -675,10 +675,33 @@
 					uni.hideLoading();
 					
 					if (response.code === 200) {
-						// 成功获取售后状态，跳转到售后列表页面
-						uni.navigateTo({
-							url: `/pages/afterSale/afterSaleList?orderId=${order.id}`
-						});
+						const afterSaleStatus = response.data.afterSaleStatus;
+						
+						// 根据返回的售后状态更新订单的售后状态
+						this.$set(order, 'afterSaleStatus', afterSaleStatus);
+						
+						// 成功获取售后状态，跳转到售后列表页面 
+						// 传递状态参数，以便售后列表页面可以选择正确的标签页
+						let state = -1; // 默认显示全部标签
+						
+						if (afterSaleStatus === 0) {
+							// 未申请售后，说明可能是已取消或已删除的售后申请
+							// 直接跳转到申请售后页面
+							uni.navigateTo({
+								url: `/pages/afterSale/applyAfterSale?orderId=${order.id}`
+							});
+							return;
+						} else if (afterSaleStatus === 1 || afterSaleStatus === 2) {
+							// 已申请售后，跳转到售后列表页面
+							uni.navigateTo({
+								url: `/pages/afterSale/afterSaleList?state=${state}&orderId=${order.id}`
+							});
+						} else {
+							// 未知状态，跳转到售后列表页面
+							uni.navigateTo({
+								url: `/pages/afterSale/afterSaleList?state=${state}&orderId=${order.id}`
+							});
+						}
 					} else {
 						uni.showToast({
 							title: response.message || '查询售后状态失败',

@@ -76,6 +76,22 @@
 											<view class="product-reason" v-if="product.returnReason">
 												退货原因: {{product.returnReason}}
 											</view>
+											
+									<!-- 商品项的凭证图片 -->
+									<view class="proof-images" v-if="getLimitedProductProofPics(product).length > 0">
+										<view class="image-label">凭证图片：</view>
+										<view class="image-list">
+											<image
+												v-for="(pic, picIndex) in getLimitedProductProofPics(product)" 
+												:key="picIndex"
+												class="proof-image"
+												:src="pic"
+												mode="aspectFill"
+												@click.stop="previewImage(pic, getLimitedProductProofPics(product))"
+											/>
+											<text v-if="getProductProofPics(product).length > 5" class="more-images">+{{getProductProofPics(product).length - 5}}</text>
+										</view>
+									</view>
 										</view>
 									</view>
 								</view>
@@ -95,15 +111,16 @@
 									</view>
 								</view>
 								
-								<view class="pics-area" v-if="item.proofPics || hasProofPics(item)">
-									<view class="pics-title">凭证图片:</view>
-									<scroll-view class="pics-scroll" scroll-x="true">
-										<view class="pics-list">
-											<view class="pic-item" v-for="(pic, picIndex) in getAfterSaleProofPics(item)" :key="picIndex" @click.stop="previewImage(getAfterSaleProofPics(item), picIndex)">
-												<image :src="fixImagePath(pic)" mode="aspectFill"></image>
-											</view>
+								<view class="certificate-images" v-if="item.proofPics && item.proofPics.length > 0">
+									<view class="certificate-title">凭证图片：</view>
+									<view class="image-list">
+										<view v-for="(pic, picIndex) in item.proofPics.slice(0, 5)" :key="picIndex" class="cert-image" @click.stop="previewImage(fixImagePath(pic), item.proofPics.map(p => fixImagePath(p)))">
+											<image :src="fixImagePath(pic)" mode="aspectFill" @error="onImageError(item, picIndex)" @load="onImageLoad(item, picIndex)"></image>
 										</view>
-									</scroll-view>
+										<view class="more-images" v-if="item.proofPics.length > 5">
+											+{{item.proofPics.length - 5}}张
+										</view>
+									</view>
 								</view>
 								
 								<view class="i-action">
@@ -261,6 +278,16 @@
 				}
 				return statusTip;
 			},
+			formatDateTime(time) {
+				if (time == null || time === '') {
+					return 'N/A';
+				}
+				let date = new Date(time);
+				return formatDate(date, 'yyyy-MM-dd hh:mm:ss')
+			},
+		},
+		methods: {
+			// 格式化商品属性
 			formatProductAttr(jsonAttr) {
 				if (!jsonAttr) return '';
 				
@@ -279,15 +306,6 @@
 					return jsonAttr; // 如果解析失败，返回原始字符串
 				}
 			},
-			formatDateTime(time) {
-				if (time == null || time === '') {
-					return 'N/A';
-				}
-				let date = new Date(time);
-				return formatDate(date, 'yyyy-MM-dd hh:mm:ss')
-			},
-		},
-		methods: {
 			// 检查是否有凭证图片
 			hasPics(item) {
 				return item.pics && (
@@ -310,25 +328,33 @@
 			
 			// 图片加载错误处理
 			onImageError(item, index) {
-				console.error('图片加载失败:', this.formatPics(item.pics)[index]);
+				if (!item) return;
+				
+				const itemId = item.id || (item.productId ? 'product_' + item.productId : 'unknown');
+				console.error('图片加载失败:', itemId, index);
+				
 				// 记录错误状态便于UI处理
-				if (!this.imageErrors[item.id]) {
-					this.$set(this.imageErrors, item.id, {});
+				if (!this.imageErrors[itemId]) {
+					this.$set(this.imageErrors, itemId, {});
 				}
-				this.$set(this.imageErrors[item.id], index, true);
+				this.$set(this.imageErrors[itemId], index, true);
 				
 				// 设置加载状态为完成
-				if (this.imageLoading[item.id]) {
-					this.$set(this.imageLoading[item.id], index, false);
+				if (this.imageLoading[itemId]) {
+					this.$set(this.imageLoading[itemId], index, false);
 				}
 			},
 			
 			// 图片加载完成处理
 			onImageLoad(item, index) {
-				if (!item || !item.id) return;
-				if (this.imageLoading[item.id]) {
-					this.$set(this.imageLoading[item.id], index, false);
+				if (!item) return;
+				
+				const itemId = item.id || (item.productId ? 'product_' + item.productId : 'unknown');
+				
+				if (!this.imageLoading[itemId]) {
+					this.$set(this.imageLoading, itemId, {});
 				}
+				this.$set(this.imageLoading[itemId], index, false);
 			},
 			
 			// 获取基础URL
@@ -342,18 +368,47 @@
 			fixImagePath(path) {
 				if (!path) return '';
 				
+				let result = '';
+				// 输出原始路径便于调试
+				console.log('处理图片路径:', path);
+				
 				// 已经是完整URL
 				if (path.startsWith('http')) {
-					return path;
+					result = path;
 				}
-				
+				// 特殊处理pics/20250410目录下的图片
+				else if (path.includes('20250410')) {
+					// 处理pics目录下的图片
+					if (path.includes('/pics/20250410') || path.includes('pics/20250410')) {
+						// 提取文件名
+						const parts = path.split('/');
+						const fileName = parts[parts.length - 1];
+						result = `${this.getBaseUrl()}/pics/20250410/${fileName}`;
+					} else {
+						// 可能是其他目录下的20250410格式图片
+						result = path.startsWith('/') ? this.getBaseUrl() + path : this.getBaseUrl() + '/' + path;
+					}
+				}
+				// 处理以pics/开头的特殊路径
+				else if (path.includes('pics/') && !path.startsWith('/')) {
+					result = `${this.getBaseUrl()}/pics/${path.split('pics/')[1]}`;
+				}
+				// 处理以/pics/开头的特殊路径
+				else if (path.startsWith('/pics/')) {
+					result = this.getBaseUrl() + path;
+				}
 				// 相对路径，添加基础URL
-				if (path.startsWith('/')) {
-					return this.getBaseUrl() + path;
+				else if (path.startsWith('/')) {
+					result = this.getBaseUrl() + path;
+				}
+				// 其他情况，假设是相对路径
+				else {
+					result = this.getBaseUrl() + '/' + path;
 				}
 				
-				// 其他情况，假设是相对路径
-				return this.getBaseUrl() + '/' + path;
+				// 输出图片路径转换结果
+				console.log(`图片路径处理结果: ${result}`);
+				return result;
 			},
 			
 			// 格式化凭证图片列表
@@ -443,8 +498,8 @@
 			// 预览图片
 			previewImage(current, urls) {
 				uni.previewImage({
-					current: current, // 当前显示图片的链接
-					urls: urls, // 所有图片的链接列表
+					current: current,
+					urls: urls,
 					indicator: 'number',
 					loop: true
 				});
@@ -839,7 +894,7 @@
 				}
 				return this.formatPics(pics.join(','));
 			},
-			// 计算总退款金额
+			// 计算商品总退款金额
 			calcTotalAmount(item) {
 				if (!item.afterSaleItemList || item.afterSaleItemList.length === 0) {
 					return item.returnAmount || 0;
@@ -852,30 +907,60 @@
 					return total + (price * quantity);
 				}, 0).toFixed(2);
 			},
-			// 格式化商品属性
-			formatProductAttr(jsonAttr) {
-				if (!jsonAttr) return '';
+			// 获取产品凭证图片
+			getProductProofPics(product) {
+				if (!product.proofPics) return [];
 				
-				try {
-					let attrArr = JSON.parse(jsonAttr);
-					let attrStr = '';
-					for (let attr of attrArr) {
-						attrStr += attr.key;
-						attrStr += ":";
-						attrStr += attr.value;
-						attrStr += "; ";
-					}
-					return attrStr;
-				} catch (e) {
-					console.error('解析商品属性出错:', e);
-					return jsonAttr; // 如果解析失败，返回原始字符串
+				// 已经是数组
+				if (Array.isArray(product.proofPics)) {
+					return product.proofPics.filter(pic => pic && typeof pic === 'string')
+						.map(pic => this.fixImagePath(pic));
 				}
+				
+				// 字符串情况
+				if (typeof product.proofPics === 'string') {
+					// 如果是URL字符串而不是JSON，直接作为单个URL处理
+					if (product.proofPics.startsWith('http') || product.proofPics.startsWith('/')) {
+						return [this.fixImagePath(product.proofPics)];
+					}
+					
+					// 如果包含逗号，可能是逗号分隔的多个URL
+					if (product.proofPics.includes(',')) {
+						return product.proofPics.split(',')
+							.filter(pic => pic && pic.trim())
+							.map(pic => this.fixImagePath(pic.trim()));
+					}
+					
+					// 尝试解析JSON字符串
+					try {
+						if (product.proofPics.startsWith('[') || product.proofPics.startsWith('{')) {
+							const pics = JSON.parse(product.proofPics);
+							if (Array.isArray(pics)) {
+								return pics.filter(pic => pic && typeof pic === 'string')
+									.map(pic => this.fixImagePath(pic));
+							}
+						}
+					} catch (e) {
+						console.log('不是有效的JSON格式，作为单个URL处理:', product.proofPics);
+					}
+					
+					// 默认作为单个URL处理
+					return [this.fixImagePath(product.proofPics)];
+				}
+				
+				return [];
+			},
+			
+			// 限制凭证图片数量
+			getLimitedProductProofPics(product) {
+				const pics = this.getProductProofPics(product);
+				return pics.slice(0, 5); // 最多显示5张图片
 			},
 		}
 	}
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 	.content {
 		background-color: #f8f8f8;
 		min-height: 100vh;
@@ -1066,6 +1151,37 @@
 							padding: 8rpx 12rpx;
 							border-radius: 4rpx;
 						}
+						
+						// 商品项的凭证图片
+						.proof-images {
+							margin-top: 8rpx;
+							.image-label {
+								font-size: 26rpx;
+								color: #666;
+								margin-bottom: 12rpx;
+							}
+							.image-list {
+								display: flex;
+								.proof-image {
+									width: 160rpx;
+									height: 160rpx;
+									margin-right: 16rpx;
+									border-radius: 8rpx;
+									overflow: hidden;
+									box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+									image {
+										width: 100%;
+										height: 100%;
+										object-fit: cover;
+									}
+								}
+							}
+							.more-images {
+								font-size: 24rpx;
+								color: #999;
+								margin-left: 16rpx;
+							}
+						}
 					}
 				}
 			}
@@ -1104,37 +1220,38 @@
 				}
 			}
 			
-			.pics-area {
-				margin: 16rpx 0;
+			.certificate-images {
+				margin-top: 16rpx;
 				
-				.pics-title {
+				.certificate-title {
 					font-size: 26rpx;
 					color: #666;
 					margin-bottom: 12rpx;
 				}
 				
-				.pics-scroll {
-					width: 100%;
-					white-space: nowrap;
+				.image-list {
+					display: flex;
 					
-					.pics-list {
-						display: flex;
+					.cert-image {
+						width: 160rpx;
+						height: 160rpx;
+						margin-right: 16rpx;
+						border-radius: 8rpx;
+						overflow: hidden;
+						box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 						
-						.pic-item {
-							width: 160rpx;
-							height: 160rpx;
-							margin-right: 16rpx;
-							border-radius: 8rpx;
-							overflow: hidden;
-							box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
-							
-							image {
-								width: 100%;
-								height: 100%;
-								object-fit: cover;
-							}
+						image {
+							width: 100%;
+							height: 100%;
+							object-fit: cover;
 						}
 					}
+				}
+				
+				.more-images {
+					font-size: 24rpx;
+					color: #999;
+					margin-left: 16rpx;
 				}
 			}
 			

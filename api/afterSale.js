@@ -169,6 +169,9 @@ export function checkOrderAfterSaleStatus(orderId) {
 	return request({
 		url: `/member/afterSale/checkOrderAfterSaleStatus`,
 		method: 'get',
-		params: { orderId }
+		params: { 
+			orderId,
+			_t: Date.now() // 添加时间戳参数防止缓存
+		}
 	});
 } 
