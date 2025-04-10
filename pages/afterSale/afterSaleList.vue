@@ -49,15 +49,15 @@
 									<text class="create-time">{{formatDate(item.createTime)}}</text>
 								</view>
 								<view class="item-main">
-									<view class="product-list" v-if="item.orderItemList && item.orderItemList.length > 0">
-										<view class="product-item" v-for="(product, productIndex) in item.orderItemList" :key="productIndex">
+									<view class="product-list" v-if="item.afterSaleItemList && item.afterSaleItemList.length > 0">
+										<view class="product-item" v-for="(product, productIndex) in item.afterSaleItemList" :key="productIndex">
 											<image class="product-img" :src="fixImagePath(product.productPic)" mode="aspectFill"></image>
 											<view class="product-info">
 												<view class="product-name">{{product.productName}}</view>
 												<view class="product-attr" v-if="product.productAttr">{{formatProductAttr(product.productAttr)}}</view>
 												<view class="product-price-qty">
 													<text>单价: ¥{{product.productPrice}}</text>
-													<text>退货数量: {{product.returnQuantity || product.productQuantity}}</text>
+													<text>退货数量: {{product.returnQuantity || 0}}</text>
 												</view>
 												<view class="product-reason" v-if="product.returnReason">
 													退货原因: {{product.returnReason}}
@@ -73,7 +73,7 @@
 										</view>
 										<view class="refund-item">
 											<text>退款金额:</text>
-											<text class="amount">¥{{item.returnAmount || 0}}</text>
+											<text class="amount">¥{{calcTotalAmount(item)}}</text>
 										</view>
 										<view class="refund-item" v-if="item.handleTime">
 											<text>处理时间:</text>
@@ -81,11 +81,11 @@
 										</view>
 									</view>
 									
-									<view class="pics-area" v-if="item.pics && formatPics(item.pics).length > 0">
+									<view class="pics-area" v-if="item.proofPics || hasProofPics(item)">
 										<view class="pics-title">凭证图片:</view>
 										<scroll-view class="pics-scroll" scroll-x="true">
 											<view class="pics-list">
-												<view class="pic-item" v-for="(pic, picIndex) in formatPics(item.pics)" :key="picIndex" @click.stop="previewImage(formatPics(item.pics), picIndex)">
+												<view class="pic-item" v-for="(pic, picIndex) in getAfterSaleProofPics(item)" :key="picIndex" @click.stop="previewImage(getAfterSaleProofPics(item), picIndex)">
 													<image :src="fixImagePath(pic)" mode="aspectFill"></image>
 												</view>
 											</view>
@@ -199,8 +199,13 @@
 			});
 			
 			// 如果有传入状态参数，则切换到对应选项卡
-			if(options.state){
-				this.tabCurrentIndex = parseInt(options.state, 10);
+			if(options.state !== undefined) {
+				const stateInt = parseInt(options.state, 10);
+				// 找到对应的索引
+				const index = this.navList.findIndex(item => item.state === stateInt);
+				if (index !== -1) {
+					this.tabCurrentIndex = index;
+				}
 			}
 			
 			// 显示加载中提示
@@ -242,15 +247,22 @@
 				return statusTip;
 			},
 			formatProductAttr(jsonAttr) {
-				let attrArr = JSON.parse(jsonAttr);
-				let attrStr = '';
-				for (let attr of attrArr) {
-					attrStr += attr.key;
-					attrStr += ":";
-					attrStr += attr.value;
-					attrStr += ";";
+				if (!jsonAttr) return '';
+				
+				try {
+					let attrArr = JSON.parse(jsonAttr);
+					let attrStr = '';
+					for (let attr of attrArr) {
+						attrStr += attr.key;
+						attrStr += ":";
+						attrStr += attr.value;
+						attrStr += "; ";
+					}
+					return attrStr;
+				} catch (e) {
+					console.error('解析商品属性出错:', e);
+					return jsonAttr; // 如果解析失败，返回原始字符串
 				}
-				return attrStr
 			},
 			formatDateTime(time) {
 				if (time == null || time === '') {
@@ -496,7 +508,7 @@
 								uni.hideLoading();
 							}
 							
-							console.log('售后列表响应:', JSON.stringify(response.data));
+							console.log('售后列表响应:', JSON.stringify(response));
 							
 							// 处理响应数据
 							if (response.code === 200 && response.data) {
@@ -785,7 +797,65 @@
 				uni.navigateTo({
 					url: '/pages/afterSale/afterSaleDetail?id=' + item.id
 				});
-			}
+			},
+			// 检查是否有凭证图片
+			hasProofPics(item) {
+				return item.proofPics && (
+					(typeof item.proofPics === 'string' && item.proofPics.trim() !== '') ||
+					(Array.isArray(item.proofPics) && item.proofPics.length > 0) ||
+					(typeof item.proofPics === 'object' && item.proofPics !== null)
+				);
+			},
+			// 获取凭证图片列表
+			getAfterSaleProofPics(item) {
+				if (!item.proofPics) return [];
+				
+				// 如果是字符串或数组，直接返回
+				if (typeof item.proofPics === 'string' || Array.isArray(item.proofPics)) {
+					return this.formatPics(item.proofPics);
+				}
+				
+				// 如果是对象，遍历所有可能的键
+				const pics = [];
+				for (const key in item) {
+					if (key.startsWith('proofPics') && typeof item[key] === 'string') {
+						pics.push(item[key]);
+					}
+				}
+				return this.formatPics(pics.join(','));
+			},
+			// 计算总退款金额
+			calcTotalAmount(item) {
+				if (!item.afterSaleItemList || item.afterSaleItemList.length === 0) {
+					return item.returnAmount || 0;
+				}
+				
+				return item.afterSaleItemList.reduce((total, product) => {
+					// 退款金额 = 单价 × 退货数量
+					const price = parseFloat(product.productPrice || 0);
+					const quantity = parseInt(product.returnQuantity || 0);
+					return total + (price * quantity);
+				}, 0).toFixed(2);
+			},
+			// 格式化商品属性
+			formatProductAttr(jsonAttr) {
+				if (!jsonAttr) return '';
+				
+				try {
+					let attrArr = JSON.parse(jsonAttr);
+					let attrStr = '';
+					for (let attr of attrArr) {
+						attrStr += attr.key;
+						attrStr += ":";
+						attrStr += attr.value;
+						attrStr += "; ";
+					}
+					return attrStr;
+				} catch (e) {
+					console.error('解析商品属性出错:', e);
+					return jsonAttr; // 如果解析失败，返回原始字符串
+				}
+			},
 		}
 	}
 </script>
