@@ -78,23 +78,39 @@
 
 		<!-- 评价 -->
 		<view class="eva-section">
-			<view class="e-header">
-				<text class="tit">评价</text>
-				<text>(86)</text>
-				<text class="tip">好评率 100%</text>
+			<view class="e-header" @click="goToCommentList">
+				<text class="tit">商品评价</text>
+				<text v-if="commentSummary.totalCount > 0">({{commentSummary.totalCount}})</text>
+				<text class="tip" v-if="commentSummary.totalCount > 0">好评率 {{commentSummary.positiveRate}}%</text>
+                <text class="tip" v-else>暂无评价</text>
 				<text class="yticon icon-you"></text>
 			</view>
-			<view class="eva-box">
-				<image class="portrait" src="http://img3.imgtn.bdimg.com/it/u=1150341365,1327279810&fm=26&gp=0.jpg" mode="aspectFill"></image>
-				<view class="right">
-					<text class="name">Leo yo</text>
-					<text class="con">商品收到了，79元两件，质量不错，试了一下有点瘦，但是加个外罩很漂亮，我很喜欢</text>
-					<view class="bot">
-						<text class="attr">购买类型：XL 红色</text>
-						<text class="time">2019-04-01 19:21</text>
-					</view>
-				</view>
-			</view>
+			<!-- 显示最近的 commentList.length (最多3) 条评价 -->
+			<view v-if="commentList.length > 0">
+                <view class="eva-box b-b" v-for="(comment, index) in commentList" :key="index">
+                    <image class="portrait" :src="comment.memberIcon || '/static/missing-face.png'" mode="aspectFill"></image>
+                    <view class="right">
+                        <text class="name">{{comment.memberNickName}}</text>
+                        <!-- 简单星级显示 -->
+                        <view class="star-line">
+                            <text class="yticon icon-xingxing" v-for="n in 5" :key="n" :class="{ active: n <= comment.star }"></text>
+                        </view>
+                        <text class="con">{{comment.content}}</text>
+                        <view class="bot">
+                            <text class="attr">{{comment.productAttribute}}</text>
+                            <text class="time">{{comment.createTime | formatDateTime}}</text>
+                        </view>
+                        <!-- 评价图片预览 -->
+                        <view class="pic-list" v-if="comment.pics">
+                            <image v-for="(pic, picIndex) in formatCommentPics(comment.pics)" :key="picIndex" 
+                                   :src="pic" mode="aspectFill" class="pic-item" @click="previewCommentImage(comment, picIndex)"></image>
+                        </view>
+                    </view>
+                </view>
+            </view>
+            <view class="eva-box no-comment" v-else>
+                <text>还没有人评价过哦~</text>
+            </view>
 		</view>
 
 		<!-- 品牌信息 -->
@@ -249,6 +265,10 @@
 		productCollectionDetail
 	} from '@/api/memberProductCollection.js';
 	import {
+		fetchCommentList,
+		fetchCommentSummary
+	} from '@/api/comment.js';
+	import {
 		mapState
 	} from 'vuex';
 	import {
@@ -308,27 +328,34 @@
 				promotionTipList: [],
 				couponState: 0,
 				couponList: [],
-				cartCount: 0
+				cartCount: 0,
+				productId: null,
+				commentSummary: {
+					totalCount: 0,
+					positiveRate: 0
+				},
+				commentList: [],
+				commentPageNum: 1,
+				commentPageSize: 3,
+				commentLoadingType: 'more',
 			};
 		},
 		async onLoad(options) {
 			let id = options.id;
+			this.productId = id;
 			this.shareList = defaultShareList;
 			this.loadData(id);
-			// 更新购物车数量
+			this.loadComments();
 			this.$store.dispatch('updateCartCount');
 		},
 		onShow() {
-			// 更新购物车数量
 			this.$store.dispatch('updateCartCount');
 		},
 		onUnload() {
-			// 在页面卸载前同步本地购物车数量到Vuex
 			this.$store.commit('setCartCount', this.cartCount);
 		},
 		computed: {
 			...mapState(['hasLogin']),
-			// 同步Vuex中的购物车数量
 			storeCartCount() {
 				return this.$store.state.cartCount;
 			}
@@ -354,7 +381,6 @@
 		},
 		methods: {
 			async loadData(id) {
-				// 显示加载提示
 				uni.showLoading({
 					title: '加载中...'
 				});
@@ -362,7 +388,6 @@
 				try {
 					const response = await fetchProductDetail(id);
 					
-					// 成功加载数据
 					if (response && response.data) {
 						this.product = response.data.product || {};
 						this.skuStockList = response.data.skuStockList || [];
@@ -375,13 +400,11 @@
 						this.initPromotionTipList(response.data);
 						this.initProductDesc();
 						
-						// 只有登录用户才记录浏览历史和检查收藏状态
 						if (this.hasLogin) {
 							this.handleReadHistory();
 							this.initProductCollection();
 						}
 					} else {
-						// 可能是错误，但不一定是401
 						console.warn('商品信息加载不完整', response);
 						uni.showToast({
 							title: '商品信息加载失败',
@@ -389,10 +412,8 @@
 						});
 					}
 				} catch (error) {
-					// 如果是被标记为静默的错误(来自公开API)，不显示错误提示
 					if (error && error.silent) {
 						console.log('静默处理的错误:', error);
-						// 尝试从错误中提取可用的数据
 						if (error.data && error.data.data) {
 							const data = error.data.data;
 							if (data.product) {
@@ -409,7 +430,6 @@
 							}
 						}
 					} else {
-						// 普通错误，显示提示
 						console.error('商品详情加载错误:', error);
 						uni.showToast({
 							title: '商品信息加载失败',
@@ -420,7 +440,73 @@
 					uni.hideLoading();
 				}
 			},
-			//规格弹窗开关
+			async loadComments() {
+				if (!this.productId) {
+					console.error('[loadComments] Product ID is missing.');
+					return;
+				}
+				console.log(`[loadComments] Loading comments for productId: ${this.productId}`);
+				this.commentLoadingType = 'loading';
+				try {
+					// 加载评价概要
+					console.log(`[loadComments] Fetching summary...`);
+					const summaryRes = await fetchCommentSummary(this.productId);
+					console.log('[loadComments] Summary response:', JSON.stringify(summaryRes));
+					if (summaryRes.code === 200) {
+						this.commentSummary = summaryRes.data;
+						console.log('[loadComments] Summary updated:', this.commentSummary);
+					} else {
+						 console.warn('[loadComments] Failed to fetch summary:', summaryRes.message);
+					}
+
+					// 加载第一条评价用于预览
+					const params = {
+						pageNum: 1,
+						pageSize: this.commentPageSize // Should be 1
+					};
+					console.log(`[loadComments] Fetching first comment list with params:`, params);
+					const listRes = await fetchCommentList(this.productId, params);
+					console.log('[loadComments] First comment list response:', JSON.stringify(listRes));
+
+					if (listRes.code === 200 && listRes.data && listRes.data.list && listRes.data.list.length > 0) {
+						this.commentList = listRes.data.list;
+						console.log('[loadComments] commentList updated with first comment:', JSON.stringify(this.commentList));
+						// Check if total count > fetched count
+						if (this.commentSummary.totalCount > this.commentList.length) {
+							 this.commentLoadingType = 'more';
+						} else {
+							 this.commentLoadingType = 'noMore';
+						}
+						 console.log(`[loadComments] Set loadingType to: ${this.commentLoadingType}`);
+					} else {
+						console.warn('[loadComments] No comments found or API error, clearing commentList.');
+						this.commentList = [];
+						this.commentLoadingType = 'noMore';
+						console.log(`[loadComments] Set loadingType to: ${this.commentLoadingType}`);
+					}
+				} catch (error) {
+					console.error('[loadComments] Error loading comments:', error);
+					this.commentList = []; // Ensure list is empty on error
+					this.commentLoadingType = 'more'; // Allow retry on error
+				} finally {
+					console.log(`[loadComments] Finished loading. Final commentList length: ${this.commentList.length}, loadingType: ${this.commentLoadingType}`);
+					// 如果需要，在这里停止加载动画等
+				}
+			},
+			goToCommentList() {
+				if (this.commentSummary.totalCount > 0) {
+					uni.navigateTo({ url: `/pages/comment/list?productId=${this.productId}` });
+				} else {
+					uni.showToast({ title: '暂无评价', icon: 'none' });
+				}
+			},
+			previewCommentImage(comment, index) {
+				const urls = this.formatCommentPics(comment.pics);
+				uni.previewImage({
+					urls: urls,
+					current: urls[index]
+				});
+			},
 			toggleSpec() {
 				if (this.specClass === 'show') {
 					this.specClass = 'hide';
@@ -431,7 +517,6 @@
 					this.specClass = 'show';
 				}
 			},
-			//属性弹窗开关
 			toggleAttr() {
 				if (this.attrClass === 'show') {
 					this.attrClass = 'hide';
@@ -442,7 +527,6 @@
 					this.attrClass = 'show';
 				}
 			},
-			//优惠券弹窗开关
 			toggleCoupon(type) {
 				fetchProductCouponList(this.product.id).then(response => {
 					this.couponList = response.data;
@@ -461,7 +545,6 @@
 					}, timer)
 				});
 			},
-			//选择规格
 			selectSpec(index, pid) {
 				let list = this.specChildList;
 				list.forEach(item => {
@@ -471,12 +554,6 @@
 				})
 
 				this.$set(list[index], 'selected', true);
-				//存储已选择
-				/**
-				 * 修复选择规格存储错误
-				 * 将这几行代码替换即可
-				 * 选择的规格存放在specSelected中
-				 */
 				this.specSelected = [];
 				list.forEach(item => {
 					if (item.selected === true) {
@@ -486,7 +563,6 @@
 				this.changeSpecInfo();
 
 			},
-			//领取优惠券
 			addCoupon(coupon) {
 				this.toggleCoupon();
 				addMemberCoupon(coupon.id).then(response => {
@@ -496,11 +572,9 @@
 					});
 				});
 			},
-			//分享
 			share() {
 				this.$refs.share.toggleMask();
 			},
-			//收藏
 			toFavorite(){
 				if (!this.hasLogin) {
 					uni.showModal({
@@ -510,7 +584,6 @@
 						cancelText: '取消',
 						success: function(res) {
 							if (res.confirm) {
-								// 获取当前页面路径，作为登录后的重定向URL
 								const pages = getCurrentPages();
 								const currentPage = pages[pages.length - 1];
 								const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
@@ -524,7 +597,6 @@
 					return;
 				}
 				
-				// 验证商品ID是否存在
 				if (!this.product || !this.product.id) {
 					uni.showToast({
 						title: '商品信息不完整，无法收藏',
@@ -534,21 +606,18 @@
 					return;
 				}
 				
-				// 打印调试信息
 				console.log('收藏按钮点击:', {
 					当前状态: this.favorite ? '已收藏' : '未收藏',
 					商品ID: this.product.id,
 					商品名: this.product.name
 				});
 				
-				// 显示加载提示
 				uni.showLoading({
 					title: this.favorite ? '取消收藏中...' : '收藏中...'
 				});
 				
 				try {
 					if(this.favorite){
-						// 使用data参数而不是params
 						console.log('准备取消收藏，商品ID:', this.product.id);
 						deleteProductCollection({
 							productId: this.product.id
@@ -571,7 +640,6 @@
 							});
 						});
 					} else {
-						// 创建收藏
 						let data = {
 							productId: this.product.id,
 							productName: this.product.name || '',
@@ -618,7 +686,6 @@
 				});
 			},
 			stopPrevent() {},
-			//设置头图信息
 			initImgList() {
 				let tempPics = this.product.albumPics.split(',');
 				tempPics.unshift(this.product.pic);
@@ -630,7 +697,6 @@
 					}
 				}
 			},
-			//设置服务信息
 			initServiceList() {
 				for (let item of defaultServiceList) {
 					if (this.product.serviceIds.indexOf(item.id) != -1) {
@@ -638,7 +704,6 @@
 					}
 				}
 			},
-			//设置商品规格
 			initSpecList(data) {
 				for (let i = 0; i < data.productAttributeList.length; i++) {
 					let item = data.productAttributeList[i];
@@ -648,7 +713,6 @@
 							name: item.name
 						});
 						if (item.handAddStatus == 1) {
-							//支持手动新增的
 							let valueList = data.productAttributeValueList;
 							let filterValueList = valueList.filter(value => value.productAttributeId == item.id);
 							let inputList = filterValueList[0].value.split(',');
@@ -660,7 +724,6 @@
 								});
 							}
 						} else if (item.handAddStatus == 0) {
-							//不支持手动新增的
 							let inputList = item.inputList.split(',');
 							for (let j = 0; j < inputList.length; j++) {
 								this.specChildList.push({
@@ -679,11 +742,9 @@
 						availAbleSpecSet.add(spDataArr[j].value);
 					}
 				}
-				// 根据商品sku筛选出可用规格
 				this.specChildList = this.specChildList.filter(item => {
 					return availAbleSpecSet.has(item.name)
 				});
-				// 规格 默认选中第一条
 				this.specList.forEach(item => {
 					for (let cItem of this.specChildList) {
 						if (cItem.pid === item.id) {
@@ -695,7 +756,6 @@
 					}
 				})
 			},
-			//设置商品参数
 			initAttrList(data) {
 				for (let item of data.productAttributeList) {
 					if (item.type == 1) {
@@ -709,7 +769,6 @@
 					}
 				}
 			},
-			//设置促销活动信息
 			initPromotionTipList(data) {
 				let promotionType = this.product.promotionType;
 				if (promotionType == 0) {
@@ -732,7 +791,6 @@
 					this.promotionTipList.push("限时优惠");
 				}
 			},
-			//初始化商品详情信息
 			initProductDesc() {
 				let rawhtml = this.product.detailMobileHtml;
 				let tempNode = document.createElement('div');
@@ -745,7 +803,6 @@
 				}
 				this.desc = tempNode.innerHTML;
 			},
-			//处理创建浏览记录
 			handleReadHistory() {
 				if (this.hasLogin) {
 					let data = {
@@ -758,14 +815,11 @@
 					createReadHistory(data);
 				}
 			},
-			//当商品规格改变时，修改商品信息
 			changeSpecInfo() {
 				let skuStock = this.getSkuStock();
 				if (skuStock != null) {
-					// 设置原价
 					this.product.price = skuStock.price;
 					
-					// 如果有促销价，设置促销价
 					if (skuStock.promotionPrice && skuStock.promotionPrice > 0) {
 						this.product.promotionPrice = skuStock.promotionPrice;
 					} else {
@@ -775,7 +829,6 @@
 					this.product.stock = skuStock.stock;
 				}
 			},
-			//获取当前选中商品的SKU
 			getSkuStock() {
 				for (let i = 0; i < this.skuStockList.length; i++) {
 					let spDataArr = JSON.parse(this.skuStockList[i].spData);
@@ -796,7 +849,6 @@
 				}
 				return null;
 			},
-			//添加到购物车
 			addToCart() {
 				if (!this.hasLogin) {
 					uni.showModal({
@@ -806,7 +858,6 @@
 						cancelText: '取消',
 						success: function(res) {
 							if (res.confirm) {
-								// 获取当前页面路径，作为登录后的重定向URL
 								const pages = getCurrentPages();
 								const currentPage = pages[pages.length - 1];
 								const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
@@ -820,13 +871,11 @@
 					return;
 				}
 				
-				// 验证token有效性
 				const token = uni.getStorageSync('token');
 				const tokenExpireTime = uni.getStorageSync('tokenExpireTime');
 				const currentTime = Date.now();
 				
 				if (!token || (tokenExpireTime && currentTime > tokenExpireTime)) {
-					// token不存在或已过期
 					uni.showModal({
 						title: '提示',
 						content: '登录已过期，请重新登录',
@@ -834,7 +883,6 @@
 						cancelText: '取消',
 						success: function(res) {
 							if (res.confirm) {
-								// 获取当前页面路径，作为登录后的重定向URL
 								const pages = getCurrentPages();
 								const currentPage = pages[pages.length - 1];
 								const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
@@ -850,27 +898,22 @@
 				
 				let productSkuStock = this.getSkuStock();
 				
-				// 确定最终价格：优先使用促销价，如果没有促销价则使用原价
 				let finalPrice = this.product.promotionPrice && this.product.promotionPrice > 0 
 					? this.product.promotionPrice 
 					: this.product.price;
 				
-				// 如果SKU有促销价，优先使用SKU的促销价
 				if (productSkuStock && productSkuStock.promotionPrice && productSkuStock.promotionPrice > 0) {
 					finalPrice = productSkuStock.promotionPrice;
 				}
 				
-				// 显示加载提示
 				uni.showLoading({
 					title: '正在处理...'
 				});
 				
-				// 先检查购物车中是否已有相同商品
 				fetchCartList().then(response => {
 					let cartList = response.data || [];
 					let existingItem = null;
 					
-					// 查找购物车中是否已有相同商品和规格
 					for (let item of cartList) {
 						if (item.productId === this.product.id && item.productSkuId === productSkuStock.id) {
 							existingItem = item;
@@ -879,13 +922,11 @@
 					}
 					
 					if (existingItem) {
-						// 如果购物车中已有相同商品，直接使用更新接口更新数量
 						return updateCartItem({
 							id: existingItem.id,
 							quantity: existingItem.quantity + 1
 						});
 					} else {
-						// 如果购物车中没有相同商品，创建新条目
 						let cartItem = {
 							price: finalPrice,
 							productAttr: productSkuStock.spData,
@@ -901,7 +942,6 @@
 							quantity: 1
 						};
 						
-						// 调用添加购物车API
 						return addCartItem(cartItem);
 					}
 				}).then(response => {
@@ -912,25 +952,19 @@
 						duration: 1500
 					});
 					
-					// 设置全局标记，表示购物车数据已更新
 					const app = getApp();
 					if (app.globalData) {
 						app.globalData.cartNeedRefresh = true;
-						// 添加新标记，表示数据发生了变化，需要强制刷新数据
 						app.globalData.forceCartRefresh = true;
 					}
 					
-					// 更新购物车徽标
-					this.cartCount += 1; // 本地立即更新数量
+					this.cartCount += 1;
 					this.$store.dispatch('updateCartCount');
 				}).catch(error => {
 					uni.hideLoading();
 					console.error('操作购物车失败:', error);
 					
-					// 根据错误类型显示不同提示
 					if (error && error.data && error.data.code === 401) {
-						// 授权失败，提示登录
-						// 清除可能无效的token
 						uni.removeStorageSync('token');
 						uni.removeStorageSync('tokenExpireTime');
 						
@@ -940,7 +974,6 @@
 							confirmText: '去登录',
 							success: function(res) {
 								if (res.confirm) {
-									// 获取当前页面路径，作为登录后的重定向URL
 									const pages = getCurrentPages();
 									const currentPage = pages[pages.length - 1];
 									const redirect = encodeURIComponent(`${currentPage.route}?id=${currentPage.options.id}`);
@@ -952,7 +985,6 @@
 							}
 						});
 					} else {
-						// 其他错误
 						uni.showToast({
 							title: '添加失败，请稍后再试',
 							icon: 'none',
@@ -961,7 +993,6 @@
 					}
 				});
 			},
-			//跳转到品牌详情页
 			navToBrandDetail(){
 				let id = this.brand.id;
 				uni.navigateTo({
@@ -971,7 +1002,6 @@
 			filteredSpecChildList(pid) {
 				return this.specChildList.filter((item, index) => {
 					if (item.pid === pid) {
-						// 添加索引属性以便后续使用
 						item.childIndex = index;
 						return true;
 					}
@@ -979,18 +1009,14 @@
 				});
 			},
 			getCartCount() {
-				// 使用Vuex的updateCartCount方法更新购物车徽标
 				this.$store.dispatch('updateCartCount').then(() => {
-					// 从Vuex状态中获取最新的购物车数量
 					this.cartCount = this.$store.state.cartCount;
 				});
 			},
 			goBack() {
-				// 在返回前同步购物车数量到Vuex
 				this.$store.commit('setCartCount', this.cartCount);
 				uni.navigateBack();
 			},
-			//初始化收藏状态
 			initProductCollection() {
 				if (this.hasLogin) {
 					productCollectionDetail({
@@ -1003,9 +1029,13 @@
 					});
 				}
 			},
+			formatCommentPics(pics) {
+				if (!pics) return [];
+				const picArray = pics.split(',');
+				return picArray.filter(pic => pic.trim() !== '');
+			},
 		},
 		watch: {
-			// 监听Vuex中购物车数量的变化
 			storeCartCount: {
 				handler(newVal) {
 					this.cartCount = newVal;
@@ -1027,7 +1057,6 @@
 		color: #888;
 	}
 
-	/* 购物车数量徽章 */
 	.cart-count {
 		position: absolute;
 		top: -10upx;
@@ -1081,7 +1110,6 @@
 
 	}
 
-	/* 标题简介 */
 	.introduce-section {
 		background: #fff;
 		padding: 20upx 30upx;
@@ -1145,7 +1173,6 @@
 		}
 	}
 
-	/* 分享 */
 	.share-section {
 		display: flex;
 		align-items: center;
@@ -1262,7 +1289,6 @@
 		}
 	}
 
-	/* 评价 */
 	.eva-section {
 		display: flex;
 		flex-direction: column;
@@ -1276,6 +1302,7 @@
 			height: 70upx;
 			font-size: $font-sm + 2upx;
 			color: $font-color-light;
+			cursor: pointer;
 
 			.tit {
 				font-size: $font-base + 2upx;
@@ -1286,6 +1313,7 @@
 			.tip {
 				flex: 1;
 				text-align: right;
+				margin-right: 10upx;
 			}
 
 			.icon-you {
@@ -1297,6 +1325,14 @@
 	.eva-box {
 		display: flex;
 		padding: 20upx 0;
+
+		&.no-comment {
+			justify-content: center;
+			align-items: center;
+			color: $font-color-light;
+			font-size: $font-sm;
+			min-height: 100upx;
+		}
 
 		.portrait {
 			flex-shrink: 0;
@@ -1313,10 +1349,22 @@
 			color: $font-color-base;
 			padding-left: 26upx;
 
+			.star-line {
+				margin-bottom: 10upx;
+				.yticon {
+					font-size: 30upx;
+					color: $font-color-light;
+					margin-right: 6upx;
+					&.active {
+						color: #ffb400;
+					}
+				}
+			}
+
 			.con {
 				font-size: $font-base;
 				color: $font-color-dark;
-				padding: 20upx 0;
+				padding: 10upx 0;
 			}
 
 			.bot {
@@ -1324,11 +1372,24 @@
 				justify-content: space-between;
 				font-size: $font-sm;
 				color: $font-color-light;
+				margin-top: 10upx;
+			}
+
+			.pic-list {
+				display: flex;
+				flex-wrap: wrap;
+				margin-top: 16upx;
+				.pic-item {
+					width: 100upx;
+					height: 100upx;
+					margin-right: 10upx;
+					margin-bottom: 10upx;
+					border-radius: 6upx;
+				}
 			}
 		}
 	}
 
-	/*  详情 */
 	.detail-desc {
 		background: #fff;
 		margin-top: 16upx;
@@ -1367,7 +1428,6 @@
 		height: auto;
 	}
 
-	/* 规格选择弹窗 */
 	.attr-content {
 		padding: 10upx 30upx;
 
@@ -1459,7 +1519,6 @@
 		padding: 0upx 0upx;
 	}
 
-	/*  弹出层 */
 	.popup {
 		position: fixed;
 		left: 0;
@@ -1563,7 +1622,6 @@
 		}
 	}
 
-	/* 底部操作菜单 */
 	.page-bottom {
 		position: fixed;
 		left: 0;
@@ -1662,7 +1720,6 @@
 		}
 	}
 
-	/* 优惠券面板 */
 	.mask {
 		display: flex;
 		align-items: flex-end;
@@ -1698,7 +1755,6 @@
 		}
 	}
 
-	/* 优惠券列表 */
 	.coupon-item {
 		display: flex;
 		flex-direction: column;

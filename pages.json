@@ -297,7 +297,15 @@
 			"style": {
 				"navigationBarTitleText": "发票详情"
 			}
-		}
+		},
+        {
+            "path" : "pages/comment/list",
+            "style" :                                                                                    
+            {
+                "navigationBarTitleText": "商品评价",
+                "enablePullDownRefresh": false // 通常不需要下拉刷新，靠上拉加载
+            }
+        }
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
