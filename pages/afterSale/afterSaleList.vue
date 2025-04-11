@@ -15,7 +15,7 @@
 				<text class="iconfont icon-refresh">刷新</text>
 			</view>
 		</view>
-		
+
 		<!-- 内容区域 -->
 		<swiper class="swiper-box" :current="tabCurrentIndex" @change="changeTab">
 			<!-- 循环渲染每个标签页 -->
@@ -44,22 +44,28 @@
 					<view v-else-if="tabItem.afterSaleList.length === 0 && !tabItem.loading" class="empty-box">
 						<image class="empty-icon" src="/static/images/empty.png" mode="aspectFit"></image>
 						<view class="empty-text">
-							{{ tabCurrentIndex === 0 ? '暂无售后申请记录' : 
-							   tabCurrentIndex === 1 ? '暂无处理中的售后记录' :
-							   tabCurrentIndex === 2 ? '暂无已完成的售后记录' : '暂无售后记录' }}
+							<template v-if="orderId">
+								此订单暂无售后记录
+							</template>
+							<template v-else>
+								{{ tabCurrentIndex === 0 ? '暂无售后申请记录' : 
+								   tabCurrentIndex === 1 ? '暂无处理中的售后记录' :
+								   tabCurrentIndex === 2 ? '暂无已完成的售后记录' : '暂无售后记录' }}
+							</template>
 						</view>
 						<view class="retry-btn" @click="refreshCurrentTab">重新加载</view>
+						<view v-if="orderId" class="back-btn" @click="clearOrderFilter">查看全部售后记录</view>
 					</view>
 					
 					<!-- 售后列表区 -->
 					<view class="after-sale-list" v-else>
 						<view class="after-sale-item" v-for="(item, idx) in tabItem.afterSaleList" :key="idx" @click="viewDetails(item)">
-							<view class="i-top b-b">
+						<view class="i-top b-b">
 								<text class="service-id">售后单号: {{item.id}}</text>
 								<text class="state" :class="'status-' + item.status">{{getStatusText(item.status)}}</text>
 							</view>
 							<view class="order-num b-b">
-								<text>订单号: {{item.orderSn}}</text>
+								<text>{{item.orderSn ? '订单号: ' + item.orderSn : (item.orderId ? '订单ID: ' + item.orderId : '无订单信息')}}</text>
 								<text class="create-time">{{formatDate(item.createTime)}}</text>
 							</view>
 							<view class="i-content">
@@ -75,8 +81,8 @@
 											</view>
 											<view class="product-reason" v-if="product.returnReason">
 												退货原因: {{product.returnReason}}
-											</view>
-											
+						</view>
+						
 									<!-- 商品项的凭证图片 -->
 									<view class="proof-images" v-if="getLimitedProductProofPics(product).length > 0">
 										<view class="image-label">凭证图片：</view>
@@ -93,9 +99,9 @@
 										</view>
 									</view>
 										</view>
-									</view>
-								</view>
-								
+							</view>
+						</view>
+
 								<view class="i-info b-b">
 									<view class="info-item">
 										<text class="title">退货总数:</text>
@@ -109,8 +115,8 @@
 										<text class="title">处理时间:</text>
 										<text class="content">{{formatDate(item.handleTime)}}</text>
 									</view>
-								</view>
-								
+						</view>
+						
 								<view class="certificate-images" v-if="item.proofPics && item.proofPics.length > 0">
 									<view class="certificate-title">凭证图片：</view>
 									<view class="image-list">
@@ -120,9 +126,9 @@
 										<view class="more-images" v-if="item.proofPics.length > 5">
 											+{{item.proofPics.length - 5}}张
 										</view>
-									</view>
-								</view>
-								
+						</view>
+					</view>
+
 								<view class="i-action">
 									<view class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item.id)">取消申请</view>
 									<view class="action-btn">查看详情</view>
@@ -165,6 +171,7 @@
 		data() {
 			return {
 				tabCurrentIndex: 0,
+				orderId: null, // 添加orderId属性，用于从订单页面跳转过来时过滤特定订单
 				afterSaleParam: {
 					status: -1,
 					pageNum: 1,
@@ -237,7 +244,57 @@
 				const index = this.navList.findIndex(item => item.state === stateInt);
 				if (index !== -1) {
 					this.tabCurrentIndex = index;
+					
+					// 确保将tab的状态值设置到请求参数中
+					this.afterSaleParam.status = this.navList[index].state;
+					console.log(`初始化选项卡为 ${index}，状态参数设置为:`, this.afterSaleParam.status);
 				}
+			}
+			
+			// 如果有传入orderId参数（从订单页面跳转过来查询特定订单的售后）
+			if(options.orderId !== undefined) {
+				console.log('从订单页面跳转，订单ID:', options.orderId);
+				// 保存订单ID用于过滤
+				this.orderId = options.orderId;
+				
+				// 尝试获取订单号
+				uni.request({
+					url: API_BASE_URL + '/order/query',
+					method: 'GET',
+					data: {
+						orderId: options.orderId
+					},
+					header: {
+						'Authorization': uni.getStorageSync('token')
+					},
+					success: (res) => {
+						if (res.data && res.data.code === 200 && res.data.data) {
+							const orderInfo = res.data.data;
+							console.log('查询到订单信息:', orderInfo);
+							if (orderInfo.orderSn) {
+								console.log('订单编号:', orderInfo.orderSn);
+							} else {
+								console.log('订单信息中没有orderSn字段');
+							}
+						} else {
+							console.log('查询订单信息失败或订单不存在');
+						}
+					},
+					fail: (err) => {
+						console.error('请求订单信息失败:', err);
+					}
+				});
+				
+				// 设置全部选项卡
+				this.tabCurrentIndex = 0;
+				
+				// 如果是查询特定订单的全部售后记录，则不设置状态筛选
+				this.afterSaleParam.status = -1; // 全部状态
+				console.log('按订单ID筛选，状态参数设置为全部');
+			} else {
+				// 如果没有指定orderId，确保使用当前选项卡的状态
+				this.afterSaleParam.status = this.navList[this.tabCurrentIndex].state;
+				console.log('正常加载，状态参数设置为:', this.afterSaleParam.status);
 			}
 			
 			// 显示加载中提示
@@ -292,12 +349,12 @@
 				if (!jsonAttr) return '';
 				
 				try {
-					let attrArr = JSON.parse(jsonAttr);
-					let attrStr = '';
-					for (let attr of attrArr) {
-						attrStr += attr.key;
-						attrStr += ":";
-						attrStr += attr.value;
+				let attrArr = JSON.parse(jsonAttr);
+				let attrStr = '';
+				for (let attr of attrArr) {
+					attrStr += attr.key;
+					attrStr += ":";
+					attrStr += attr.value;
 						attrStr += "; ";
 					}
 					return attrStr;
@@ -515,63 +572,92 @@
 			},
 			// 获取订单编号，考虑各种可能的数据结构
 			getOrderSn(item) {
+				if (!item) return '无订单信息';
+				
+				// 调试日志 - 输出售后单完整数据结构
+				console.log('售后单数据:', JSON.stringify(item));
+				
 				if (item.orderSn) {
+					console.log('使用item.orderSn:', item.orderSn);
 					return item.orderSn;
 				} else if (item.order && item.order.orderSn) {
+					console.log('使用item.order.orderSn:', item.order.orderSn);
 					return item.order.orderSn;
 				} else if (item.orderId) {
-					return '订单编号: ' + item.orderId;
+					console.log('无orderSn字段，使用订单ID代替:', item.orderId);
+					// 提示：这里应返回订单编号而非订单ID
+					return '订单ID:' + item.orderId;
 				} else if (item.order && item.order.id) {
-					return '订单编号: ' + item.order.id;
+					console.log('无orderSn字段，使用order.id代替:', item.order.id);
+					return '订单ID:' + item.order.id;
 				} else {
+					console.log('无订单信息');
 					return '无订单信息';
 				}
 			},
 			
 			//加载数据
-			loadData(isRefresh = false, showLoading = false) {
-				// 当前选中的选项卡
+			loadData(isRefresh = false, showLoading = true) {
+				console.log('开始加载售后数据', isRefresh ? '(刷新模式)' : '(加载更多模式)');
+				
 				const currentTab = this.navList[this.tabCurrentIndex];
 				
-				// 如果是刷新操作，重置页码
+				// 当需要刷新时，不应该返回空数据，而是应该强制刷新
+				if (currentTab.loadingType === 'loading' && !isRefresh) {
+					console.log('正在加载中，跳过');
+					return Promise.resolve([]);
+				}
+				
 				if (isRefresh) {
+					// 重置页码
 					currentTab.pageNum = 1;
+					// 重置数据
+					currentTab.afterSaleList = [];
 				} else {
-					// 否则页码加1
-					currentTab.pageNum++;
+					// 如果是加载更多，页码加1
+					currentTab.pageNum = currentTab.pageNum + 1;
 				}
 				
-				// 已经在加载中，则不重复请求
-				if (currentTab.loadingType === 'loading') {
-					return Promise.reject(new Error('已经在加载中'));
+				// 设置加载中状态
+				currentTab.loadingType = 'loading';
+				
+				// 设置请求参数
+				this.afterSaleParam.pageNum = currentTab.pageNum;
+				
+				// 如果有订单ID，处理orderId参数
+				if (this.orderId) {
+					this.afterSaleParam.orderId = this.orderId;
+					console.log('按订单ID筛选售后记录:', this.orderId);
+					
+					// 如果是按订单ID筛选且在全部选项卡，则不用设置状态筛选
+					if (currentTab.state === -1) {
+						// 清除状态筛选，查看所有状态的记录
+						this.afterSaleParam.status = -1;
+					} else {
+						// 否则仍然按当前选项卡的状态筛选
+						this.afterSaleParam.status = currentTab.state;
+					}
+				} else {
+					// 没有订单ID时，严格按照当前标签页的状态筛选
+					this.afterSaleParam.status = currentTab.state;
+					
+					// 如果不需要按订单过滤，但参数中有orderId，则删除它
+					if (this.afterSaleParam.orderId) {
+						delete this.afterSaleParam.orderId;
+					}
 				}
 				
-				// 显示加载提示
+				console.log('请求参数:', JSON.stringify(this.afterSaleParam));
+				
+				// 显示loading提示
 				if (showLoading) {
 					uni.showLoading({
-						title: '加载中'
+						title: '加载中...'
 					});
 				}
 				
-				// 更新加载状态
-				currentTab.loadingType = 'loading';
-				
-				// 构建请求参数
-				const params = {
-					pageNum: currentTab.pageNum,
-					pageSize: this.afterSaleParam.pageSize
-				};
-				
-				// 只有当状态不是全部时才添加状态过滤
-				if (currentTab.state !== -1) {
-					params.status = currentTab.state;
-				}
-				
-				console.log('请求售后列表参数:', JSON.stringify(params));
-				
-				// 发起请求并返回Promise
 				return new Promise((resolve, reject) => {
-					fetchAfterSaleList(params)
+					fetchAfterSaleList(this.afterSaleParam)
 						.then(response => {
 							// 请求完成后关闭loading
 							if (showLoading) {
@@ -586,7 +672,18 @@
 								
 								// 打印售后列表数据结构
 								if (list.length > 0) {
-									console.log('售后列表第一项数据结构:', JSON.stringify(list[0]));
+									// 打印第一条售后单详细数据
+									console.log('售后列表第一项数据结构:');
+									const firstItem = list[0];
+									console.log('ID:', firstItem.id);
+									console.log('订单ID:', firstItem.orderId);
+									console.log('订单编号:', firstItem.orderSn);
+									console.log('状态:', firstItem.status);
+									console.log('创建时间:', firstItem.createTime);
+									console.log('处理时间:', firstItem.handleTime);
+									console.log('商品项数量:', firstItem.afterSaleItemList ? firstItem.afterSaleItemList.length : 0);
+									// 完整数据
+									console.log('完整数据:', JSON.stringify(firstItem));
 								} else {
 									console.log('售后列表为空');
 								}
@@ -699,20 +796,50 @@
 			refreshCurrentTab() {
 				console.log('刷新当前选项卡', this.tabCurrentIndex);
 				
+				// 保存当前选项卡索引
+				const currentTabIndex = this.tabCurrentIndex;
+				
 				// 显示loading提示
 				uni.showLoading({
 					title: '刷新中...'
 				});
 				
 				// 重置当前选项卡数据
-				const currentTab = this.navList[this.tabCurrentIndex];
+				const currentTab = this.navList[currentTabIndex];
 				currentTab.pageNum = 1;
 				currentTab.afterSaleList = [];
 				currentTab.loadingType = 'loading';
 				
+				// 加载数据，确保传递正确的状态值
+				if (this.orderId) {
+					// 如果有订单ID，添加到请求参数
+					this.afterSaleParam.orderId = this.orderId;
+					console.log('刷新时按订单ID筛选:', this.orderId);
+					
+					// 如果是按订单ID筛选且在全部选项卡，则不用设置状态筛选
+					if (currentTab.state === -1) {
+						// 清除状态筛选，查看所有状态的记录
+						this.afterSaleParam.status = -1;
+					} else {
+						// 否则仍然按当前选项卡的状态筛选
+						this.afterSaleParam.status = currentTab.state;
+					}
+				} else {
+					// 没有订单ID时，严格按照当前标签页的状态筛选
+					this.afterSaleParam.status = currentTab.state;
+					
+					// 如果不需要按订单过滤，但参数中有orderId，则删除它
+					if (this.afterSaleParam.orderId) {
+						delete this.afterSaleParam.orderId;
+					}
+				}
+				
 				// 加载数据
 				this.loadData(true, false)
 					.then(() => {
+						// 确保选项卡没有被改变
+						this.tabCurrentIndex = currentTabIndex;
+						
 						// 延迟关闭loading
 						setTimeout(() => {
 							uni.hideLoading();
@@ -724,6 +851,9 @@
 						}, 500);
 					})
 					.catch(() => {
+						// 确保选项卡没有被改变
+						this.tabCurrentIndex = currentTabIndex;
+						
 						// 延迟关闭loading（即使出错）
 						setTimeout(() => {
 							uni.hideLoading();
@@ -744,6 +874,16 @@
 				
 				const currentTab = this.navList[this.tabCurrentIndex];
 				
+				// 确保状态参数与当前选项卡一致
+				this.afterSaleParam.status = currentTab.state;
+				
+				// 如果是按订单ID筛选且在全部选项卡，则不用设置状态筛选
+				if (this.orderId && currentTab.state === -1) {
+					this.afterSaleParam.status = -1;
+				}
+				
+				console.log(`切换到标签页 ${this.tabCurrentIndex}，状态参数设置为:`, this.afterSaleParam.status);
+				
 				// 如果当前选项卡没有数据且不在加载中，则加载数据
 				if (currentTab.afterSaleList.length === 0 && currentTab.loadingType !== 'loading') {
 					this.loadData(true, true);
@@ -757,9 +897,19 @@
 					this.refreshCurrentTab();
 				} else {
 					// 否则切换选项卡
-					this.tabCurrentIndex = index;
+				this.tabCurrentIndex = index;
 					
 					const currentTab = this.navList[this.tabCurrentIndex];
+					
+					// 确保状态参数与当前选项卡一致
+					this.afterSaleParam.status = currentTab.state;
+					
+					// 如果是按订单ID筛选且在全部选项卡，则不用设置状态筛选
+					if (this.orderId && currentTab.state === -1) {
+						this.afterSaleParam.status = -1;
+					}
+					
+					console.log(`点击切换到标签页 ${this.tabCurrentIndex}，状态参数设置为:`, this.afterSaleParam.status);
 					
 					// 如果当前选项卡没有数据，则加载数据
 					if (currentTab.afterSaleList.length === 0) {
@@ -836,72 +986,6 @@
 				uni.navigateTo({
 					url: `/pages/afterSale/afterSaleDetail?id=${id}`
 				});
-			},
-			// 查看详情
-			viewDetail(item) {
-				// 跳转到售后详情页面
-				uni.navigateTo({
-					url: '/pages/afterSale/afterSaleDetail?id=' + item.id
-				});
-			},
-			// 取消售后申请
-			cancelAfterSale(itemId) {
-				uni.showModal({
-					title: '提示',
-					content: '确定要取消该售后申请吗？\n取消后记录将被删除',
-					success: (res) => {
-						if (res.confirm) {
-							uni.showLoading({
-								title: '处理中...'
-							});
-							
-							console.log('准备取消售后申请:', itemId);
-							
-							// 确保id参数正确传递
-							cancelAfterSale({id: itemId}).then(response => {
-								uni.hideLoading();
-								console.log('取消售后申请响应:', response);
-								
-								if (response.code === 200) {
-									uni.showToast({
-										title: '售后申请已取消',
-										icon: 'success'
-									});
-									// 刷新当前页
-									this.refreshCurrentTab();
-								} else {
-									uni.showToast({
-										title: response.message || '取消失败，请重试',
-										icon: 'none'
-									});
-								}
-							}).catch(error => {
-								uni.hideLoading();
-								console.error('取消售后申请失败:', error);
-								uni.showToast({
-									title: '取消失败: ' + (error.message || '未知错误'),
-									icon: 'none'
-								});
-							});
-						}
-					}
-				});
-			},
-			// 获取状态文本
-			getStatusText(status) {
-				const statusMap = {
-					0: '待处理',
-					1: '处理中',
-					2: '已完成',
-					3: '已拒绝'
-				};
-				return statusMap[status] || '未知状态';
-			},
-			// 格式化日期
-			formatDate(dateStr) {
-				if (!dateStr) return 'N/A';
-				const date = new Date(dateStr);
-				return formatDate(date, 'yyyy-MM-dd hh:mm:ss');
 			},
 			// 查看详情
 			viewDetails(item) {
@@ -998,6 +1082,163 @@
 				const pics = this.getProductProofPics(product);
 				return pics.slice(0, 5); // 最多显示5张图片
 			},
+			// 取消售后申请
+			cancelAfterSale(itemId) {
+				uni.showModal({
+					title: '提示',
+					content: '确定要取消该售后申请吗？\n取消后记录将被删除',
+					success: (res) => {
+						if (res.confirm) {
+							uni.showLoading({
+								title: '处理中...'
+							});
+							
+							console.log('准备取消售后申请:', itemId);
+							
+							// 保存当前选项卡索引
+							const currentTabIndex = this.tabCurrentIndex;
+							
+							// 检查当前标签页的记录数量
+							const currentTab = this.navList[currentTabIndex];
+							const isLastRecord = currentTab.afterSaleList.length === 1;
+							
+							// 确保id参数正确传递
+							cancelAfterSale({id: itemId}).then(response => {
+								uni.hideLoading();
+								console.log('取消售后申请响应:', response);
+								
+								if (response.code === 200) {
+									// 找到并从所有标签页中移除已取消的售后单
+									this.removeAfterSaleFromAllTabs(itemId);
+									
+									// 成功提示
+									uni.showToast({
+										title: '售后申请已取消',
+										icon: 'success'
+									});
+									
+									// 如果当前标签页是最后一条记录，刷新显示空状态
+									if (isLastRecord) {
+										// 确保回到正确的选项卡
+										this.tabCurrentIndex = currentTabIndex;
+										// 刷新当前选项卡
+										this.refreshCurrentTab();
+									}
+									
+									// 如果当前不是全部标签页，还需要刷新全部标签页
+									if (currentTabIndex !== 0) {
+										console.log('当前不在全部标签页，需要静默刷新全部标签页数据');
+										
+										// 重置全部标签页的数据
+										this.navList[0].afterSaleList = [];
+										this.navList[0].loadingType = 'more';
+										this.navList[0].pageNum = 1;
+										this.navList[0].loading = true; // 设置加载状态
+										
+										// 由于我们不切换到全部标签页，所以不影响用户体验
+										// 静默刷新全部标签页数据
+										const originalStatus = this.afterSaleParam.status;
+										
+										// 构造临时查询参数，避免影响当前状态
+										const tempParams = {
+											status: -1, // 查询全部状态
+											pageNum: 1,
+											pageSize: this.afterSaleParam.pageSize
+										};
+										
+										// 如果有订单ID筛选，保留它
+										if (this.orderId) {
+											tempParams.orderId = this.orderId;
+										}
+										
+										console.log('刷新全部标签页，参数:', tempParams);
+										
+										// 加载全部标签页数据
+										fetchAfterSaleList(tempParams)
+											.then(response => {
+												console.log('刷新全部标签页响应:', response);
+												if (response.code === 200 && response.data) {
+													this.navList[0].afterSaleList = response.data.list || [];
+													this.navList[0].loadingType = (response.data.list || []).length < this.afterSaleParam.pageSize ? 'noMore' : 'more';
+													console.log(`全部标签页刷新完成，数据数量: ${this.navList[0].afterSaleList.length}`);
+												} else {
+													console.error('刷新全部标签页失败, 响应错误:', response.message);
+													this.navList[0].afterSaleList = [];
+													this.navList[0].loadingType = 'more';
+												}
+											})
+											.catch(error => {
+												console.error('刷新全部标签页异常:', error);
+												this.navList[0].afterSaleList = [];
+												this.navList[0].loadingType = 'more';
+											})
+											.finally(() => {
+												this.navList[0].loading = false; // 结束加载状态
+											});
+									}
+								} else {
+									uni.showToast({
+										title: response.message || '取消失败，请重试',
+										icon: 'none'
+									});
+								}
+							}).catch(error => {
+								uni.hideLoading();
+								console.error('取消售后申请失败:', error);
+								uni.showToast({
+									title: '取消失败: ' + (error.message || '未知错误'),
+									icon: 'none'
+								});
+							});
+						}
+					}
+				});
+			},
+			// 从所有标签页中移除指定售后单
+			removeAfterSaleFromAllTabs(afterSaleId) {
+				// 遍历所有标签页
+				for (let i = 0; i < this.navList.length; i++) {
+					const tab = this.navList[i];
+					const originalLength = tab.afterSaleList.length;
+					
+					// 找到并移除该售后单
+					const index = tab.afterSaleList.findIndex(item => item.id == afterSaleId);
+					if (index !== -1) {
+						console.log(`从标签页 ${i}(${tab.text}) 中移除售后单 ${afterSaleId}, 原数量:${originalLength}`);
+						tab.afterSaleList.splice(index, 1);
+						console.log(`移除后数量:${tab.afterSaleList.length}`);
+						
+						// 如果移除后该标签页没有数据了，更新loadingType
+						if (tab.afterSaleList.length === 0) {
+							tab.loadingType = 'more';
+						}
+					}
+				}
+			},
+			// 获取状态文本
+			getStatusText(status) {
+				const statusMap = {
+					0: '待处理',
+					1: '处理中',
+					2: '已完成',
+					3: '已拒绝'
+				};
+				return statusMap[status] || '未知状态';
+			},
+			// 格式化日期
+			formatDate(dateStr) {
+				if (!dateStr) return 'N/A';
+				const date = new Date(dateStr);
+				return formatDate(date, 'yyyy-MM-dd hh:mm:ss');
+			},
+			// 清除订单过滤
+			clearOrderFilter() {
+				console.log('清除订单过滤');
+				this.orderId = null;
+				this.tabCurrentIndex = 0;
+				this.afterSaleParam.status = -1;
+				this.refreshCurrentTab();
+			},
 		}
 	}
 </script>
@@ -1007,7 +1248,7 @@
 		background-color: #f8f8f8;
 		min-height: 100vh;
 	}
-	
+
 	.navbar {
 		display: flex;
 		height: 80rpx;
@@ -1016,7 +1257,7 @@
 		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
 		position: relative;
 		z-index: 10;
-		
+
 		.nav-item {
 			flex: 1;
 			display: flex;
@@ -1026,10 +1267,10 @@
 			font-size: 28rpx;
 			color: #303133;
 			position: relative;
-			
+
 			&.current {
 				color: #3366cc;
-				
+
 				&:after {
 					content: '';
 					position: absolute;
@@ -1076,7 +1317,7 @@
 		background: #fff;
 		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.1);
 		overflow: hidden;
-		
+
 		.i-top {
 			display: flex;
 			justify-content: space-between;
@@ -1088,7 +1329,7 @@
 				font-size: 26rpx;
 				color: #333;
 			}
-			
+
 			.state {
 				font-size: 24rpx;
 				padding: 4rpx 12rpx;
@@ -1117,7 +1358,7 @@
 		}
 		
 		.order-num {
-			display: flex;
+				display: flex;
 			justify-content: space-between;
 			align-items: center;
 			padding: 16rpx 20rpx;
@@ -1138,7 +1379,7 @@
 				margin-bottom: 20rpx;
 				
 				.product-item {
-					display: flex;
+			display: flex;
 					margin-bottom: 16rpx;
 					padding: 16rpx;
 					background: #f8f8f8;
@@ -1179,7 +1420,7 @@
 						}
 						
 						.product-price-qty {
-							display: flex;
+			display: flex;
 							justify-content: space-between;
 							font-size: 26rpx;
 							color: #3366cc;
@@ -1237,7 +1478,7 @@
 				
 				.info-item {
 					justify-content: space-between;
-					align-items: center;
+		align-items: center;
 					margin-bottom: 12rpx;
 					
 					&:last-child {
@@ -1374,6 +1615,22 @@
 		
 		.retry-btn {
 			margin-top: 30rpx;
+			padding: 10rpx 40rpx;
+			background-color: #f8f8f8;
+			color: #666;
+			font-size: 24rpx;
+			border-radius: 30rpx;
+			box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
+			transition: all 0.2s ease;
+			
+			&:active {
+				background-color: #e8e8e8;
+				transform: scale(0.98);
+			}
+		}
+		
+		.back-btn {
+			margin-top: 20rpx;
 			padding: 10rpx 40rpx;
 			background-color: #f8f8f8;
 			color: #666;

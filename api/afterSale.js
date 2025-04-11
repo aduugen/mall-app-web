@@ -7,6 +7,7 @@ import { API_BASE_URL } from '@/utils/appConfig.js'
  * @param {number} params.status - 售后状态
  * @param {number} params.pageNum - 页码
  * @param {number} params.pageSize - 每页数量
+ * @param {number} [params.orderId] - 订单ID，可选，用于筛选特定订单的售后记录
  */
 export function fetchAfterSaleList(params) {
 	return request({
