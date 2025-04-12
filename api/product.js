@@ -22,3 +22,13 @@ export function fetchProductDetail(id) {
 	})
 }
 
+/**
+ * 检查商品状态是否可用（上架且未删除）
+ */
+export function checkProductStatus(id) {
+	return request({
+		method: 'GET',
+		url: `/product/checkStatus/${id}`
+	});
+}
+

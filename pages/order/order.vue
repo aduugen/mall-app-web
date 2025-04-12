@@ -40,8 +40,8 @@
 						</view>
 						<view class="goods-box-single" v-for="(orderItem, itemIndex) in item.orderItemList"
 						 :key="itemIndex">
-							<image class="goods-img" :src="orderItem.productPic" mode="aspectFill"></image>
-							<view class="right">
+							<image class="goods-img" :src="orderItem.productPic" mode="aspectFill" @click="goToProductDetail(orderItem)"></image>
+							<view class="right" @click="goToProductDetail(orderItem)">
 								<text class="title clamp">{{orderItem.productName}}</text>
 								<text class="attr-box">{{orderItem.productAttr | formatProductAttr}} x {{orderItem.productQuantity}}</text>
 								<text class="price">{{orderItem.productPrice}}</text>
@@ -113,6 +113,9 @@
 		fetchInvoiceByOrderId,
 		checkOrderInvoice
 	} from '@/api/invoice.js';
+	import {
+		checkProductStatus
+	} from '@/api/product.js';
 	export default {
 		components: {
 			empty
@@ -773,6 +776,42 @@
 					console.log('所有订单售后状态已更新');
 				}).catch(error => {
 					console.error('更新售后状态过程出错:', error);
+				});
+			},
+			/**
+			 * 跳转到商品详情页，先检查商品状态
+			 */
+			goToProductDetail(orderItem) {
+				if (!orderItem || !orderItem.productId) {
+					console.error('无效的订单商品项:', orderItem);
+					return;
+				}
+				const productId = orderItem.productId;
+				
+				// 调用后端 API 检查商品状态 (假设已在 @/api/product.js 中定义 checkProductStatus)
+				uni.showLoading({ title: '加载中...' });
+				checkProductStatus(productId).then(response => {
+					uni.hideLoading();
+					// 假设后端返回 { code: 200, data: { isAvailable: true/false } }
+					if (response.code === 200 && response.data && response.data.isAvailable) {
+						// 商品有效，跳转到详情页
+						uni.navigateTo({
+							url: `/pages/product/product?id=${productId}`
+						});
+					} else {
+						// 商品无效（已下架或删除），提示用户
+						uni.showToast({
+							title: '该商品已下架',
+							icon: 'none'
+						});
+					}
+				}).catch(error => {
+					uni.hideLoading();
+					console.error('检查商品状态失败:', error);
+					uni.showToast({
+						title: '获取商品信息失败',
+						icon: 'none'
+					});
 				});
 			},
 		},
