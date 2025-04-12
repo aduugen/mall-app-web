@@ -19,7 +19,6 @@
 				<text class="price" v-else>￥{{product.price}}</text>
 			</view>
 			<view class="bot-row">
-				<text class="price">￥{{ product.price }}</text>
 				<text>销量: {{product.sale}}</text>
 				<text>库存: {{product.stock}}</text>
 				<text>浏览量: {{product.viewCnt}}</text>
