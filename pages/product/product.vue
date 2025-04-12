@@ -97,7 +97,7 @@
                         </view>
                         <text class="con">{{comment.content}}</text>
                         <view class="bot">
-                            <text class="attr">{{comment.productAttribute}}</text>
+                            <text class="attr">{{comment.productAttribute | formatProductAttr}}</text>
                             <text class="time">{{comment.createTime | formatDateTime}}</text>
                         </view>
                         <!-- 评价图片预览 -->
@@ -377,6 +377,22 @@
 					return "指定商品可用";
 				}
 				return null;
+			},
+			formatProductAttr(jsonAttr) {
+				if (!jsonAttr) return '';
+				try {
+					let attrArr = JSON.parse(jsonAttr);
+					let attrStr = '';
+					for (let attr of attrArr) {
+						attrStr += attr.key + ":" + attr.value + "; ";
+					}
+					// 移除末尾的分号和空格
+					return attrStr.replace(/;\s*$/, '');
+				} catch (e) {
+					// 如果解析失败，直接返回原始字符串或者空字符串
+					console.error("解析商品属性JSON失败:", jsonAttr, e);
+					return jsonAttr; // 或者返回 ''
+				}
 			},
 		},
 		methods: {

@@ -78,7 +78,6 @@
 							
 							<!-- 使用后端返回的 canComment 字段控制评价按钮 -->
 							<button class="action-btn after-sale-btn" v-if="item.canComment" @click="evaluateOrder(item)">评价商品</button>
-							<button class="action-btn after-sale-btn" >再次购买</button>
 						</view>
 					</view>
 

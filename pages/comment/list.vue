@@ -21,7 +21,7 @@
 							   :src="pic" mode="aspectFill" class="pic-item" @click="previewCommentImage(comment, picIndex)"></image>
 					</view>
 					<view class="bot">
-						<text class="attr">{{ comment.productAttribute }}</text>
+						<text class="attr">{{ comment.productAttribute | formatProductAttr }}</text>
 						<text class="time">{{ comment.createTime | formatDateTime }}</text>
 					</view>
 				</view>
@@ -85,6 +85,22 @@
 				}
 				let date = new Date(time);
 				return formatDate(date, 'yyyy-MM-dd hh:mm:ss');
+			},
+			formatProductAttr(jsonAttr) {
+				if (!jsonAttr) return '';
+				try {
+					let attrArr = JSON.parse(jsonAttr);
+					let attrStr = '';
+					for (let attr of attrArr) {
+						attrStr += attr.key + ":" + attr.value + "; ";
+					}
+					// 移除末尾的分号和空格
+					return attrStr.replace(/;\s*$/, '');
+				} catch (e) {
+					// 如果解析失败，直接返回原始字符串或者空字符串
+					console.error("解析商品属性JSON失败:", jsonAttr, e);
+					return jsonAttr; // 或者返回 ''
+				}
 			},
 		},
 		methods: {
