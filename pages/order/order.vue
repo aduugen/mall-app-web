@@ -76,7 +76,8 @@
 							<button class="action-btn after-sale-btn" v-if="item.canApplyAfterSale" @click="applyAfterSale(item)">申请售后</button>
 							<button class="action-btn after-sale-btn" v-if="item.hasAfterSaleRecords" @click="checkAfterSale(item)">查询售后</button>
 							
-							<button class="action-btn recom" @click="evaluateOrder(item)">评价商品</button>
+							<!-- 使用后端返回的 canComment 字段控制评价按钮 -->
+							<button class="action-btn recom" v-if="item.canComment" @click="evaluateOrder(item)">评价商品</button>
 							<button class="action-btn recom" >再次购买</button>
 						</view>
 					</view>
