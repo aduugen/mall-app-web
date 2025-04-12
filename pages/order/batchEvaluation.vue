@@ -304,6 +304,7 @@ export default {
 			const commentItems = products.map(product => {
 				return {
 					productId: product.productId,
+					orderItemId: product.id,
 					rating: product.rating,
 					comment: product.comment,
 					pics: product.uploadedPics || []

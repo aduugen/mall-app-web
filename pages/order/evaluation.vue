@@ -55,12 +55,14 @@
 import { fetchProductDetail } from '@/api/product.js';
 import { createProductComment } from '@/api/order.js';
 import { API_BASE_URL } from '@/utils/appConfig.js';
+import { fetchOrderDetail } from '@/api/order.js';
 
 export default {
 	data() {
 		return {
 			orderId: null,
 			productId: null,
+			orderItemId: null,
 			productInfo: {},
 			rating: 5,
 			comment: '',
@@ -71,14 +73,43 @@ export default {
 		if(options.orderId && options.productId) {
 			this.orderId = options.orderId;
 			this.productId = options.productId;
-			this.getProductDetail();
+			this.loadOrderItemInfo();
 		}
 	},
 	methods: {
+		async loadOrderItemInfo() {
+			if (!this.orderId || !this.productId) return;
+			uni.showLoading({ title: '加载商品信息...' });
+			try {
+				const res = await fetchOrderDetail(this.orderId);
+				if (res.code === 200 && res.data && res.data.orderItemList) {
+					const orderItem = res.data.orderItemList.find(item => item.productId == this.productId);
+					if (orderItem) {
+						this.productInfo = {
+							productPic: orderItem.productPic,
+							productName: orderItem.productName,
+							productAttr: orderItem.productAttr
+						};
+						this.orderItemId = orderItem.id;
+					} else {
+						uni.showToast({ title: '未找到订单中的商品信息', icon: 'none' });
+						console.warn(`未在订单 ${this.orderId} 中找到商品 ID 为 ${this.productId} 的订单项`);
+					}
+				} else {
+					uni.showToast({ title: '加载订单信息失败', icon: 'none' });
+				}
+			} catch (error) {
+				console.error('加载订单信息异常:', error);
+				uni.showToast({ title: '加载信息失败', icon: 'none' });
+			} finally {
+				uni.hideLoading();
+			}
+		},
 		getProductDetail() {
-			fetchProductDetail(this.productId).then(response => {
+			// 这个方法现在可以不用了，信息从订单项获取
+			/* fetchProductDetail(this.productId).then(response => {
 				this.productInfo = response.data;
-			});
+			}); */
 		},
 		setRating(value) {
 			this.rating = value;
@@ -169,9 +200,16 @@ export default {
 				title: '提交评价...'
 			});
 			
+			if (!this.orderItemId) {
+				uni.hideLoading();
+				uni.showToast({ title: '缺少订单商品信息，无法提交', icon: 'none' });
+				return;
+			}
+			
 			createProductComment({
-				orderId: this.orderId,
-				productId: this.productId,
+				orderId: parseInt(this.orderId),
+				productId: parseInt(this.productId),
+				orderItemId: this.orderItemId,
 				rating: this.rating,
 				comment: this.comment,
 				pics: imageUrls
