@@ -22,4 +22,16 @@ export function fetchCommentSummary(productId) {
     url: `/comment/summary/${productId}`,
     method: 'get'
   });
+}
+
+/**
+ * 获取我的评价列表（分页）
+ * @param {Object} params 分页参数 { pageNum, pageSize }
+ */
+export function fetchMyCommentList(params) {
+  return request({
+    url: '/comment/myList',
+    method: 'get',
+    params: params
+  });
 } 

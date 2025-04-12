@@ -122,7 +122,7 @@
 						</view>
 						<text class="service-text">我的收藏</text>
 					</view>
-					<view class="service-item">
+					<view class="service-item" @click="navTo('/pages/comment/myList')">
 						<view class="icon-wrapper">
 							<text class="yticon icon-dianzan-ash"></text>
 						</view>

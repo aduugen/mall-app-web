@@ -299,11 +299,17 @@
 			}
 		},
         {
-            "path" : "pages/comment/list",
-            "style" :                                                                                    
-            {
-                "navigationBarTitleText": "商品评价",
-                "enablePullDownRefresh": false // 通常不需要下拉刷新，靠上拉加载
+            "path": "pages/comment/list",
+            "style": {
+                "navigationBarTitleText": "评价列表",
+                "enablePullDownRefresh": true
+            }
+        },
+        {
+            "path": "pages/comment/myList",
+            "style": {
+                "navigationBarTitleText": "我的评价",
+                "enablePullDownRefresh": true
             }
         }
 	],
