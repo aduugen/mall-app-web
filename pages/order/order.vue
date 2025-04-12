@@ -55,30 +55,30 @@
 							<text class="price">{{item.payAmount}}</text>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 0">
-							<button class="action-btn" @click="cancelOrder(item.id)">取消订单</button>
-							<button class="action-btn recom" @click="payOrder(item.id)">立即付款</button>
+							<button class="action-btn after-sale-btn" @click="cancelOrder(item.id)">取消订单</button>
+							<button class="action-btn after-sale-btn" @click="payOrder(item.id)">立即付款</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 2">
-							<button class="action-btn" >查看物流</button>
-							<button class="action-btn recom" @click="receiveOrder(item.id)">确认收货</button>
+							<button class="action-btn after-sale-btn" >查看物流</button>
+							<button class="action-btn after-sale-btn" @click="receiveOrder(item.id)">确认收货</button>
 						</view>
 						<view class="action-box b-t" v-if="item.status == 3">
 							<!-- 开具发票按钮，根据后端返回的invoiceStatus状态来判断 -->
-							<button class="action-btn" v-if="item.invoiceStatus === 0 || item.invoiceStatus === 3" @click="invoiceOrder(item)">开具发票</button>
+							<button class="action-btn after-sale-btn" v-if="item.invoiceStatus === 0 || item.invoiceStatus === 3" @click="invoiceOrder(item)">开具发票</button>
 							
 							<!-- 在"申请中"状态下显示查询按钮 -->
-							<button class="action-btn" v-if="item.invoiceStatus === 1" @click="checkInvoiceStatus(item)">查询发票</button>
+							<button class="action-btn after-sale-btn" v-if="item.invoiceStatus === 1" @click="checkInvoiceStatus(item)">查询发票</button>
 							
 							<!-- 在"已开票"状态下显示查看按钮 -->
-							<button class="action-btn" v-if="item.invoiceStatus === 2" @click="viewInvoice(item)">查看发票</button>
+							<button class="action-btn after-sale-btn" v-if="item.invoiceStatus === 2" @click="viewInvoice(item)">查看发票</button>
 							
 							<!-- 售后按钮逻辑 - 改进版 -->
 							<button class="action-btn after-sale-btn" v-if="item.canApplyAfterSale" @click="applyAfterSale(item)">申请售后</button>
 							<button class="action-btn after-sale-btn" v-if="item.hasAfterSaleRecords" @click="checkAfterSale(item)">查询售后</button>
 							
 							<!-- 使用后端返回的 canComment 字段控制评价按钮 -->
-							<button class="action-btn recom" v-if="item.canComment" @click="evaluateOrder(item)">评价商品</button>
-							<button class="action-btn recom" >再次购买</button>
+							<button class="action-btn after-sale-btn" v-if="item.canComment" @click="evaluateOrder(item)">评价商品</button>
+							<button class="action-btn after-sale-btn" >再次购买</button>
 						</view>
 					</view>
 
@@ -815,7 +815,7 @@
 			position: relative;
 
 			&.current {
-				color: $base-color;
+				color: #286090;
 
 				&:after {
 					content: '';
@@ -825,7 +825,7 @@
 					transform: translateX(-50%);
 					width: 44px;
 					height: 0;
-					border-bottom: 2px solid $base-color;
+					border-bottom: 2px solid #286090;
 				}
 			}
 		}
