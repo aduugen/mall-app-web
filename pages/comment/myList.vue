@@ -9,16 +9,14 @@
                     <view class="product-details">
                         <text class="product-name clamp">{{ comment.productName }}</text>
                         <text class="product-attr">{{ comment.productAttribute | formatProductAttr }}</text>
+                        <text class="product-price" v-if="comment.productPrice !== null && comment.productPrice !== undefined">购买时价格: ¥{{ comment.productPrice }}</text>
                     </view>
+                    <view class="comment-status" :class="getStatusClass(comment.showStatus)">{{ comment.statusText }}</view>
                 </view>
                 <!-- 评价内容区域 -->
 				<view class="comment-content">
-                    <view class="user-info">
-                        <image class="portrait" :src="comment.memberIcon || '/static/missing-face.png'" mode="aspectFill"></image>
-                        <text class="name">{{ comment.memberNickName }}</text>
-                        <view class="star-line">
-                            <text class="yticon icon-xingxing" v-for="n in 5" :key="n" :class="{ active: n <= comment.star }"></text>
-                        </view>
+                    <view class="star-line">
+                        <text class="yticon icon-xingxing" v-for="n in 5" :key="n" :class="{ active: n <= comment.star }"></text>
                     </view>
 					<text class="con">{{ comment.content }}</text>
 					<view class="pic-list" v-if="comment.pics">
@@ -26,7 +24,7 @@
 							   :src="pic" mode="aspectFill" class="pic-item" @click="previewCommentImage(comment, picIndex)"></image>
 					</view>
 					<view class="bot">
-						<text class="time">{{ comment.createTime | formatDateTime }}</text>
+                        <text class="time">{{ comment.createTime | formatDateTime }}</text>
 					</view>
 				</view>
 			</view>
@@ -163,7 +161,14 @@
 				uni.navigateTo({
 					url
 				})
-			}
+			},
+            // Helper function to get status class for styling
+            getStatusClass(status) {
+                if (status === 0) return 'status-pending'; // 审核中
+                if (status === 1) return 'status-approved'; // 已显示
+                if (status === 2) return 'status-hidden'; // 已隐藏
+                return 'status-unknown'; // 其他
+            }
 		},
         filters: {
             // 格式化商品属性
@@ -227,6 +232,7 @@
         margin-bottom: 20rpx; // 增加与评价内容的间距
         padding-bottom: 20rpx;
         border-bottom: 1rpx solid #eee; // 添加分隔线
+        position: relative; // For absolute positioning of status
 
         .product-pic {
             width: 120rpx;
@@ -249,6 +255,39 @@
                 color: $font-color-light;
                 margin-top: 8rpx;
             }
+            .product-price {
+                font-size: $font-sm;
+                color: $font-color-light;
+                margin-top: 8rpx;
+            }
+        }
+        .comment-status {
+            position: absolute;
+            top: 10rpx;
+            right: 10rpx;
+            font-size: $font-sm - 2upx;
+            padding: 4rpx 10rpx;
+            border-radius: 6rpx;
+            &.status-pending {
+                background-color: #fdf6ec;
+                color: #f9ae3d;
+                border: 1rpx solid #f9ae3d;
+            }
+            &.status-approved {
+                 background-color: #eafaf4;
+                color: $uni-color-success;
+                border: 1rpx solid $uni-color-success;
+            }
+            &.status-hidden {
+                background-color: #f8f8f8;
+                color: $font-color-light;
+                border: 1rpx solid #ddd;
+            }
+            &.status-unknown {
+                background-color: #f8f8f8;
+                color: $font-color-light;
+                border: 1rpx solid #ddd;
+            }
         }
     }
     
@@ -257,31 +296,15 @@
         flex-direction: column;
         flex: 1;
 
-        .user-info {
+        .star-line {
             display: flex;
-            align-items: center;
-            margin-bottom: 16rpx;
-
-            .portrait {
-                width: 60rpx;
-                height: 60rpx;
-                border-radius: 50%;
-                margin-right: 16rpx;
-            }
-            .name {
-                font-size: $font-sm + 2upx;
-                color: $font-color-dark;
-                margin-right: 10rpx;
-            }
-            .star-line {
-                display: flex;
-                .yticon {
-                    font-size: 30rpx;
-                    margin-right: 6rpx;
-                    color: #ddd; // 未点亮颜色
-                    &.active {
-                        color: $uni-color-warning; // 点亮颜色，使用 uni-app 警告色
-                    }
+            margin-bottom: 16rpx; // Add margin since user-info is removed
+            .yticon {
+                font-size: 30rpx;
+                margin-right: 6rpx;
+                color: #ddd;
+                &.active {
+                    color: $uni-color-warning;
                 }
             }
         }
@@ -311,10 +334,13 @@
 
 		.bot {
 			display: flex;
-			justify-content: space-between;
+			justify-content: flex-end;
 			font-size: $font-sm;
 			color: $font-color-light;
             margin-top: 16rpx;
+            .time {
+                 white-space: nowrap; // Prevent time from wrapping
+            }
 		}
 	}
 }
