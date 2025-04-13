@@ -14,7 +14,7 @@
 						<text class="goods-name">{{item.productName}}</text>
 						<text class="goods-attr">{{item.productAttr | formatProductAttr}}</text>
 						<view class="goods-price">
-							<text class="price">￥{{item.productPrice}}</text>
+							<text class="price">￥{{item.realAmount}}</text>
 							<text class="quantity">x {{item.productQuantity}}</text>
 						</view>
 						<view class="applied-info" v-if="item.appliedQuantity > 0">

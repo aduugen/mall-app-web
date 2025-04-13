@@ -76,7 +76,7 @@
 											<view class="product-name">{{product.productName}}</view>
 											<view class="product-attr" v-if="product.productAttr">{{formatProductAttr(product.productAttr)}}</view>
 											<view class="product-price-qty">
-												<text>单价: ¥{{product.productPrice}}</text>
+												<text>单价: ¥{{product.productRealPrice}}</text>
 												<text>退货数量: {{product.returnQuantity || 0}}</text>
 											</view>
 											<view class="product-reason" v-if="product.returnReason">
@@ -1028,7 +1028,7 @@
 				
 				return item.afterSaleItemList.reduce((total, product) => {
 					// 退款金额 = 单价 × 退货数量
-					const price = parseFloat(product.productPrice || 0);
+					const price = parseFloat(product.productRealPrice || 0);
 					const quantity = parseInt(product.returnQuantity || 0);
 					return total + (price * quantity);
 				}, 0).toFixed(2);
