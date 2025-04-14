@@ -316,6 +316,17 @@
 					});
 				});
 		},
+		onShow() {
+			// 检查是否需要刷新数据
+			const needRefresh = uni.getStorageSync('afterSaleListNeedRefresh');
+			if (needRefresh) {
+				console.log('检测到刷新标记，刷新当前选项卡');
+				// 清除刷新标记
+				uni.removeStorageSync('afterSaleListNeedRefresh');
+				// 刷新当前选项卡
+				this.refreshCurrentTab();
+			}
+		},
 		filters: {
 			formatStatus(status) {
 				let statusTip = '';
@@ -705,6 +716,9 @@
 									currentTab.loadingType = 'more';
 								}
 								
+								// 缓存售后列表数据，供详情页面使用
+								this.cacheAfterSaleList();
+								
 								resolve(list);
 							} else {
 								// 请求失败
@@ -747,6 +761,23 @@
 							reject(error);
 						});
 				});
+			},
+			
+			// 新增方法：缓存售后列表数据
+			cacheAfterSaleList() {
+				try {
+					// 创建需要缓存的数据结构
+					const cacheData = this.navList.map(tab => ({
+						state: tab.state,
+						afterSaleList: tab.afterSaleList
+					}));
+					
+					// 保存到本地存储
+					uni.setStorageSync('afterSaleListCache', JSON.stringify(cacheData));
+					console.log('售后列表数据已缓存，包含', cacheData.length, '个标签页');
+				} catch (error) {
+					console.error('缓存售后列表数据失败:', error);
+				}
 			},
 			
 			// 下拉刷新
@@ -993,6 +1024,13 @@
 				uni.navigateTo({
 					url: '/pages/afterSale/afterSaleDetail?id=' + item.id
 				});
+				
+				// 监听从详情页面传来的刷新事件
+				uni.$once('afterSaleListRefresh', () => {
+					console.log('收到详情页面刷新通知');
+					// 设置刷新标记，使onShow中能检测到需要刷新
+					uni.setStorageSync('afterSaleListNeedRefresh', true);
+				});
 			},
 			// 检查是否有凭证图片
 			hasProofPics(item) {
@@ -1238,6 +1276,12 @@
 				this.tabCurrentIndex = 0;
 				this.afterSaleParam.status = -1;
 				this.refreshCurrentTab();
+			},
+			// 在退出页面时确保缓存最新数据
+			onUnload() {
+				// 缓存售后列表数据
+				this.cacheAfterSaleList();
+				console.log('页面卸载，已更新售后列表缓存');
 			},
 		}
 	}

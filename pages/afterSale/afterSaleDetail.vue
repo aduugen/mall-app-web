@@ -17,6 +17,9 @@
 					<text class="status-text">{{statusText}}</text>
 					<text class="status-desc">{{statusDesc}}</text>
 				</view>
+				<view class="refresh-btn" v-if="dataFromCache" @click="refreshData">
+					<text class="yticon icon-refresh"></text>
+				</view>
 			</view>
 			
 			<!-- 进度详情 -->
@@ -76,7 +79,7 @@
 				</view>
 				<view class="detail-item">
 					<text class="item-label">售后原因</text>
-					<text class="item-value">{{afterSaleDetail.reason}}</text>
+					<text class="item-value">{{getAfterSaleReason()}}</text>
 				</view>
 				<!-- 添加退款总金额显示 -->
 				<view class="detail-item highlight">
@@ -102,11 +105,11 @@
 				</view>
 			</view>
 			
-			<view class="pics-section" v-if="afterSaleDetail && afterSaleDetail.pics">
+			<view class="pics-section" v-if="afterSaleDetail && hasProofPics()">
 				<view class="section-title">退货凭证</view>
 				<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
 					<view class="pics-container">
-						<view class="pic-item" v-for="(pic, picIndex) in formatPics(afterSaleDetail.pics)" :key="picIndex" @click="previewImage(pic, formatPics(afterSaleDetail.pics))">
+						<view class="pic-item" v-for="(pic, picIndex) in getProofPics()" :key="picIndex" @click="previewImage(pic, getProofPics())">
 							<image class="thumbnail" :src="pic" mode="aspectFill"></image>
 						</view>
 					</view>
@@ -115,13 +118,15 @@
 			
 			<view class="goods-section" v-if="afterSaleDetail && afterSaleDetail.afterSaleItemList">
 				<view class="section-title">退货商品</view>
+				<view class="price-note">显示价格为实际支付价格，用于计算退款金额</view>
 				<view class="goods-item" v-for="(item, index) in afterSaleDetail.afterSaleItemList" :key="index">
-					<image class="goods-img" :src="item.productPic" mode="aspectFill"></image>
+					<image class="goods-img" :src="fixImagePath(item.productPic)" mode="aspectFill" @error="onImageError"></image>
 					<view class="goods-info">
 						<text class="goods-name">{{item.productName}}</text>
 						<text class="goods-attr">{{item.productAttr | formatProductAttr}}</text>
 						<view class="goods-price">
-							<text class="price">￥{{item.productPrice}}</text>
+							<text class="price">￥{{item.productRealPrice || item.productPrice || 0}}</text>
+							<text class="original-price" v-if="item.productRealPrice && item.productPrice && item.productRealPrice != item.productPrice">￥{{item.productPrice}}</text>
 						</view>
 						<view class="return-quantity">
 							<text class="quantity-label">购买数量:</text>
@@ -146,6 +151,52 @@
 					</view>
 				</view>
 			</view>
+			
+			<!-- 添加调试信息区域 -->
+			<view class="debug-section" v-if="debugMode && afterSaleDetail">
+				<view class="section-title">调试信息 (Debug Mode)</view>
+				<view class="debug-content">
+					<view class="debug-item">
+						<text class="debug-label">售后ID:</text>
+						<text class="debug-value">{{afterSaleId}}</text>
+					</view>
+					
+					<view class="debug-item">
+						<text class="debug-label">数据来源:</text>
+						<text class="debug-value" :style="{color: dataFromCache ? '#00b894' : '#e17055'}">
+							{{dataFromCache ? '缓存数据' : 'API请求'}}
+						</text>
+					</view>
+					
+					<view class="debug-item">
+						<text class="debug-label">数据类型:</text>
+						<text class="debug-value">{{typeof afterSaleDetail}}</text>
+					</view>
+					
+					<view class="debug-item">
+						<text class="debug-label">顶级字段:</text>
+						<text class="debug-value">{{Object.keys(afterSaleDetail).join(', ')}}</text>
+					</view>
+					
+					<view class="debug-item" v-if="afterSaleDetail.afterSaleItemList">
+						<text class="debug-label">商品项数量:</text>
+						<text class="debug-value">{{afterSaleDetail.afterSaleItemList.length}}</text>
+					</view>
+					
+					<view class="debug-item" v-for="field in filteredDetailFields" :key="field.key">
+						<text class="debug-label">{{field.key}}:</text>
+						<text class="debug-value">{{field.value}}</text>
+					</view>
+					
+					<view class="debug-panel" v-if="afterSaleDetail.afterSaleItemList && afterSaleDetail.afterSaleItemList.length > 0">
+						<text class="debug-panel-title">第一个商品项数据:</text>
+						<view class="debug-item" v-for="field in firstItemFields" :key="field.key">
+							<text class="debug-label">{{field.key}}:</text>
+							<text class="debug-value">{{field.value}}</text>
+						</view>
+					</view>
+				</view>
+			</view>
 		</template>
 	</view>
 </template>
@@ -164,7 +215,9 @@ export default {
 			orderInfo: null,
 			statusChangeTimes: {}, // 存储各状态的时间记录
 			loadError: false,
-			errorMessage: ''
+			errorMessage: '',
+			debugMode: false, // 调试模式标志
+			dataFromCache: false // 标记数据来源是否为缓存
 		}
 	},
 	computed: {
@@ -215,9 +268,48 @@ export default {
 				case 3: return 'reject';
 				default: return '';
 			}
+		},
+		// 过滤后的售后详情字段（排除afterSaleItemList）
+		filteredDetailFields() {
+			if (!this.afterSaleDetail) return [];
+			
+			const result = [];
+			for (const [key, value] of Object.entries(this.afterSaleDetail)) {
+				if (key !== 'afterSaleItemList') {
+					result.push({
+						key,
+						value: typeof value === 'object' ? JSON.stringify(value) : value
+					});
+				}
+			}
+			return result;
+		},
+		// 第一个商品项的字段
+		firstItemFields() {
+			if (!this.afterSaleDetail || !this.afterSaleDetail.afterSaleItemList || !this.afterSaleDetail.afterSaleItemList.length) {
+				return [];
+			}
+			
+			const firstItem = this.afterSaleDetail.afterSaleItemList[0];
+			const result = [];
+			
+			for (const [key, value] of Object.entries(firstItem)) {
+				result.push({
+					key,
+					value: typeof value === 'object' ? JSON.stringify(value) : value
+				});
+			}
+			
+			return result;
 		}
 	},
 	onLoad(options) {
+		// 检查是否启用了调试模式
+		if(options.debug === 'true' || options.debug === '1') {
+			this.debugMode = true;
+			console.log('【调试模式已启用】');
+		}
+		
 		if(options.id) {
 			this.afterSaleId = options.id;
 			this.getAfterSaleDetail();
@@ -241,10 +333,34 @@ export default {
 	},
 	methods: {
 		formatDate,
-		getAfterSaleDetail() {
-			console.log('开始获取售后详情，ID:', this.afterSaleId);
+		getAfterSaleDetail(ignoreCache = false) {
+			console.log('开始获取售后详情，ID:', this.afterSaleId, ignoreCache ? '(忽略缓存)' : '');
 			
-			// 添加加载状态提示
+			// 首先尝试从缓存获取数据（除非明确要求忽略缓存）
+			if (!ignoreCache) {
+				const cachedData = this.getAfterSaleFromCache();
+				if (cachedData) {
+					console.log('使用缓存的售后数据');
+					this.afterSaleDetail = cachedData;
+					this.dataFromCache = true;
+					
+					// 如果有orderId，获取订单详情
+					if(this.afterSaleDetail.orderId) {
+						this.getOrderDetail(this.afterSaleDetail.orderId);
+					}
+					
+					// 输出调试信息
+					if (this.debugMode) {
+						console.log('【调试】使用缓存数据：', JSON.stringify(this.afterSaleDetail, null, 2));
+					}
+					
+					return; // 使用缓存数据，无需继续API请求
+				}
+			} else {
+				console.log('忽略缓存，直接请求API');
+			}
+			
+			// 没有缓存数据，显示加载状态并请求API
 			uni.showLoading({
 				title: '加载中...'
 			});
@@ -255,11 +371,29 @@ export default {
 			
 			fetchAfterSaleDetail({id: this.afterSaleId}).then(response => {
 				uni.hideLoading();
-				console.log('售后详情返回数据:', JSON.stringify(response));
+				console.log('=======================================================');
+				console.log('【调试】售后详情接口原始响应:', response);
 				
 				if(response.code === 200) {
 					this.afterSaleDetail = response.data;
-					console.log('售后详情数据:', JSON.stringify(this.afterSaleDetail));
+					console.log('【调试】售后详情数据类型:', typeof this.afterSaleDetail);
+					console.log('【调试】售后详情数据完整内容:', JSON.stringify(this.afterSaleDetail, null, 2));
+					console.log('【调试】售后详情顶层字段列表:', Object.keys(this.afterSaleDetail));
+					
+					// 检查并输出所有可能包含原因的字段
+					['reason', 'returnReason', 'description', 'note', 'handleNote'].forEach(field => {
+						if (this.afterSaleDetail[field]) {
+							console.log(`【调试】找到可能的原因字段 ${field}:`, this.afterSaleDetail[field]);
+						}
+					});
+					
+					// 检查并输出所有可能包含图片的字段
+					['pics', 'proofPics', 'images', 'proof_pics'].forEach(field => {
+						if (this.afterSaleDetail[field]) {
+							console.log(`【调试】找到可能的图片字段 ${field}:`, this.afterSaleDetail[field]);
+							console.log(`【调试】图片字段 ${field} 的类型:`, typeof this.afterSaleDetail[field]);
+						}
+					});
 					
 					// 检查返回的数据是否有效
 					if (!this.afterSaleDetail || typeof this.afterSaleDetail !== 'object') {
@@ -267,6 +401,32 @@ export default {
 						this.loadError = true;
 						this.errorMessage = '售后详情数据无效或已被删除';
 						return;
+					}
+					
+					// 检查关键字段
+					if (this.afterSaleDetail.afterSaleItemList) {
+						console.log('【调试】售后商品项数量:', this.afterSaleDetail.afterSaleItemList.length);
+						
+						if (this.afterSaleDetail.afterSaleItemList.length > 0) {
+							const firstItem = this.afterSaleDetail.afterSaleItemList[0];
+							console.log('【调试】第一个售后商品项完整数据:', JSON.stringify(firstItem, null, 2));
+							console.log('【调试】第一个售后商品项字段列表:', Object.keys(firstItem));
+							
+							// 检查商品项中的原因字段
+							['reason', 'returnReason', 'description', 'note'].forEach(field => {
+								if (firstItem[field]) {
+									console.log(`【调试】商品项中找到可能的原因字段 ${field}:`, firstItem[field]);
+								}
+							});
+							
+							// 检查商品项中的图片字段
+							['pics', 'proofPics', 'images', 'proof_pics'].forEach(field => {
+								if (firstItem[field]) {
+									console.log(`【调试】商品项中找到可能的图片字段 ${field}:`, firstItem[field]);
+									console.log(`【调试】商品项图片字段 ${field} 的类型:`, typeof firstItem[field]);
+								}
+							});
+						}
 					}
 					
 					// 获取订单详情
@@ -401,39 +561,127 @@ export default {
 			});
 		},
 		formatPics(picsStr) {
-			if (!picsStr) return [];
+			console.log('格式化图片路径，输入:', picsStr);
 			
-			// 处理字符串类型
-			if (typeof picsStr === 'string') {
-				// 直接处理逗号分隔的图片地址
-				if (picsStr.includes(',')) {
-					const urls = picsStr.split(',')
-						.map(url => url.trim())
-						.filter(url => url)
-						.map(url => this.fixImagePath(url));
-					return urls;
-				}
-				
-				// 单个URL
-				return [this.fixImagePath(picsStr)];
+			// 处理null或undefined
+			if (!picsStr) {
+				console.log('输入为空，返回空数组');
+				return [];
 			}
 			
-			return [];
+			// 已经是数组，确保每个URL都是完整的
+			if (Array.isArray(picsStr)) {
+				return picsStr.map(url => this.fixImagePath(url));
+			}
+			
+			try {
+				// 处理字符串类型
+				if (typeof picsStr === 'string') {
+					// 直接处理逗号分隔的图片地址 - 最常见的情况
+					if (picsStr.includes(',')) {
+						const urls = picsStr.split(',')
+							.map(url => url.trim())
+							.filter(url => url)
+							.map(url => this.fixImagePath(url));
+							
+						console.log('处理后的图片URL列表:', urls);
+						return urls;
+					}
+					
+					// 如果是单个URL
+					if (picsStr.includes('/upload/') || picsStr.startsWith('/')) {
+						const url = this.fixImagePath(picsStr);
+						console.log('处理后的单个URL:', url);
+						return [url];
+					}
+					
+					// 尝试解析JSON
+					if (picsStr.startsWith('[') || picsStr.startsWith('{')) {
+						try {
+							const parsed = JSON.parse(picsStr);
+							if (Array.isArray(parsed)) {
+								return parsed.map(url => this.fixImagePath(url));
+							} else if (typeof parsed === 'object' && parsed !== null) {
+								// 尝试从对象中提取URL
+								for (const key of ['url', 'src', 'path']) {
+									if (parsed[key]) {
+										return [this.fixImagePath(parsed[key])];
+									}
+								}
+							}
+						} catch (e) {
+							console.error('JSON解析失败:', e);
+						}
+					}
+					
+					// 作为单个URL处理
+					return [this.fixImagePath(picsStr)];
+				}
+				
+				// 处理对象类型
+				if (typeof picsStr === 'object' && picsStr !== null) {
+					for (const key of ['url', 'src', 'path', 'pics']) {
+						if (picsStr[key]) {
+							if (Array.isArray(picsStr[key])) {
+								return picsStr[key].map(url => this.fixImagePath(url));
+							}
+							return [this.fixImagePath(picsStr[key])];
+						}
+					}
+				}
+				
+				// 转换为字符串
+				return [this.fixImagePath(String(picsStr))];
+				
+			} catch (e) {
+				console.error('解析凭证图片出错:', e);
+				return [];
+			}
 		},
 		fixImagePath(path) {
 			if (!path) return '';
 			
+			let result = '';
+			// 输出原始路径便于调试
+			console.log('处理图片路径:', path);
+			
 			// 已经是完整URL
 			if (path.startsWith('http')) {
-				return path;
+				result = path;
 			}
-			
+			// 特殊处理pics/20250410目录下的图片
+			else if (path.includes('20250410')) {
+				// 处理pics目录下的图片
+				if (path.includes('/pics/20250410') || path.includes('pics/20250410')) {
+					// 提取文件名
+					const parts = path.split('/');
+					const fileName = parts[parts.length - 1];
+					result = `${API_BASE_URL}/pics/20250410/${fileName}`;
+				} else {
+					// 可能是其他目录下的20250410格式图片
+					result = path.startsWith('/') ? API_BASE_URL + path : API_BASE_URL + '/' + path;
+				}
+			}
+			// 处理以pics/开头的特殊路径
+			else if (path.includes('pics/') && !path.startsWith('/')) {
+				result = `${API_BASE_URL}/pics/${path.split('pics/')[1]}`;
+			}
+			// 处理以/pics/开头的特殊路径
+			else if (path.startsWith('/pics/')) {
+				result = API_BASE_URL + path;
+			}
 			// 相对路径，添加基础URL
-			if (path.startsWith('/')) {
-				return API_BASE_URL + path;
+			else if (path.startsWith('/')) {
+				result = API_BASE_URL + path;
+			}
+			// 其他情况，假设是相对路径
+			else {
+				result = API_BASE_URL + '/' + path;
 			}
 			
-			return API_BASE_URL + '/' + path;
+			// 输出图片路径转换结果
+			console.log(`图片路径处理结果: ${result}`);
+			return result;
 		},
 		previewImage(current, urls) {
 			uni.previewImage({
@@ -451,7 +699,243 @@ export default {
 					icon: 'none'
 				});
 			}
-		}
+		},
+		// 获取售后原因
+		getAfterSaleReason() {
+			if (!this.afterSaleDetail) return '';
+			
+			console.log('尝试获取售后原因，数据结构:', JSON.stringify(this.afterSaleDetail));
+			
+			// 检查所有可能的原因字段名
+			const possibleReasonFields = ['returnReason', 'reason', 'return_reason', 'description', 'note', 'handleNote', 'return_reason_text', 'reasonText'];
+			
+			// 优先从售后商品项中获取原因，因为原因通常存储在商品项表中
+			if (this.afterSaleDetail.afterSaleItemList && 
+				this.afterSaleDetail.afterSaleItemList.length > 0) {
+				
+				console.log('从售后商品项中搜索原因字段，商品项数量:', this.afterSaleDetail.afterSaleItemList.length);
+				
+				for (let i = 0; i < this.afterSaleDetail.afterSaleItemList.length; i++) {
+					const item = this.afterSaleDetail.afterSaleItemList[i];
+					console.log(`检查商品项 ${i + 1} 的字段:`, Object.keys(item));
+				}
+				
+				// 收集所有不同的原因
+				let allReasons = new Set();
+				
+				for (let item of this.afterSaleDetail.afterSaleItemList) {
+					for (let field of possibleReasonFields) {
+						if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+							console.log(`从商品项中找到${field}:`, item[field]);
+							allReasons.add(item[field]);
+						}
+					}
+				}
+				
+				// 如果找到了多个不同的原因，用逗号连接
+				if (allReasons.size > 0) {
+					const reasonsArray = Array.from(allReasons);
+					console.log('收集到的所有原因:', reasonsArray);
+					return reasonsArray.join(', ');
+				}
+			}
+			
+			// 检查主对象的所有字段，打印出来帮助调试
+			console.log('检查主对象字段:', Object.keys(this.afterSaleDetail));
+			
+			// 如果商品项中没有找到，再检查主对象
+			for (let field of possibleReasonFields) {
+				if (this.afterSaleDetail[field] && typeof this.afterSaleDetail[field] === 'string' && this.afterSaleDetail[field].trim() !== '') {
+					console.log(`从主对象中找到${field}:`, this.afterSaleDetail[field]);
+					return this.afterSaleDetail[field];
+				}
+			}
+			
+			// 检查是否在handle_note字段中
+			if (this.afterSaleDetail.handle_note) {
+				console.log('从handle_note字段找到原因:', this.afterSaleDetail.handle_note);
+				return this.afterSaleDetail.handle_note;
+			}
+			
+			console.log('未找到有效的售后原因');
+			return '未提供原因';
+		},
+		// 检查是否有凭证图片
+		hasProofPics() {
+			if (!this.afterSaleDetail) return false;
+			
+			console.log('检查是否有凭证图片，数据结构:', JSON.stringify(this.afterSaleDetail));
+			
+			// 检查所有可能的图片字段
+			const possibleFields = ['proofPics', 'pics', 'proof_pics', 'returnPics', 'proof_pic', 'pic', 'images', 'returnImages'];
+			
+			// 优先检查售后商品项中是否有图片，因为图片通常存储在商品项中
+			if (this.afterSaleDetail.afterSaleItemList && this.afterSaleDetail.afterSaleItemList.length > 0) {
+				console.log('检查售后商品项中的凭证图片，商品项数量:', this.afterSaleDetail.afterSaleItemList.length);
+				
+				for (let item of this.afterSaleDetail.afterSaleItemList) {
+					console.log('商品项所有字段:', Object.keys(item));
+					
+					for (let field of possibleFields) {
+						if (item[field]) {
+							console.log(`商品项中找到图片字段 ${field}:`, item[field]);
+							
+							// 判断是否有有效内容
+							if (typeof item[field] === 'string') {
+								if (item[field].trim() !== '') {
+									return true;
+								}
+							} else if (Array.isArray(item[field]) && item[field].length > 0) {
+								return true;
+							} else if (typeof item[field] === 'object' && item[field] !== null) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+			
+			// 检查主对象的所有字段，帮助调试
+			console.log('主对象所有字段:', Object.keys(this.afterSaleDetail));
+			
+			// 如果商品项中没找到，再检查主对象
+			for (let field of possibleFields) {
+				if (this.afterSaleDetail[field]) {
+					console.log(`主对象中找到图片字段 ${field}:`, this.afterSaleDetail[field]);
+					
+					// 判断是否有有效内容
+					if (typeof this.afterSaleDetail[field] === 'string') {
+						if (this.afterSaleDetail[field].trim() !== '') {
+							return true;
+						}
+					} else if (Array.isArray(this.afterSaleDetail[field]) && this.afterSaleDetail[field].length > 0) {
+						return true;
+					} else if (typeof this.afterSaleDetail[field] === 'object' && this.afterSaleDetail[field] !== null) {
+						return true;
+					}
+				}
+			}
+			
+			console.log('未找到任何凭证图片');
+			return false;
+		},
+		// 获取凭证图片
+		getProofPics() {
+			if (!this.afterSaleDetail) return [];
+			
+			console.log('尝试获取凭证图片');
+			
+			// 检查所有可能的图片字段
+			const possibleFields = ['proofPics', 'pics', 'proof_pics', 'returnPics', 'proof_pic', 'pic', 'images', 'returnImages'];
+			
+			// 收集所有商品项的图片
+			let allPics = [];
+			
+			// 优先从售后商品项获取图片
+			if (this.afterSaleDetail.afterSaleItemList && this.afterSaleDetail.afterSaleItemList.length > 0) {
+				console.log('从售后商品项中获取凭证图片，商品项数量:', this.afterSaleDetail.afterSaleItemList.length);
+				
+				for (let i = 0; i < this.afterSaleDetail.afterSaleItemList.length; i++) {
+					const item = this.afterSaleDetail.afterSaleItemList[i];
+					console.log(`检查商品项 ${i+1} 的图片字段:`, Object.keys(item));
+					
+					for (let field of possibleFields) {
+						if (item[field]) {
+							console.log(`从商品项 ${i+1} 的 ${field} 字段获取图片:`, item[field]);
+							try {
+								const itemPics = this.formatPics(item[field]);
+								if (itemPics && itemPics.length > 0) {
+									console.log(`商品项 ${i+1} 处理后的图片:`, itemPics);
+									allPics = allPics.concat(itemPics);
+								}
+							} catch (error) {
+								console.error(`处理商品项 ${i+1} 的图片出错:`, error);
+							}
+						}
+					}
+				}
+			}
+			
+			// 如果已经找到了图片，直接返回
+			if (allPics.length > 0) {
+				console.log('已收集所有商品项的图片，总数:', allPics.length);
+				return allPics;
+			}
+			
+			// 如果商品项中没有找到，尝试从主对象获取
+			console.log('从主对象获取凭证图片');
+			for (let field of possibleFields) {
+				if (this.afterSaleDetail[field]) {
+					console.log(`从主对象的 ${field} 字段获取图片:`, this.afterSaleDetail[field]);
+					try {
+						const pics = this.formatPics(this.afterSaleDetail[field]);
+						if (pics && pics.length > 0) {
+							console.log('主对象处理后的图片:', pics);
+							return pics;
+						}
+					} catch (error) {
+						console.error('处理主对象图片出错:', error);
+					}
+				}
+			}
+			
+			console.log('未找到任何可用的凭证图片');
+			return [];
+		},
+		onImageError(event) {
+			console.error('图片加载失败:', event);
+			uni.showToast({
+				title: '图片加载失败，请检查网络连接',
+				icon: 'none'
+			});
+		},
+		// 从缓存中获取售后详情数据
+		getAfterSaleFromCache() {
+			try {
+				// 尝试从localStorage获取售后列表数据
+				const cachedAfterSaleListStr = uni.getStorageSync('afterSaleListCache');
+				if (!cachedAfterSaleListStr) {
+					console.log('未找到售后列表缓存');
+					return null;
+				}
+				
+				const cachedAfterSaleList = JSON.parse(cachedAfterSaleListStr);
+				console.log('找到售后列表缓存，包含', cachedAfterSaleList.length, '条记录');
+				
+				// 从缓存中查找匹配的售后记录
+				for (const tabData of cachedAfterSaleList) {
+					if (tabData && tabData.afterSaleList && Array.isArray(tabData.afterSaleList)) {
+						const matchedItem = tabData.afterSaleList.find(item => item.id == this.afterSaleId);
+						if (matchedItem) {
+							console.log('在缓存中找到匹配的售后记录:', matchedItem.id);
+							return matchedItem;
+						}
+					}
+				}
+				
+				// 尝试另一种可能的缓存结构
+				for (const tabData of cachedAfterSaleList) {
+					if (tabData && Array.isArray(tabData)) {
+						const matchedItem = tabData.find(item => item.id == this.afterSaleId);
+						if (matchedItem) {
+							console.log('在缓存(扁平数组)中找到匹配的售后记录:', matchedItem.id);
+							return matchedItem;
+						}
+					}
+				}
+				
+				console.log('未在缓存中找到匹配的售后记录');
+				return null;
+			} catch (error) {
+				console.error('从缓存获取售后详情失败:', error);
+				return null;
+			}
+		},
+		// 刷新数据，忽略缓存强制从API获取
+		refreshData() {
+			this.dataFromCache = false;
+			this.getAfterSaleDetail(true); // 传递参数表示忽略缓存
+		},
 	}
 }
 </script>
@@ -554,6 +1038,22 @@ export default {
 			.status-desc {
 				font-size: 26upx;
 				opacity: 0.8;
+			}
+		}
+		
+		.refresh-btn {
+			width: 60upx;
+			height: 60upx;
+			border-radius: 50%;
+			background-color: rgba(255,255,255,0.2);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			margin-left: 20upx;
+			
+			.yticon {
+				font-size: 36upx;
+				color: #fff;
 			}
 		}
 	}
@@ -699,6 +1199,12 @@ export default {
 		background-color: #fff;
 		margin-bottom: 20upx;
 		
+		.price-note {
+			padding: 20upx 30upx;
+			font-size: 24upx;
+			color: #999;
+		}
+		
 		.goods-item {
 			display: flex;
 			padding: 30upx;
@@ -734,6 +1240,17 @@ export default {
 					font-size: 28upx;
 					color: #fa436a;
 					margin-bottom: 10upx;
+					
+					.price {
+						font-weight: bold;
+					}
+					
+					.original-price {
+						color: #999;
+						text-decoration: line-through;
+						margin-left: 10upx;
+						font-size: 24upx;
+					}
 				}
 				
 				.return-quantity {
@@ -805,5 +1322,57 @@ export default {
 			}
 		}
 	}
+	
+	// 调试信息区域样式
+	.debug-section {
+		background-color: #fff;
+		margin-top: 20upx;
+		padding: 30upx;
+		
+		.debug-content {
+			.debug-item {
+				margin-bottom: 10upx;
+				
+				.debug-label {
+					font-size: 28upx;
+					color: #666;
+					margin-right: 10upx;
+				}
+				
+				.debug-value {
+					font-size: 28upx;
+					color: #333;
+				}
+			}
+			
+			.debug-panel {
+				margin-top: 20upx;
+				padding: 20upx;
+				background-color: #f8f8f8;
+				
+				.debug-panel-title {
+					font-size: 28upx;
+					color: #333;
+					font-weight: bold;
+					margin-bottom: 10upx;
+				}
+				
+				.debug-item {
+					margin-bottom: 10upx;
+					
+					.debug-label {
+						font-size: 28upx;
+						color: #666;
+						margin-right: 10upx;
+					}
+					
+					.debug-value {
+						font-size: 28upx;
+						color: #333;
+					}
+				}
+			}
+		}
+	}
 }
-</style> 
+</style>
