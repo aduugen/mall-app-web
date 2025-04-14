@@ -142,11 +142,64 @@ export function createAfterSale(data) {
  * @param {number} params.id - 售后ID
  */
 export function fetchAfterSaleDetail(params) {
-	return request({
-		method: 'GET',
-		url: '/member/afterSale/detail',
-		params: params
-	})
+	console.log('调用fetchAfterSaleDetail API，参数:', JSON.stringify(params));
+	
+	return new Promise((resolve, reject) => {
+		// 获取token
+		const token = uni.getStorageSync('token');
+		if (!token) {
+			console.error('获取售后详情失败: 未登录');
+			uni.showToast({
+				title: '请先登录',
+				icon: 'none'
+			});
+			reject({message: '未登录'});
+			return;
+		}
+		
+		// 设置请求URL
+		const apiUrl = API_BASE_URL + '/member/afterSale/detail';
+		console.log('请求URL:', apiUrl);
+		
+		// 发送请求
+		uni.request({
+			url: apiUrl,
+			method: 'GET',
+			data: params,
+			header: {
+				'Authorization': token
+			},
+			success: (res) => {
+				console.log('售后详情响应:', JSON.stringify(res));
+				if (res.statusCode === 200) {
+					if (res.data && res.data.code === 200) {
+						console.log('获取售后详情成功');
+						resolve(res.data);
+					} else {
+						console.error('服务器返回错误:', res.data);
+						reject({
+							message: (res.data && res.data.message) || '服务器处理失败',
+							data: res.data
+						});
+					}
+				} else {
+					console.error('请求状态码错误:', res.statusCode);
+					reject({
+						statusCode: res.statusCode,
+						message: '请求失败，状态码：' + res.statusCode,
+						data: res.data
+					});
+				}
+			},
+			fail: (err) => {
+				console.error('网络请求失败:', err);
+				reject({
+					message: '网络请求失败',
+					error: err
+				});
+			}
+		});
+	});
 }
 
 /**

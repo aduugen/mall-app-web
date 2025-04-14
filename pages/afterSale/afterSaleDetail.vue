@@ -1,92 +1,158 @@
 <template>
 	<view class="content">
-		<view class="status-section" v-if="afterSaleDetail">
-			<view class="status-icon" :class="statusIconClass">
-				<text class="yticon" :class="statusIcon"></text>
+		<view v-if="!afterSaleDetail || loadError" class="error-container">
+			<view class="error-icon">
+				<text class="yticon icon-jujue"></text>
 			</view>
-			<view class="status-info">
-				<text class="status-text">{{statusText}}</text>
-				<text class="status-desc">{{statusDesc}}</text>
-			</view>
+			<text class="error-text">{{errorMessage || '获取售后详情失败，请稍后重试'}}</text>
+			<button class="retry-btn" @click="retryLoading">重新加载</button>
 		</view>
 		
-		<view class="detail-section" v-if="afterSaleDetail">
-			<view class="section-title">售后信息</view>
-			<view class="detail-item">
-				<text class="item-label">售后编号</text>
-				<text class="item-value">{{afterSaleDetail.id}}</text>
+		<template v-else>
+			<view class="status-section" v-if="afterSaleDetail">
+				<view class="status-icon" :class="statusIconClass">
+					<text class="yticon" :class="statusIcon"></text>
+				</view>
+				<view class="status-info">
+					<text class="status-text">{{statusText}}</text>
+					<text class="status-desc">{{statusDesc}}</text>
+				</view>
 			</view>
-			<view class="detail-item">
-				<text class="item-label">创建时间</text>
-				<text class="item-value">{{formatDate(afterSaleDetail.createTime)}}</text>
-			</view>
-			<view class="detail-item">
-				<text class="item-label">售后原因</text>
-				<text class="item-value">{{afterSaleDetail.reason}}</text>
-			</view>
-			<view class="detail-item" v-if="afterSaleDetail.handleNote">
-				<text class="item-label">处理备注</text>
-				<text class="item-value">{{afterSaleDetail.handleNote}}</text>
-			</view>
-			<view class="detail-item" v-if="afterSaleDetail.handleTime">
-				<text class="item-label">处理时间</text>
-				<text class="item-value">{{formatDate(afterSaleDetail.handleTime)}}</text>
-			</view>
-		</view>
-		
-		<view class="pics-section" v-if="afterSaleDetail && afterSaleDetail.pics">
-			<view class="section-title">退货凭证</view>
-			<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
-				<view class="pics-container">
-					<view class="pic-item" v-for="(pic, picIndex) in formatPics(afterSaleDetail.pics)" :key="picIndex" @click="previewImage(pic, formatPics(afterSaleDetail.pics))">
-						<image class="thumbnail" :src="pic" mode="aspectFill"></image>
+			
+			<!-- 进度详情 -->
+			<view class="progress-section" v-if="afterSaleDetail">
+				<view class="section-title">进度详情</view>
+				<view class="progress-timeline">
+					<view class="timeline-item" :class="{'active': afterSaleDetail.createTime}">
+						<view class="timeline-icon"></view>
+						<view class="timeline-content">
+							<text class="timeline-title">售后申请提交</text>
+							<text class="timeline-time" v-if="afterSaleDetail.createTime">{{formatDate(afterSaleDetail.createTime)}}</text>
+						</view>
+					</view>
+					<view class="timeline-item" :class="{'active': afterSaleDetail.status >= 1}">
+						<view class="timeline-icon"></view>
+						<view class="timeline-content">
+							<text class="timeline-title">商家处理中</text>
+							<text class="timeline-time" v-if="afterSaleDetail.status >= 1">{{getStatusChangeTime(1)}}</text>
+						</view>
+					</view>
+					<view class="timeline-item" :class="{'active': afterSaleDetail.status === 2 || afterSaleDetail.status === 3}">
+						<view class="timeline-icon"></view>
+						<view class="timeline-content">
+							<text class="timeline-title">{{afterSaleDetail.status === 3 ? '申请被拒绝' : '申请完成'}}</text>
+							<text class="timeline-time" v-if="afterSaleDetail.handleTime">{{formatDate(afterSaleDetail.handleTime)}}</text>
+						</view>
+					</view>
+					<view class="timeline-item" :class="{'active': afterSaleDetail.status === 2}">
+						<view class="timeline-icon"></view>
+						<view class="timeline-content">
+							<text class="timeline-title">退款完成</text>
+							<text class="timeline-time" v-if="afterSaleDetail.status === 2">{{formatDate(afterSaleDetail.handleTime)}}</text>
+						</view>
 					</view>
 				</view>
-			</scroll-view>
-		</view>
-		
-		<view class="goods-section" v-if="afterSaleDetail && afterSaleDetail.afterSaleItemList">
-			<view class="section-title">退货商品</view>
-			<view class="goods-item" v-for="(item, index) in afterSaleDetail.afterSaleItemList" :key="index">
-				<image class="goods-img" :src="item.productPic" mode="aspectFill"></image>
-				<view class="goods-info">
-					<text class="goods-name">{{item.productName}}</text>
-					<text class="goods-attr">{{item.productAttr | formatProductAttr}}</text>
-					<view class="goods-price">
-						<text class="price">￥{{item.productPrice}}</text>
+			</view>
+			
+			<view class="detail-section" v-if="afterSaleDetail">
+				<view class="section-title">售后信息</view>
+				<view class="detail-item">
+					<text class="item-label">售后编号</text>
+					<text class="item-value">{{afterSaleDetail.id}}</text>
+				</view>
+				<!-- 添加订单号显示 -->
+				<view class="detail-item">
+					<text class="item-label">订单号</text>
+					<text class="item-value">{{afterSaleDetail.orderId}}</text>
+				</view>
+				<!-- 添加订单SN显示 -->
+				<view class="detail-item" v-if="orderInfo && orderInfo.orderSn">
+					<text class="item-label">订单SN</text>
+					<text class="item-value">{{orderInfo.orderSn}}</text>
+				</view>
+				<view class="detail-item">
+					<text class="item-label">创建时间</text>
+					<text class="item-value">{{formatDate(afterSaleDetail.createTime)}}</text>
+				</view>
+				<view class="detail-item">
+					<text class="item-label">售后原因</text>
+					<text class="item-value">{{afterSaleDetail.reason}}</text>
+				</view>
+				<!-- 添加退款总金额显示 -->
+				<view class="detail-item highlight">
+					<text class="item-label">退款总金额</text>
+					<text class="item-value amount">￥{{calculateTotalRefund()}}</text>
+				</view>
+				<view class="detail-item" v-if="afterSaleDetail.handleNote">
+					<text class="item-label">处理备注</text>
+					<text class="item-value">{{afterSaleDetail.handleNote}}</text>
+				</view>
+				<view class="detail-item" v-if="afterSaleDetail.handleTime">
+					<text class="item-label">处理时间</text>
+					<text class="item-value">{{formatDate(afterSaleDetail.handleTime)}}</text>
+				</view>
+				<!-- 添加联系人/联系方式 -->
+				<view class="detail-item" v-if="orderInfo && orderInfo.receiverName">
+					<text class="item-label">联系人</text>
+					<text class="item-value">{{orderInfo.receiverName}}</text>
+				</view>
+				<view class="detail-item" v-if="orderInfo && orderInfo.receiverPhone">
+					<text class="item-label">联系方式</text>
+					<text class="item-value">{{orderInfo.receiverPhone}}</text>
+				</view>
+			</view>
+			
+			<view class="pics-section" v-if="afterSaleDetail && afterSaleDetail.pics">
+				<view class="section-title">退货凭证</view>
+				<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
+					<view class="pics-container">
+						<view class="pic-item" v-for="(pic, picIndex) in formatPics(afterSaleDetail.pics)" :key="picIndex" @click="previewImage(pic, formatPics(afterSaleDetail.pics))">
+							<image class="thumbnail" :src="pic" mode="aspectFill"></image>
+						</view>
 					</view>
-					<view class="return-quantity">
-						<text class="quantity-label">购买数量:</text>
-						<text class="quantity-value">{{item.productQuantity}}</text>
-						<text class="quantity-label return">退货数量:</text>
-						<text class="quantity-value return">{{item.returnQuantity}}</text>
-					</view>
-					<view class="item-reason" v-if="item.reason">
-						<text class="reason-label">退货原因:</text>
-						<text class="reason-value">{{item.reason}}</text>
-					</view>
-					<view class="item-pics" v-if="item.pics">
-						<text class="pics-label">凭证图片:</text>
-						<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
-							<view class="pics-container">
-								<view class="pic-item" v-for="(pic, picIndex) in formatPics(item.pics)" :key="picIndex" @click="previewImage(pic, formatPics(item.pics))">
-									<image class="thumbnail" :src="pic" mode="aspectFill"></image>
+				</scroll-view>
+			</view>
+			
+			<view class="goods-section" v-if="afterSaleDetail && afterSaleDetail.afterSaleItemList">
+				<view class="section-title">退货商品</view>
+				<view class="goods-item" v-for="(item, index) in afterSaleDetail.afterSaleItemList" :key="index">
+					<image class="goods-img" :src="item.productPic" mode="aspectFill"></image>
+					<view class="goods-info">
+						<text class="goods-name">{{item.productName}}</text>
+						<text class="goods-attr">{{item.productAttr | formatProductAttr}}</text>
+						<view class="goods-price">
+							<text class="price">￥{{item.productPrice}}</text>
+						</view>
+						<view class="return-quantity">
+							<text class="quantity-label">购买数量:</text>
+							<text class="quantity-value">{{item.productQuantity}}</text>
+							<text class="quantity-label return">退货数量:</text>
+							<text class="quantity-value return">{{item.returnQuantity}}</text>
+						</view>
+						<view class="item-reason" v-if="item.reason">
+							<text class="reason-label">退货原因:</text>
+							<text class="reason-value">{{item.reason}}</text>
+						</view>
+						<view class="item-pics" v-if="item.pics">
+							<text class="pics-label">凭证图片:</text>
+							<scroll-view class="pics-scroll" scroll-x="true" show-scrollbar="false">
+								<view class="pics-container">
+									<view class="pic-item" v-for="(pic, picIndex) in formatPics(item.pics)" :key="picIndex" @click="previewImage(pic, formatPics(item.pics))">
+										<image class="thumbnail" :src="pic" mode="aspectFill"></image>
+									</view>
 								</view>
-							</view>
-						</scroll-view>
+							</scroll-view>
+						</view>
 					</view>
 				</view>
 			</view>
-		</view>
-		
-		<view class="btn-section" v-if="afterSaleDetail && afterSaleDetail.status === 0">
-			<button class="cancel-btn" @click="cancelAfterSale">取消申请</button>
-		</view>
+		</template>
 	</view>
 </template>
 
 <script>
 import {fetchAfterSaleDetail, cancelAfterSale} from '@/api/afterSale.js';
+import {getOrderDetail} from '@/api/order.js';
 import {formatDate} from '@/utils/date';
 import {API_BASE_URL} from '@/utils/appConfig.js';
 
@@ -94,7 +160,11 @@ export default {
 	data() {
 		return {
 			afterSaleId: null,
-			afterSaleDetail: null
+			afterSaleDetail: null,
+			orderInfo: null,
+			statusChangeTimes: {}, // 存储各状态的时间记录
+			loadError: false,
+			errorMessage: ''
 		}
 	},
 	computed: {
@@ -172,16 +242,122 @@ export default {
 	methods: {
 		formatDate,
 		getAfterSaleDetail() {
+			console.log('开始获取售后详情，ID:', this.afterSaleId);
+			
+			// 添加加载状态提示
+			uni.showLoading({
+				title: '加载中...'
+			});
+			
+			// 重置错误状态
+			this.loadError = false;
+			this.errorMessage = '';
+			
 			fetchAfterSaleDetail({id: this.afterSaleId}).then(response => {
+				uni.hideLoading();
+				console.log('售后详情返回数据:', JSON.stringify(response));
+				
 				if(response.code === 200) {
 					this.afterSaleDetail = response.data;
+					console.log('售后详情数据:', JSON.stringify(this.afterSaleDetail));
+					
+					// 检查返回的数据是否有效
+					if (!this.afterSaleDetail || typeof this.afterSaleDetail !== 'object') {
+						console.error('售后详情数据无效');
+						this.loadError = true;
+						this.errorMessage = '售后详情数据无效或已被删除';
+						return;
+					}
+					
+					// 获取订单详情
+					if(this.afterSaleDetail.orderId) {
+						this.getOrderDetail(this.afterSaleDetail.orderId);
+					} else {
+						console.error('售后详情中没有订单ID');
+					}
 				} else {
+					console.error('获取售后详情失败:', response.message);
+					this.loadError = true;
+					this.errorMessage = response.message || '获取售后详情失败';
 					uni.showToast({
 						title: response.message || '获取售后详情失败',
-						icon: 'none'
+						icon: 'none',
+						duration: 2000
 					});
 				}
+			}).catch(error => {
+				uni.hideLoading();
+				console.error('获取售后详情异常:', error);
+				this.loadError = true;
+				this.errorMessage = error.message || '获取售后详情异常';
+				uni.showToast({
+					title: '获取售后详情异常:' + (error.message || '未知错误'),
+					icon: 'none',
+					duration: 2000
+				});
 			});
+		},
+		// 获取订单详情
+		getOrderDetail(orderId) {
+			console.log('开始获取订单详情，订单ID:', orderId);
+			
+			getOrderDetail(orderId).then(response => {
+				console.log('订单详情返回数据:', JSON.stringify(response));
+				
+				if(response.code === 200) {
+					this.orderInfo = response.data;
+					console.log('订单详情数据:', JSON.stringify(this.orderInfo));
+				} else {
+					console.error('获取订单详情失败:', response.message);
+				}
+			}).catch(error => {
+				console.error('获取订单详情异常:', error);
+			});
+		},
+		// 计算总退款金额
+		calculateTotalRefund() {
+			if(!this.afterSaleDetail || !this.afterSaleDetail.afterSaleItemList) {
+				return '0.00';
+			}
+			
+			let total = 0;
+			this.afterSaleDetail.afterSaleItemList.forEach(item => {
+				const itemTotal = (item.productRealPrice || 0) * (item.returnQuantity || 0);
+				total += itemTotal;
+			});
+			
+			return total.toFixed(2);
+		},
+		// 获取状态变更时间
+		getStatusChangeTime(status) {
+			if(this.statusChangeTimes[status]) {
+				return this.formatDate(this.statusChangeTimes[status]);
+			}
+			
+			// 如果没有记录状态变更时间，对于已处理的状态返回处理时间
+			if(status === 1 && this.afterSaleDetail && this.afterSaleDetail.status >= 1) {
+				// 对于处理中状态，如果没有记录，使用创建时间后1天作为估计
+				if (this.afterSaleDetail.createTime) {
+					try {
+						let createTime = this.afterSaleDetail.createTime;
+						// 确保createTime是日期对象
+						if (typeof createTime === 'string') {
+							createTime = new Date(createTime);
+						}
+						
+						// 检查是否是有效的日期对象
+						if (createTime instanceof Date && !isNaN(createTime.getTime())) {
+							const estimatedTime = new Date(createTime);
+							estimatedTime.setDate(estimatedTime.getDate() + 1);
+							return this.formatDate(estimatedTime);
+						}
+					} catch (e) {
+						console.error('处理状态变更时间出错:', e);
+					}
+				}
+			}
+			
+			return '';
 		},
 		cancelAfterSale() {
 			uni.showModal({
@@ -264,6 +440,17 @@ export default {
 				current: current,
 				urls: urls
 			});
+		},
+		// 重试加载方法
+		retryLoading() {
+			if (this.afterSaleId) {
+				this.getAfterSaleDetail();
+			} else {
+				uni.showToast({
+					title: '售后ID无效，请返回重试',
+					icon: 'none'
+				});
+			}
 		}
 	}
 }
@@ -273,8 +460,50 @@ export default {
 .content {
 	padding-bottom: 30upx;
 	
+	// 错误容器样式
+	.error-container {
+		padding: 60upx 30upx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		
+		.error-icon {
+			width: 120upx;
+			height: 120upx;
+			border-radius: 50%;
+			background-color: #f8f8f8;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			margin-bottom: 30upx;
+			
+			.yticon {
+				font-size: 60upx;
+				color: #d63031;
+			}
+		}
+		
+		.error-text {
+			font-size: 28upx;
+			color: #666;
+			text-align: center;
+			margin-bottom: 30upx;
+		}
+		
+		.retry-btn {
+			width: 300upx;
+			height: 80upx;
+			line-height: 80upx;
+			background-color: #0066cc;
+			color: #fff;
+			border-radius: 40upx;
+			font-size: 28upx;
+		}
+	}
+	
 	.status-section {
-		background-color: #fa436a;
+		background-color: #0066cc;
 		color: #fff;
 		padding: 50upx 30upx;
 		display: flex;
@@ -300,7 +529,7 @@ export default {
 			}
 			
 			&.process {
-				background-color: #0984e3;
+				background-color: #0066cc;
 			}
 			
 			&.success {
@@ -325,6 +554,73 @@ export default {
 			.status-desc {
 				font-size: 26upx;
 				opacity: 0.8;
+			}
+		}
+	}
+	
+	/* 进度时间线样式 */
+	.progress-section {
+		background-color: #fff;
+		margin-bottom: 20upx;
+		
+		.progress-timeline {
+			padding: 30upx;
+			
+			.timeline-item {
+				display: flex;
+				position: relative;
+				padding-bottom: 30upx;
+				
+				&:not(:last-child):before {
+					content: '';
+					position: absolute;
+					left: 10upx;
+					top: 30upx;
+					height: calc(100% - 30upx);
+					width: 2upx;
+					background-color: #ddd;
+				}
+				
+				.timeline-icon {
+					width: 20upx;
+					height: 20upx;
+					border-radius: 50%;
+					background-color: #ddd;
+					margin-right: 20upx;
+					margin-top: 10upx;
+				}
+				
+				.timeline-content {
+					flex: 1;
+					
+					.timeline-title {
+						font-size: 28upx;
+						color: #666;
+						margin-bottom: 5upx;
+						display: block;
+					}
+					
+					.timeline-time {
+						font-size: 24upx;
+						color: #999;
+					}
+				}
+				
+				&.active {
+					.timeline-icon {
+						background-color: #0066cc;
+						box-shadow: 0 0 0 4upx rgba(0, 102, 204, 0.2);
+					}
+					
+					.timeline-title {
+						color: #333;
+						font-weight: bold;
+					}
+					
+					.timeline-time {
+						color: #0066cc;
+					}
+				}
 			}
 		}
 	}
@@ -356,6 +652,21 @@ export default {
 				flex: 1;
 				color: #333;
 				font-size: 28upx;
+			}
+			
+			&.highlight {
+				background-color: #f0f5ff;
+				
+				.item-label {
+					font-weight: bold;
+					color: #333;
+				}
+				
+				.item-value.amount {
+					color: #fa436a;
+					font-weight: bold;
+					font-size: 32upx;
+				}
 			}
 		}
 	}
@@ -492,23 +803,6 @@ export default {
 					}
 				}
 			}
-		}
-	}
-	
-	.btn-section {
-		padding: 40upx;
-		display: flex;
-		justify-content: center;
-		
-		.cancel-btn {
-			background-color: #fff;
-			color: #666;
-			border: 1px solid #ddd;
-			width: 60%;
-			height: 80upx;
-			line-height: 80upx;
-			font-size: 32upx;
-			border-radius: 40upx;
 		}
 	}
 }

@@ -190,3 +190,14 @@ export function getOrderItemsDebug(orderId) {
 		method: 'get'
 	});
 }
+
+/**
+ * 获取订单详情
+ * @param {number} orderId - 订单ID
+ */
+export function getOrderDetail(orderId) {
+	return request({
+		url: `/order/detail/${orderId}`,
+		method: 'get'
+	});
+}

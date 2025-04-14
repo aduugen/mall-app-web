@@ -1,5 +1,30 @@
 // date.js
 export function formatDate(date, fmt) {
+  // 添加安全检查，防止非日期对象导致错误
+  if (!date) {
+    return '';
+  }
+  
+  // 如果是字符串格式，尝试转换成日期对象
+  if (typeof date === 'string') {
+    try {
+      date = new Date(date);
+    } catch (e) {
+      console.error('日期格式化错误:', e);
+      return '';
+    }
+  }
+  
+  // 确保是有效的日期对象
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.warn('无效的日期对象:', date);
+    return '';
+  }
+  
+  if (!fmt) {
+    fmt = 'yyyy-MM-dd hh:mm:ss';
+  }
+  
   if (/(y+)/.test(fmt)) {
     fmt = fmt.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length));
   }
