@@ -1,5 +1,14 @@
 <template>
 	<view class="content">
+		<!-- 顶部标题栏 -->
+		<view class="page-header">
+			<view class="back-btn" @click="goBack">
+				<text class="yticon icon-zuojiantou"></text>
+			</view>
+			<view class="page-title">售后详情</view>
+			<view class="placeholder"></view>
+		</view>
+		
 		<view v-if="!afterSaleDetail || loadError" class="error-container">
 			<view class="error-icon">
 				<text class="yticon icon-jujue"></text>
@@ -59,49 +68,60 @@
 			
 			<view class="detail-section" v-if="afterSaleDetail">
 				<view class="section-title">售后信息</view>
-				<view class="detail-item">
-					<text class="item-label">售后编号</text>
-					<text class="item-value">{{afterSaleDetail.id}}</text>
-				</view>
-				<!-- 添加订单号显示 -->
-				<view class="detail-item">
-					<text class="item-label">订单号</text>
-					<text class="item-value">{{afterSaleDetail.orderId}}</text>
-				</view>
-				<!-- 添加订单SN显示 -->
-				<view class="detail-item" v-if="orderInfo && orderInfo.orderSn">
-					<text class="item-label">订单SN</text>
-					<text class="item-value">{{orderInfo.orderSn}}</text>
-				</view>
-				<view class="detail-item">
-					<text class="item-label">创建时间</text>
-					<text class="item-value">{{formatDate(afterSaleDetail.createTime)}}</text>
-				</view>
-				<view class="detail-item">
-					<text class="item-label">售后原因</text>
-					<text class="item-value">{{getAfterSaleReason()}}</text>
-				</view>
-				<!-- 添加退款总金额显示 -->
-				<view class="detail-item highlight">
-					<text class="item-label">退款总金额</text>
-					<text class="item-value amount">￥{{calculateTotalRefund()}}</text>
-				</view>
-				<view class="detail-item" v-if="afterSaleDetail.handleNote">
-					<text class="item-label">处理备注</text>
-					<text class="item-value">{{afterSaleDetail.handleNote}}</text>
-				</view>
-				<view class="detail-item" v-if="afterSaleDetail.handleTime">
-					<text class="item-label">处理时间</text>
-					<text class="item-value">{{formatDate(afterSaleDetail.handleTime)}}</text>
-				</view>
-				<!-- 添加联系人/联系方式 -->
-				<view class="detail-item" v-if="orderInfo && orderInfo.receiverName">
-					<text class="item-label">联系人</text>
-					<text class="item-value">{{orderInfo.receiverName}}</text>
-				</view>
-				<view class="detail-item" v-if="orderInfo && orderInfo.receiverPhone">
-					<text class="item-label">联系方式</text>
-					<text class="item-value">{{orderInfo.receiverPhone}}</text>
+				<view class="detail-content">
+					<view class="detail-item">
+						<text class="item-label">售后编号</text>
+						<text class="item-value">{{afterSaleDetail.id}}</text>
+					</view>
+					<!-- 添加订单号显示 -->
+					<view class="detail-item">
+						<text class="item-label">订单号</text>
+						<text class="item-value copy-text" @click="copyText(afterSaleDetail.orderId)">
+							{{afterSaleDetail.orderId}}
+							<text class="copy-icon yticon icon-fuzhi"></text>
+						</text>
+					</view>
+					<!-- 添加订单SN显示 -->
+					<view class="detail-item" v-if="orderInfo && orderInfo.orderSn">
+						<text class="item-label">订单SN</text>
+						<text class="item-value copy-text" @click="copyText(orderInfo.orderSn)">
+							{{orderInfo.orderSn}}
+							<text class="copy-icon yticon icon-fuzhi"></text>
+						</text>
+					</view>
+					<view class="detail-item">
+						<text class="item-label">创建时间</text>
+						<text class="item-value">{{formatDate(afterSaleDetail.createTime)}}</text>
+					</view>
+					<view class="detail-item">
+						<text class="item-label">售后原因</text>
+						<text class="item-value">{{getAfterSaleReason()}}</text>
+					</view>
+					<!-- 添加退款总金额显示 -->
+					<view class="detail-item">
+						<text class="item-label">退款总金额</text>
+						<text class="price">￥{{calculateTotalRefund()}}</text>
+					</view>
+					<view class="detail-item" v-if="afterSaleDetail.handleNote">
+						<text class="item-label">处理备注</text>
+						<text class="item-value">{{afterSaleDetail.handleNote}}</text>
+					</view>
+					<view class="detail-item" v-if="afterSaleDetail.handleTime">
+						<text class="item-label">处理时间</text>
+						<text class="item-value">{{formatDate(afterSaleDetail.handleTime)}}</text>
+					</view>
+					<!-- 添加联系人/联系方式 -->
+					<view class="detail-item" v-if="orderInfo && orderInfo.receiverName">
+						<text class="item-label">联系人</text>
+						<text class="item-value">{{orderInfo.receiverName}}</text>
+					</view>
+					<view class="detail-item" v-if="orderInfo && orderInfo.receiverPhone">
+						<text class="item-label">联系方式</text>
+						<text class="item-value copy-text" @click="copyText(orderInfo.receiverPhone)">
+							{{orderInfo.receiverPhone}}
+							<text class="copy-icon yticon icon-fuzhi"></text>
+						</text>
+					</view>
 				</view>
 			</view>
 			
@@ -151,7 +171,6 @@
 					</view>
 				</view>
 			</view>
-			
 			<!-- 添加调试信息区域 -->
 			<view class="debug-section" v-if="debugMode && afterSaleDetail">
 				<view class="section-title">调试信息 (Debug Mode)</view>
@@ -171,11 +190,6 @@
 					<view class="debug-item">
 						<text class="debug-label">数据类型:</text>
 						<text class="debug-value">{{typeof afterSaleDetail}}</text>
-					</view>
-					
-					<view class="debug-item">
-						<text class="debug-label">顶级字段:</text>
-						<text class="debug-value">{{Object.keys(afterSaleDetail).join(', ')}}</text>
 					</view>
 					
 					<view class="debug-item" v-if="afterSaleDetail.afterSaleItemList">
@@ -936,6 +950,25 @@ export default {
 			this.dataFromCache = false;
 			this.getAfterSaleDetail(true); // 传递参数表示忽略缓存
 		},
+		// 返回上一页
+		goBack() {
+			uni.navigateBack();
+		},
+		
+		// 复制文本
+		copyText(text) {
+			if (!text) return;
+			
+			uni.setClipboardData({
+				data: String(text),
+				success: () => {
+					uni.showToast({
+						title: '复制成功',
+						icon: 'none'
+					});
+				}
+			});
+		},
 	}
 }
 </script>
@@ -943,6 +976,51 @@ export default {
 <style lang="scss">
 .content {
 	padding-bottom: 30upx;
+	background-color: #f8f8f8;
+	min-height: 100vh;
+	
+	// 全局价格样式
+	.price {
+		color: #FF0000; // 设置为红色
+		font-weight: bold;
+	}
+	
+	// 页面头部
+	.page-header {
+		height: 90upx;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 30upx;
+		background-color: #fff;
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		box-shadow: 0 2upx 10upx rgba(0,0,0,0.1);
+		
+		.back-btn {
+			width: 60upx;
+			height: 60upx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			
+			.yticon {
+				font-size: 42upx;
+				color: #333;
+			}
+		}
+		
+		.page-title {
+			font-size: 32upx;
+			color: #333;
+			font-weight: bold;
+		}
+		
+		.placeholder {
+			width: 60upx;
+		}
+	}
 	
 	// 错误容器样式
 	.error-container {
@@ -951,6 +1029,10 @@ export default {
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		background-color: #fff;
+		margin: 20upx;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 12upx rgba(0, 0, 0, 0.05);
 		
 		.error-icon {
 			width: 120upx;
@@ -987,11 +1069,14 @@ export default {
 	}
 	
 	.status-section {
-		background-color: #0066cc;
+		background: linear-gradient(to right, #0066cc, #1a8fe3);
 		color: #fff;
 		padding: 50upx 30upx;
 		display: flex;
 		align-items: center;
+		border-bottom-left-radius: 20upx;
+		border-bottom-right-radius: 20upx;
+		box-shadow: 0 4upx 16upx rgba(0, 102, 204, 0.2);
 		
 		.status-icon {
 			width: 100upx;
@@ -1002,6 +1087,7 @@ export default {
 			justify-content: center;
 			align-items: center;
 			margin-right: 30upx;
+			box-shadow: 0 4upx 16upx rgba(0, 0, 0, 0.1);
 			
 			.yticon {
 				font-size: 60upx;
@@ -1050,6 +1136,11 @@ export default {
 			justify-content: center;
 			align-items: center;
 			margin-left: 20upx;
+			transition: all 0.3s;
+			
+			&:active {
+				transform: scale(0.9);
+			}
 			
 			.yticon {
 				font-size: 36upx;
@@ -1061,7 +1152,10 @@ export default {
 	/* 进度时间线样式 */
 	.progress-section {
 		background-color: #fff;
-		margin-bottom: 20upx;
+		margin: 20upx;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 12upx rgba(0, 0, 0, 0.05);
+		overflow: hidden;
 		
 		.progress-timeline {
 			padding: 30upx;
@@ -1126,20 +1220,39 @@ export default {
 	}
 	
 	.section-title {
-		font-size: 32upx;
+		font-size: 30upx;
 		color: #333;
 		font-weight: bold;
-		padding: 30upx;
+		padding: 24upx 30upx;
 		background-color: #f8f8f8;
+		position: relative;
+		
+		&::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 24upx;
+			height: 30upx;
+			width: 6upx;
+			background-color: #0066cc;
+			border-radius: 0 3upx 3upx 0;
+		}
 	}
 	
 	.detail-section {
 		background-color: #fff;
-		margin-bottom: 20upx;
+		margin: 20upx;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 12upx rgba(0, 0, 0, 0.05);
+		overflow: hidden;
+		
+		.detail-content {
+			padding: 24upx 30upx;
+		}
 		
 		.detail-item {
 			display: flex;
-			padding: 20upx 30upx;
+			padding: 24upx 0;
 			border-bottom: 1px solid #f5f5f5;
 			
 			.item-label {
@@ -1152,6 +1265,25 @@ export default {
 				flex: 1;
 				color: #333;
 				font-size: 28upx;
+				
+				&.reason-text {
+					background-color: #f0f5ff;
+					padding: 10upx;
+					border-radius: 6upx;
+					color: #0066cc;
+				}
+				
+				&.copy-text {
+					color: #0066cc;
+					display: flex;
+					align-items: center;
+					
+					.copy-icon {
+						margin-left: 10upx;
+						font-size: 24upx;
+						color: #999;
+					}
+				}
 			}
 			
 			&.highlight {
@@ -1168,12 +1300,19 @@ export default {
 					font-size: 32upx;
 				}
 			}
+			
+			&:last-child {
+				border-bottom: none;
+			}
 		}
 	}
 	
 	.pics-section {
 		background-color: #fff;
-		margin-bottom: 20upx;
+		margin: 20upx;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 12upx rgba(0, 0, 0, 0.05);
+		overflow: hidden;
 		
 		.pics-scroll {
 			white-space: nowrap;
@@ -1191,18 +1330,29 @@ export default {
 				width: 160upx;
 				height: 160upx;
 				border-radius: 8upx;
+				box-shadow: 0 2upx 6upx rgba(0, 0, 0, 0.1);
+				transition: all 0.3s;
+				
+				&:active {
+					transform: scale(0.95);
+				}
 			}
 		}
 	}
 	
 	.goods-section {
 		background-color: #fff;
-		margin-bottom: 20upx;
+		margin: 20upx;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 12upx rgba(0, 0, 0, 0.05);
+		overflow: hidden;
 		
 		.price-note {
 			padding: 20upx 30upx;
 			font-size: 24upx;
 			color: #999;
+			background-color: #f9f9f9;
+			border-bottom: 1upx dashed #eee;
 		}
 		
 		.goods-item {
@@ -1210,10 +1360,15 @@ export default {
 			padding: 30upx;
 			border-bottom: 1px solid #f5f5f5;
 			
+			&:last-child {
+				border-bottom: none;
+			}
+			
 			.goods-img {
 				width: 180upx;
 				height: 180upx;
 				border-radius: 8upx;
+				box-shadow: 0 2upx 6upx rgba(0, 0, 0, 0.1);
 			}
 			
 			.goods-info {
@@ -1233,13 +1388,17 @@ export default {
 				.goods-attr {
 					font-size: 24upx;
 					color: #999;
-					margin-bottom: 10upx;
+					margin-bottom: 15upx;
+					padding: 6upx 12upx;
+					background-color: #f8f8f8;
+					display: inline-block;
+					border-radius: 6upx;
 				}
 				
 				.goods-price {
 					font-size: 28upx;
 					color: #fa436a;
-					margin-bottom: 10upx;
+					margin-bottom: 15upx;
 					
 					.price {
 						font-weight: bold;
@@ -1256,12 +1415,18 @@ export default {
 				.return-quantity {
 					font-size: 24upx;
 					color: #999;
+					background-color: #f8f8f8;
+					padding: 6upx 12upx;
+					border-radius: 6upx;
+					display: inline-block;
+					margin-bottom: 10upx;
 					
 					.quantity-label {
 						margin-right: 10upx;
 						
 						&.return {
-							margin-left: 30upx;
+							margin-left: 16upx;
+							color: #0066cc;
 						}
 					}
 					
@@ -1286,11 +1451,14 @@ export default {
 					
 					.reason-value {
 						color: #333;
+						background-color: #f0f5ff;
+						padding: 4upx 10upx;
+						border-radius: 4upx;
 					}
 				}
 				
 				.item-pics {
-					margin-top: 10upx;
+					margin-top: 16upx;
 					
 					.pics-label {
 						font-size: 24upx;
@@ -1316,6 +1484,7 @@ export default {
 							width: 120upx;
 							height: 120upx;
 							border-radius: 8upx;
+							box-shadow: 0 2upx 6upx rgba(0, 0, 0, 0.1);
 						}
 					}
 				}
@@ -1323,51 +1492,92 @@ export default {
 		}
 	}
 	
+	// 操作按钮区域
+	.action-section {
+		display: flex;
+		justify-content: center;
+		padding: 40upx 30upx;
+		
+		.action-btn {
+			width: 80%;
+			height: 80upx;
+			line-height: 80upx;
+			border-radius: 40upx;
+			font-size: 28upx;
+			color: #fff;
+			background: linear-gradient(to right, #ff6b6b, #ee5253);
+			box-shadow: 0 10upx 20upx rgba(238, 82, 83, 0.3);
+			transition: all 0.3s;
+			
+			&:active {
+				transform: translateY(2upx);
+				box-shadow: 0 5upx 10upx rgba(238, 82, 83, 0.2);
+			}
+			
+			&.cancel {
+				background: linear-gradient(to right, #ff6b6b, #ee5253);
+			}
+		}
+	}
+	
 	// 调试信息区域样式
 	.debug-section {
 		background-color: #fff;
-		margin-top: 20upx;
-		padding: 30upx;
+		margin: 20upx;
+		border-radius: 12upx;
+		box-shadow: 0 2upx 12upx rgba(0, 0, 0, 0.05);
+		overflow: hidden;
 		
 		.debug-content {
+			padding: 20upx;
+			
 			.debug-item {
 				margin-bottom: 10upx;
+				background-color: #f8f8f8;
+				padding: 10upx;
+				border-radius: 6upx;
 				
 				.debug-label {
-					font-size: 28upx;
+					font-size: 26upx;
 					color: #666;
 					margin-right: 10upx;
+					font-weight: bold;
 				}
 				
 				.debug-value {
-					font-size: 28upx;
+					font-size: 26upx;
 					color: #333;
+					word-break: break-all;
 				}
 			}
 			
 			.debug-panel {
 				margin-top: 20upx;
 				padding: 20upx;
-				background-color: #f8f8f8;
+				background-color: #f0f5ff;
+				border-radius: 8upx;
 				
 				.debug-panel-title {
 					font-size: 28upx;
 					color: #333;
 					font-weight: bold;
-					margin-bottom: 10upx;
+					margin-bottom: 15upx;
+					padding-bottom: 10upx;
+					border-bottom: 1px dashed #ccc;
 				}
 				
 				.debug-item {
 					margin-bottom: 10upx;
+					background-color: #fff;
 					
 					.debug-label {
-						font-size: 28upx;
+						font-size: 26upx;
 						color: #666;
 						margin-right: 10upx;
 					}
 					
 					.debug-value {
-						font-size: 28upx;
+						font-size: 26upx;
 						color: #333;
 					}
 				}
