@@ -496,6 +496,7 @@ export default {
 				const pics = uploadResults[itemId] || [];
 				console.log(`商品${orderItem.productName}的退货原因:`, reasonText);
 				
+				// 确保只包含后端支持的字段,避免type字段导致错误
 				return {
 					orderItemId: itemId,
 					returnQuantity: parseInt(this.returnQuantities[itemId]),
@@ -511,12 +512,11 @@ export default {
 				};
 			});
 			
-			// 构建售后申请数据
+			// 构建售后申请数据 - 确保只包含后端OmsAfterSale模型中存在的字段
 			const afterSaleData = {
 				orderId: this.orderId,
-				items: afterSaleItems,
-				// 添加一个顶级reason字段作为备份
-				reason: '用户申请退货/退款'
+				items: afterSaleItems
+				// 移除任何后端模型不存在的字段，如type和reason
 			};
 			
 			// 打印完整数据

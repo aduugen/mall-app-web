@@ -38,11 +38,17 @@ export function createAfterSale(data) {
 	try {
 		console.log('调用createAfterSale API，原始数据:', JSON.stringify(data));
 		
-		// 构造安全的请求数据
+		// 构造安全的请求数据,保证不包含后端模型没有的字段
 		const safeData = {
 			orderId: Number(data.orderId) || 0,
 			items: []
 		};
+		
+		// 删除可能导致错误的type字段
+		if (data.type !== undefined) {
+			console.log('检测到type字段,已删除避免后端错误');
+			delete data.type;
+		}
 		
 		// 处理items数组
 		if (data.items && Array.isArray(data.items)) {
@@ -53,7 +59,8 @@ export function createAfterSale(data) {
 				
 				console.log(`商品项 ${item.productName} 的退货原因:`, returnReason);
 				
-				return {
+				// 确保只包含后端模型有的字段
+				const safeItem = {
 					orderItemId: Number(item.orderItemId || 0),
 					returnQuantity: Number(item.returnQuantity || 1),
 					productId: Number(item.productId || 0),
@@ -65,7 +72,14 @@ export function createAfterSale(data) {
 					productSkuCode: String(item.productSkuCode || ''),
 					returnReason: String(returnReason),
 					proofPics: String(proofPics)
+				};
+				
+				// 删除item中可能存在的type字段
+				if (item.type !== undefined) {
+					console.log(`检测到商品项 ${item.productName} 包含type字段,已删除避免后端错误`);
 				}
+				
+				return safeItem;
 			});
 		}
 		
