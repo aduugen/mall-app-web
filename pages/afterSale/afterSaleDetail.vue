@@ -780,6 +780,12 @@ export default {
 			
 			console.log('检查是否有凭证图片，数据结构:', JSON.stringify(this.afterSaleDetail));
 			
+			// 优先检查proofList字段
+			if (this.afterSaleDetail.proofList && this.afterSaleDetail.proofList.length > 0) {
+				console.log('在proofList中找到凭证图片，数量:', this.afterSaleDetail.proofList.length);
+				return true;
+			}
+			
 			// 检查所有可能的图片字段
 			const possibleFields = ['proofPics', 'pics', 'proof_pics', 'returnPics', 'proof_pic', 'pic', 'images', 'returnImages'];
 			
@@ -838,6 +844,16 @@ export default {
 			if (!this.afterSaleDetail) return [];
 			
 			console.log('尝试获取凭证图片');
+			
+			// 优先从proofList获取图片
+			if (this.afterSaleDetail.proofList && this.afterSaleDetail.proofList.length > 0) {
+				console.log('从proofList获取凭证图片，数量:', this.afterSaleDetail.proofList.length);
+				const pics = this.afterSaleDetail.proofList.map(proof => {
+					return this.fixImagePath(proof.picUrl);
+				});
+				console.log('从proofList处理后的图片:', pics);
+				return pics;
+			}
 			
 			// 检查所有可能的图片字段
 			const possibleFields = ['proofPics', 'pics', 'proof_pics', 'returnPics', 'proof_pic', 'pic', 'images', 'returnImages'];
