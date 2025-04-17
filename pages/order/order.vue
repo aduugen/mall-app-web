@@ -282,28 +282,40 @@
 				
 				return new Promise((resolve, reject) => {
 					fetchOrderList(this.orderParam).then(response => {
-						let list = response.data.list;
-						if(type=='refresh'){
-							this.orderList = list;
-							this.loadingType = 'more';
-						}else{
-							if(list!=null&&list.length>0){
-								this.orderList = this.orderList.concat(list);
+						try {
+							let list = response.data.list;
+							if(type=='refresh'){
+								this.orderList = list;
 								this.loadingType = 'more';
 							}else{
-								this.orderParam.pageNum--;
-								this.loadingType = 'noMore';
+								if(list!=null&&list.length>0){
+									this.orderList = this.orderList.concat(list);
+									this.loadingType = 'more';
+								}else{
+									this.orderParam.pageNum--;
+									this.loadingType = 'noMore';
+								}
 							}
+							
+							// 在确保订单列表有效后再处理状态
+							if(this.orderList && Array.isArray(this.orderList) && this.orderList.length > 0) {
+								// 加载完数据后处理订单发票状态
+								this.updateOrderInvoiceStatus();
+								
+								// 处理已完成订单的售后状态
+								this.updateOrderAfterSaleStatus();
+							} else {
+								console.log('订单列表为空或无效,跳过状态更新');
+							}
+							
+							resolve(this.orderList);
+						} catch(error) {
+							console.error('处理订单数据异常:', error);
+							this.loadingType = 'more';
+							reject(error);
 						}
-						
-						// 加载完数据后处理订单发票状态
-						this.updateOrderInvoiceStatus();
-						
-						// 处理已完成订单的售后状态
-						this.updateOrderAfterSaleStatus();
-						
-						resolve(this.orderList);
 					}).catch(error => {
+						console.error('获取订单列表失败:', error);
 						this.loadingType = 'more';
 						reject(error);
 					});
@@ -380,9 +392,25 @@
 				            	title: '请稍后'
 				            })
 				            confirmReceiveOrder({orderId:orderId}).then(response=>{
-				            	uni.hideLoading();
-				            	superThis.loadData();
-				            });
+				            	// 确保等待loadData完成后再隐藏加载提示
+				            	superThis.loadData().then(() => {
+                                    uni.hideLoading();
+                                }).catch(error => {
+                                    console.error('刷新订单列表失败:', error);
+                                    uni.hideLoading();
+                                    uni.showToast({
+                                        title: '刷新订单列表失败',
+                                        icon: 'none'
+                                    });
+                                });
+				            }).catch(error => {
+                                console.error('确认收货失败:', error);
+                                uni.hideLoading();
+                                uni.showToast({
+                                    title: '确认收货失败',
+                                    icon: 'none'
+                                });
+                            });
 				        } else if (res.cancel) {
 				            console.log('用户点击取消');
 				        }
@@ -697,6 +725,12 @@
 			},
 			// 更新订单发票状态
 			updateOrderInvoiceStatus() {
+				// 添加检查，确保orderList存在
+				if (!this.orderList || !Array.isArray(this.orderList)) {
+					console.warn('订单列表不存在或不是数组');
+					return;
+				}
+				
 				// 只处理已完成的订单
 				const completedOrders = this.orderList.filter(order => order.status === 3);
 				if (completedOrders.length === 0) return;
@@ -729,6 +763,12 @@
 			},
 			// 更新订单售后状态
 			updateOrderAfterSaleStatus() {
+				// 添加检查，确保orderList存在
+				if (!this.orderList || !Array.isArray(this.orderList)) {
+					console.warn('订单列表不存在或不是数组');
+					return;
+				}
+				
 				// 只处理已完成的订单
 				const completedOrders = this.orderList.filter(order => order.status === 3);
 				if (completedOrders.length === 0) return;
