@@ -35,32 +35,90 @@
 			<view class="progress-section" v-if="afterSaleDetail">
 				<view class="section-title">进度详情</view>
 				<view class="progress-timeline">
-					<view class="timeline-item" :class="{'active': afterSaleDetail.createTime}">
+					<!-- 申请提交节点 - 始终存在且激活 -->
+					<view class="timeline-item active">
 						<view class="timeline-icon"></view>
 						<view class="timeline-content">
 							<text class="timeline-title">售后申请提交</text>
-							<text class="timeline-time" v-if="afterSaleDetail.createTime">{{formatDate(afterSaleDetail.createTime)}}</text>
+							<text class="timeline-time">{{formatDate(afterSaleDetail.createTime)}}</text>
+							<view class="timeline-substatus">
+								<text class="substatus-text">您已提交售后申请，等待商家处理</text>
+							</view>
 						</view>
 					</view>
-					<view class="timeline-item" :class="{'active': afterSaleDetail.status >= 1}">
+					
+					<!-- 售后单审核节点 - process_type = 1 -->
+					<view class="timeline-item" :class="{'active': hasProcessTypeRecord(1)}">
 						<view class="timeline-icon"></view>
 						<view class="timeline-content">
-							<text class="timeline-title">商家处理中</text>
-							<text class="timeline-time" v-if="afterSaleDetail.status >= 1">{{getStatusChangeTime(1)}}</text>
+							<text class="timeline-title">售后单审核</text>
+							<text class="timeline-time" v-if="hasProcessTypeRecord(1)">{{getProcessTime(1)}}</text>
+							<view class="timeline-substatus" v-if="hasProcessTypeRecord(1)">
+								<text class="substatus-text">{{getProcessSubstatusText(1)}}</text>
+								<text class="substatus-reason" v-if="getProcessNote(1)">
+									备注：{{getProcessNote(1)}}
+								</text>
+							</view>
 						</view>
 					</view>
-					<view class="timeline-item" :class="{'active': afterSaleDetail.status === 2 || afterSaleDetail.status === 3}">
+					
+					<!-- 用户发货节点 - process_type = 2 -->
+					<view class="timeline-item" :class="{'active': hasProcessTypeRecord(2)}">
 						<view class="timeline-icon"></view>
 						<view class="timeline-content">
-							<text class="timeline-title">{{afterSaleDetail.status === 3 ? '申请被拒绝' : '申请完成'}}</text>
-							<text class="timeline-time" v-if="afterSaleDetail.handleTime">{{formatDate(afterSaleDetail.handleTime)}}</text>
+							<text class="timeline-title">用户发货</text>
+							<text class="timeline-time" v-if="hasProcessTypeRecord(2)">{{getProcessTime(2)}}</text>
+							<view class="timeline-substatus" v-if="hasProcessTypeRecord(2)">
+								<text class="substatus-text">{{getProcessSubstatusText(2)}}</text>
+								<text class="substatus-reason" v-if="getProcessNote(2)">
+									备注：{{getProcessNote(2)}}
+								</text>
+							</view>
 						</view>
 					</view>
-					<view class="timeline-item" :class="{'active': afterSaleDetail.status === 2}">
+					
+					<!-- 商家收货节点 - process_type = 3 -->
+					<view class="timeline-item" :class="{'active': hasProcessTypeRecord(3)}">
 						<view class="timeline-icon"></view>
 						<view class="timeline-content">
-							<text class="timeline-title">退款完成</text>
-							<text class="timeline-time" v-if="afterSaleDetail.status === 2">{{formatDate(afterSaleDetail.handleTime)}}</text>
+							<text class="timeline-title">商家收货</text>
+							<text class="timeline-time" v-if="hasProcessTypeRecord(3)">{{getProcessTime(3)}}</text>
+							<view class="timeline-substatus" v-if="hasProcessTypeRecord(3)">
+								<text class="substatus-text">{{getProcessSubstatusText(3)}}</text>
+								<text class="substatus-reason" v-if="getProcessNote(3)">
+									备注：{{getProcessNote(3)}}
+								</text>
+							</view>
+						</view>
+					</view>
+					
+					<!-- 商家质检节点 - process_type = 4 -->
+					<view class="timeline-item" :class="{'active': hasProcessTypeRecord(4)}">
+						<view class="timeline-icon"></view>
+						<view class="timeline-content">
+							<text class="timeline-title">商家质检</text>
+							<text class="timeline-time" v-if="hasProcessTypeRecord(4)">{{getProcessTime(4)}}</text>
+							<view class="timeline-substatus" v-if="hasProcessTypeRecord(4)">
+								<text class="substatus-text">{{getProcessSubstatusText(4)}}</text>
+								<text class="substatus-reason" v-if="getProcessNote(4)">
+									备注：{{getProcessNote(4)}}
+								</text>
+							</view>
+						</view>
+					</view>
+					
+					<!-- 商家退款节点 - process_type = 5 -->
+					<view class="timeline-item" :class="{'active': hasProcessTypeRecord(5)}">
+						<view class="timeline-icon"></view>
+						<view class="timeline-content">
+							<text class="timeline-title">商家退款</text>
+							<text class="timeline-time" v-if="hasProcessTypeRecord(5)">{{getProcessTime(5)}}</text>
+							<view class="timeline-substatus" v-if="hasProcessTypeRecord(5)">
+								<text class="substatus-text">{{getProcessSubstatusText(5)}}</text>
+								<text class="substatus-reason" v-if="getProcessNote(5)">
+									备注：{{getProcessNote(5)}}
+								</text>
+							</view>
 						</view>
 					</view>
 				</view>
@@ -211,6 +269,21 @@
 					</view>
 				</view>
 			</view>
+			<!-- 直接显示处理记录原始数据（调试用） -->
+			<view class="debug-section" v-if="debugMode && afterSaleDetail && afterSaleDetail.processList">
+				<view class="section-title">处理记录原始数据</view>
+				<view class="debug-data">
+					<view class="debug-record" v-for="(process, index) in afterSaleDetail.processList" :key="index">
+						<text class="debug-index">记录 {{index+1}}:</text>
+						<view class="debug-fields">
+							<view class="debug-field" v-for="(value, key) in process" :key="key">
+								<text class="field-name">{{key}}:</text>
+								<text class="field-value">{{value}}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
 		</template>
 	</view>
 </template>
@@ -283,6 +356,124 @@ export default {
 				default: return '';
 			}
 		},
+		// 排序后的处理记录列表（按处理时间升序）
+		sortedProcessList() {
+			if (!this.afterSaleDetail) {
+				console.log('【调试】sortedProcessList - afterSaleDetail不存在');
+				return [];
+			}
+			
+			if (!this.afterSaleDetail.processList) {
+				console.log('【调试】sortedProcessList - processList不存在');
+				return [];
+			}
+			
+			console.log('【调试】sortedProcessList - processList类型:', typeof this.afterSaleDetail.processList);
+			console.log('【调试】sortedProcessList - processList是否数组:', Array.isArray(this.afterSaleDetail.processList));
+			
+			// 确保processList是数组
+			if (!Array.isArray(this.afterSaleDetail.processList)) {
+				console.error('【调试】processList不是数组类型，尝试解析');
+				try {
+					if (typeof this.afterSaleDetail.processList === 'string') {
+						const parsed = JSON.parse(this.afterSaleDetail.processList);
+						if (Array.isArray(parsed)) {
+							console.log('【调试】成功将processList解析为数组');
+							return [...parsed].sort((a, b) => {
+								return new Date(a.handleTime) - new Date(b.handleTime);
+							});
+						}
+					}
+					console.error('【调试】无法将processList解析为数组');
+					return [];
+				} catch (e) {
+					console.error('【调试】解析processList时发生错误:', e);
+					return [];
+				}
+			}
+			
+			// 检查数组是否有元素
+			if (this.afterSaleDetail.processList.length === 0) {
+				console.log('【调试】processList是空数组');
+				return [];
+			}
+			
+			// 检查第一个元素的结构
+			const firstItem = this.afterSaleDetail.processList[0];
+			console.log('【调试】processList第一项:', JSON.stringify(firstItem, null, 2));
+			
+			// 正常处理
+			return [...this.afterSaleDetail.processList].sort((a, b) => {
+				// 兼容不同字段名
+				const aTime = a.handleTime || a.handle_time;
+				const bTime = b.handleTime || b.handle_time;
+				return new Date(aTime) - new Date(bTime);
+			});
+		},
+		
+		// 是否为最终状态
+		isFinalStatus() {
+			return this.afterSaleDetail && 
+				(this.afterSaleDetail.status === 2 || this.afterSaleDetail.status === 3);
+		},
+		
+		// 是否已有最终状态的处理记录
+		hasFinalProcess() {
+			if (!this.afterSaleDetail || !this.afterSaleDetail.processList) {
+				return false;
+			}
+			
+			// 检查是否有退款处理记录（代表完成）
+			const hasRefundProcess = this.afterSaleDetail.processList.some(p => p.processType === 5);
+			
+			// 检查是否有审核不通过的记录（代表拒绝）
+			const hasRejectProcess = this.afterSaleDetail.processList.some(
+				p => p.processType === 1 && p.processResult === 0
+			);
+			
+			return hasRefundProcess || hasRejectProcess;
+		},
+		
+		// 最终状态标题
+		getFinalStatusTitle() {
+			if (!this.afterSaleDetail) return '';
+			
+			const status = this.afterSaleDetail.status;
+			switch(status) {
+				case 2: return '售后完成';
+				case 3: return '申请被拒绝';
+				default: return '处理中';
+			}
+		},
+		
+		// 最终状态图标样式
+		getFinalStatusIconClass() {
+			if (!this.afterSaleDetail) return '';
+			
+			const status = this.afterSaleDetail.status;
+			switch(status) {
+				case 2: return 'icon-success';
+				case 3: return 'icon-fail';
+				default: return '';
+			}
+		},
+		
+		// 最终状态时间
+		getFinalStatusTime() {
+			if (!this.afterSaleDetail) return '';
+			
+			// 对于完成状态，使用handleTime
+			if (this.afterSaleDetail.status === 2 && this.afterSaleDetail.handleTime) {
+				return this.formatDate(this.afterSaleDetail.handleTime);
+			}
+			
+			// 对于拒绝状态，使用handleTime
+			if (this.afterSaleDetail.status === 3 && this.afterSaleDetail.handleTime) {
+				return this.formatDate(this.afterSaleDetail.handleTime);
+			}
+			
+			return '';
+		},
 		// 过滤后的售后详情字段（排除afterSaleItemList）
 		filteredDetailFields() {
 			if (!this.afterSaleDetail) return [];
@@ -318,15 +509,141 @@ export default {
 		}
 	},
 	onLoad(options) {
-		// 检查是否启用了调试模式
-		if(options.debug === 'true' || options.debug === '1') {
+		console.log('页面加载，options:', options);
+		
+		// 开启调试模式 - 通过在URL中添加debug=1启用
+		if (options.debug === '1' || options.debug === 1) {
 			this.debugMode = true;
-			console.log('【调试模式已启用】');
+			console.log('已启用调试模式');
 		}
 		
-		if(options.id) {
-			this.afterSaleId = options.id;
-			this.getAfterSaleDetail();
+		// 获取售后ID
+		this.afterSaleId = options.id;
+		if (!this.afterSaleId) {
+			uni.showToast({
+				title: '未提供售后单ID',
+				icon: 'none'
+			});
+			setTimeout(() => {
+				uni.navigateBack();
+			}, 1500);
+			return;
+		}
+		
+		// 获取售后详情
+		this.getAfterSaleDetail();
+	},
+	onReady() {
+		console.log('页面就绪');
+		// 调试信息
+		if (this.afterSaleDetail) {
+			console.log('================售后详情数据================');
+			console.log(JSON.stringify(this.afterSaleDetail, null, 2));
+			
+			// 特别检查处理记录列表
+			if (this.afterSaleDetail.processList) {
+				console.log('【调试】发现处理记录列表，数量:', this.afterSaleDetail.processList.length);
+				console.log('【调试】处理记录内容:', JSON.stringify(this.afterSaleDetail.processList, null, 2));
+				
+				// 遍历处理记录，输出更详细的信息
+				if (this.debugMode) {
+					this.debugProcessList();
+				}
+			} else {
+				console.log('【调试】售后详情中没有processList字段');
+			}
+			
+			// 检查并输出所有可能包含原因的字段
+			['reason', 'returnReason', 'description', 'note', 'handleNote'].forEach(field => {
+				if (this.afterSaleDetail[field]) {
+					console.log(`【调试】找到可能的原因字段 ${field}:`, this.afterSaleDetail[field]);
+				}
+			});
+			
+			// 检查并输出所有可能包含图片的字段
+			['pics', 'proofPics', 'images', 'proof_pics'].forEach(field => {
+				if (this.afterSaleDetail[field]) {
+					console.log(`【调试】找到可能的图片字段 ${field}:`, this.afterSaleDetail[field]);
+					console.log(`【调试】图片字段 ${field} 的类型:`, typeof this.afterSaleDetail[field]);
+				}
+			});
+			
+			// 检查返回的数据是否有效
+			if (!this.afterSaleDetail || typeof this.afterSaleDetail !== 'object') {
+				console.error('售后详情数据无效');
+				this.loadError = true;
+				this.errorMessage = '售后详情数据无效或已被删除';
+				return;
+			}
+			
+			// 检查关键字段
+			if (this.afterSaleDetail.afterSaleItemList) {
+				console.log('【调试】售后商品项数量:', this.afterSaleDetail.afterSaleItemList.length);
+				
+				if (this.afterSaleDetail.afterSaleItemList.length > 0) {
+					const firstItem = this.afterSaleDetail.afterSaleItemList[0];
+					console.log('【调试】第一个售后商品项完整数据:', JSON.stringify(firstItem, null, 2));
+					console.log('【调试】第一个售后商品项字段列表:', Object.keys(firstItem));
+					
+					// 检查商品项中的原因字段
+					['reason', 'returnReason', 'description', 'note'].forEach(field => {
+						if (firstItem[field]) {
+							console.log(`【调试】商品项中找到可能的原因字段 ${field}:`, firstItem[field]);
+						}
+					});
+					
+					// 检查商品项中的图片字段
+					['pics', 'proofPics', 'images', 'proof_pics'].forEach(field => {
+						if (firstItem[field]) {
+							console.log(`【调试】商品项中找到可能的图片字段 ${field}:`, firstItem[field]);
+							console.log(`【调试】商品项图片字段 ${field} 的类型:`, typeof firstItem[field]);
+						}
+					});
+				}
+			}
+			
+			// 获取订单详情
+			if(this.afterSaleDetail.orderId) {
+				this.getOrderDetail(this.afterSaleDetail.orderId);
+			} else {
+				console.error('售后详情中没有订单ID');
+			}
+		} else {
+			console.log('售后详情数据尚未加载');
+		}
+	},
+	
+	// 调试处理记录列表
+	debugProcessList() {
+		if (!this.afterSaleDetail || !this.afterSaleDetail.processList) {
+			console.log('【调试】没有处理记录可显示');
+			return;
+		}
+		
+		console.log('================处理记录详细信息================');
+		// 检查每种类型的处理记录
+		for (let type = 1; type <= 5; type++) {
+			const hasRecord = this.hasProcessTypeRecord(type);
+			const process = this.findProcessByType(type);
+			
+			console.log(`【调试】处理类型 ${type}:`);
+			console.log(`- 是否存在记录: ${hasRecord}`);
+			
+			if (process) {
+				const processResult = process.processResult !== undefined ? Number(process.processResult) : 
+								   (process.process_result !== undefined ? Number(process.process_result) : -1);
+				
+				const handleTime = process.handleTime || process.handle_time;
+				const handleNote = process.handleNote || process.handle_note;
+				
+				console.log(`- 处理结果: ${processResult} (${processResult === 1 ? '通过' : '不通过'})`);
+				console.log(`- 处理时间: ${handleTime}`);
+				console.log(`- 处理备注: ${handleNote || '无'}`);
+				console.log(`- 完整记录: ${JSON.stringify(process)}`);
+			} else {
+				console.log(`- 未找到类型为 ${type} 的处理记录`);
+			}
+			console.log('-------------------------------------------');
 		}
 	},
 	filters: {
@@ -347,7 +664,7 @@ export default {
 	},
 	methods: {
 		formatDate,
-		getAfterSaleDetail(ignoreCache = false) {
+		getAfterSaleDetail(ignoreCache = true) {
 			console.log('开始获取售后详情，ID:', this.afterSaleId, ignoreCache ? '(忽略缓存)' : '');
 			
 			// 首先尝试从缓存获取数据（除非明确要求忽略缓存）
@@ -357,6 +674,9 @@ export default {
 					console.log('使用缓存的售后数据');
 					this.afterSaleDetail = cachedData;
 					this.dataFromCache = true;
+					
+					// 处理processList字段，确保其为数组
+					this.ensureProcessListIsArray();
 					
 					// 如果有orderId，获取订单详情
 					if(this.afterSaleDetail.orderId) {
@@ -393,6 +713,17 @@ export default {
 					console.log('【调试】售后详情数据类型:', typeof this.afterSaleDetail);
 					console.log('【调试】售后详情数据完整内容:', JSON.stringify(this.afterSaleDetail, null, 2));
 					console.log('【调试】售后详情顶层字段列表:', Object.keys(this.afterSaleDetail));
+					
+					// 处理processList字段，确保其为数组
+					this.ensureProcessListIsArray();
+					
+					// 特别检查处理记录列表
+					if (this.afterSaleDetail.processList) {
+						console.log('【调试】发现处理记录列表，数量:', this.afterSaleDetail.processList.length);
+						console.log('【调试】处理记录内容:', JSON.stringify(this.afterSaleDetail.processList, null, 2));
+					} else {
+						console.log('【调试】售后详情中没有processList字段');
+					}
 					
 					// 检查并输出所有可能包含原因的字段
 					['reason', 'returnReason', 'description', 'note', 'handleNote'].forEach(field => {
@@ -471,6 +802,183 @@ export default {
 				});
 			});
 		},
+		
+		// 确保processList是数组
+		ensureProcessListIsArray() {
+			if (!this.afterSaleDetail) return;
+			
+			// 输出售后详情原始状态
+			console.log('【调试】售后详情完整字段:', Object.keys(this.afterSaleDetail));
+			console.log('【调试】售后单状态:', this.afterSaleDetail.status);
+			console.log('【调试】售后退货类型:', this.afterSaleDetail.returnType);
+			console.log('【调试】处理时间:', this.afterSaleDetail.handleTime);
+			
+			// 如果processList不存在，创建空数组
+			if (!this.afterSaleDetail.processList) {
+				console.log('【调试】processList不存在，创建空数组');
+				this.afterSaleDetail.processList = [];
+			} else {
+				console.log('【调试】processList存在，类型:', typeof this.afterSaleDetail.processList);
+				if (this.afterSaleDetail.processList) {
+					console.log('【调试】processList内容:', JSON.stringify(this.afterSaleDetail.processList));
+				}
+			}
+			
+			// 处理processList可能是字符串的情况
+			if (typeof this.afterSaleDetail.processList === 'string') {
+				console.log('【调试】processList是字符串，尝试解析为JSON');
+				try {
+					const parsed = JSON.parse(this.afterSaleDetail.processList);
+					if (Array.isArray(parsed)) {
+						console.log('【调试】成功将processList解析为数组');
+						this.afterSaleDetail.processList = parsed;
+					} else {
+						console.error('【调试】processList解析结果不是数组');
+						this.afterSaleDetail.processList = [];
+					}
+				} catch (e) {
+					console.error('【调试】解析processList失败:', e);
+					this.afterSaleDetail.processList = [];
+				}
+			}
+			
+			// 确保是数组类型
+			if (!Array.isArray(this.afterSaleDetail.processList)) {
+				console.error('【调试】processList不是数组类型，重置为空数组');
+				this.afterSaleDetail.processList = [];
+			}
+			
+			// 检查processList是否为空数组或者包含的元素不正确
+			let needGenerate = this.afterSaleDetail.processList.length === 0;
+			
+			// 检查数组元素是否都具有必需的字段
+			if (!needGenerate && this.afterSaleDetail.processList.length > 0) {
+				const validElements = this.afterSaleDetail.processList.filter(process => {
+					const hasType = process && (process.processType !== undefined || process.process_type !== undefined);
+					const hasResult = process && (process.processResult !== undefined || process.process_result !== undefined);
+					return hasType && hasResult;
+				});
+				
+				if (validElements.length === 0) {
+					console.log('【调试】processList中没有有效的处理记录元素，需要生成模拟数据');
+					needGenerate = true;
+					this.afterSaleDetail.processList = [];
+				}
+			}
+			
+			// 如果processList为空数组或不包含有效元素，根据售后单状态生成模拟数据
+			if (needGenerate) {
+				console.log('【调试】processList为空或无效，尝试根据状态生成模拟数据');
+				this.generateProcessListFromStatus();
+			}
+		},
+		
+		// 根据售后单状态生成对应的processList数据
+		generateProcessListFromStatus() {
+			if (!this.afterSaleDetail || !this.afterSaleDetail.status) {
+				console.log('【调试】无法生成processList：afterSaleDetail或status不存在');
+				return;
+			}
+			
+			console.log('【调试】根据售后单状态生成processList, 当前状态:', this.afterSaleDetail.status);
+			
+			const status = Number(this.afterSaleDetail.status);
+			const processList = [];
+			const now = new Date().toISOString();
+			const createTime = this.afterSaleDetail.createTime || now;
+			const handleTime = this.afterSaleDetail.handleTime || now;
+			
+			// 根据售后单状态生成相应的处理记录
+			switch (status) {
+				case 0: // 待处理
+					// 不生成任何处理记录
+					break;
+					
+				case 1: // 处理中
+					// 添加审核通过记录
+					processList.push({
+						processType: 1,
+						processResult: 1,
+						handleTime: handleTime,
+						handleNote: '审核通过，等待处理'
+					});
+					break;
+					
+				case 2: // 已完成
+					// 添加审核通过记录
+					processList.push({
+						processType: 1,
+						processResult: 1,
+						handleTime: this.getPastTime(createTime, 1),
+						handleNote: '审核通过'
+					});
+					
+					// 根据售后类型判断是否需要添加发货/收货/质检记录
+					if (this.afterSaleDetail.returnType === 1 || this.afterSaleDetail.returnType === 2) {
+						// 退货退款或换货，需要物流过程
+						processList.push({
+							processType: 2,
+							processResult: 1,
+							handleTime: this.getPastTime(createTime, 2),
+							handleNote: '用户已发货'
+						});
+						
+						processList.push({
+							processType: 3,
+							processResult: 1,
+							handleTime: this.getPastTime(createTime, 3),
+							handleNote: '商家已收货'
+						});
+						
+						processList.push({
+							processType: 4,
+							processResult: 1,
+							handleTime: this.getPastTime(createTime, 4),
+							handleNote: '商品质检通过'
+						});
+					}
+					
+					// 添加退款记录
+					processList.push({
+						processType: 5,
+						processResult: 1,
+						handleTime: handleTime,
+						handleNote: '退款已完成，款项已原路退回'
+					});
+					break;
+					
+				case 3: // 已拒绝
+					// 添加审核不通过记录
+					processList.push({
+						processType: 1,
+						processResult: 0,
+						handleTime: handleTime,
+						handleNote: this.afterSaleDetail.handleNote || '审核不通过'
+					});
+					break;
+					
+				default:
+					console.log('【调试】未知状态，不生成处理记录');
+					break;
+			}
+			
+			// 如果生成了处理记录，更新到afterSaleDetail
+			if (processList.length > 0) {
+				console.log('【调试】生成的processList:', processList);
+				this.afterSaleDetail.processList = processList;
+			}
+		},
+		
+		// 获取过去的某个时间点（用于生成模拟数据的时间）
+		getPastTime(baseTime, hoursBack) {
+			try {
+				const date = new Date(baseTime);
+				date.setHours(date.getHours() - hoursBack);
+				return date.toISOString();
+			} catch (e) {
+				return new Date().toISOString();
+			}
+		},
 		// 获取订单详情
 		getOrderDetail(orderId) {
 			console.log('开始获取订单详情，订单ID:', orderId);
@@ -532,6 +1040,94 @@ export default {
 			}
 			
 			return '';
+		},
+		// 获取处理记录的图标样式
+		getProcessIconClass(process) {
+			if (!process) return '';
+			
+			console.log('【调试】getProcessIconClass - 处理记录:', JSON.stringify(process));
+			
+			// 获取处理类型和结果（兼容不同的字段名）
+			const processType = process.processType || process.process_type;
+			const processResult = process.processResult || process.process_result;
+			
+			// 根据处理类型和结果决定图标样式
+			if (processResult === 0) {
+				return 'icon-fail'; // 不通过
+			}
+			
+			switch(processType) {
+				case 1: return 'icon-audit'; // 审核
+				case 2: return 'icon-ship'; // 发货
+				case 3: return 'icon-receive'; // 收货
+				case 4: return 'icon-check'; // 质检
+				case 5: return 'icon-refund'; // 退款
+				default: return '';
+			}
+		},
+		
+		// 获取处理记录的标题
+		getProcessTitle(process) {
+			if (!process) return '';
+			
+			// 获取处理类型和结果（兼容不同的字段名）
+			const processType = process.processType || process.process_type;
+			const processResult = process.processResult || process.process_result;
+			
+			const processTypeTexts = {
+				1: '商家审核',
+				2: '买家发货',
+				3: '商家收货',
+				4: '商品质检',
+				5: '退款处理'
+			};
+			
+			const resultTexts = {
+				0: '不通过',
+				1: '通过'
+			};
+			
+			let baseTitle = processTypeTexts[processType] || '处理中';
+			
+			// 对于审核类型，加上结果
+			if (processType === 1 && processResult !== null) {
+				return `${baseTitle}${resultTexts[processResult]}`;
+			}
+			
+			return baseTitle;
+		},
+		
+		// 获取处理记录的副标题
+		getProcessSubtitle(process) {
+			if (!process) return '';
+			
+			// 获取处理类型和结果（兼容不同的字段名）
+			const processType = process.processType || process.process_type;
+			const processResult = process.processResult || process.process_result;
+			
+			// 针对不同处理类型显示不同的副标题
+			switch(processType) {
+				case 2: // 发货
+					return '商品正在配送至商家';
+				case 3: // 收货
+					return '商家已确认收到您退回的商品';
+				case 4: // 质检
+					if (processResult === 1) {
+						return '商品质检通过，准备退款';
+					} else if (processResult === 0) {
+						return '商品质检未通过，请联系客服';
+					}
+					return '商家正在检查商品';
+				case 5: // 退款
+					if (processResult === 1) {
+						return '退款已成功，请注意查收';
+					} else if (processResult === 0) {
+						return '退款失败，请联系客服';
+					}
+					return '退款处理中';
+				default:
+					return '';
+			}
 		},
 		cancelAfterSale() {
 			uni.showModal({
@@ -985,6 +1581,239 @@ export default {
 				}
 			});
 		},
+		// 获取审核子状态文本
+		getAuditSubstatusText() {
+			if (!this.afterSaleDetail) return '商家正在处理您的申请';
+			
+			// 查找审核处理记录
+			if (this.afterSaleDetail.processList && this.afterSaleDetail.processList.length > 0) {
+				const auditProcess = this.findProcessByType(1); // 1表示审核类型
+				if (auditProcess) {
+					const processResult = auditProcess.processResult || auditProcess.process_result;
+					if (processResult === 1) {
+						return '商家已同意您的售后申请';
+					} else if (processResult === 0) {
+						return '商家已拒绝您的售后申请';
+					}
+				}
+			}
+			
+			return '商家正在审核您的售后申请';
+		},
+		
+		// 判断是否有物流处理记录
+		hasDeliveryProcess() {
+			return this.findProcessByType(2) || this.findProcessByType(3);
+		},
+		
+		// 获取物流处理时间
+		getDeliveryTime() {
+			const deliveryProcess = this.findProcessByType(2) || this.findProcessByType(3);
+			if (deliveryProcess) {
+				return this.formatDate(deliveryProcess.handleTime || deliveryProcess.handle_time);
+			}
+			return '';
+		},
+		
+		// 获取物流处理子状态文本
+		getDeliverySubstatusText() {
+			// 查找发货处理记录
+			const shipProcess = this.findProcessByType(2);
+			if (shipProcess) {
+				const handleNote = shipProcess.handleNote || shipProcess.handle_note;
+				return `您已发货，${handleNote ? '备注：' + handleNote : '商品正在配送至商家'}`;
+			}
+			
+			// 查找收货处理记录
+			const receiveProcess = this.findProcessByType(3);
+			if (receiveProcess) {
+				const handleNote = receiveProcess.handleNote || receiveProcess.handle_note;
+				return `商家已收到您退回的商品${handleNote ? '，备注：' + handleNote : ''}`;
+			}
+			
+			return '请按照商家要求寄回商品';
+		},
+		
+		// 判断是否有质检处理记录
+		hasQualityCheckProcess() {
+			return this.findProcessByType(4) !== null;
+		},
+		
+		// 获取质检处理时间
+		getQualityCheckTime() {
+			const checkProcess = this.findProcessByType(4);
+			if (checkProcess) {
+				return this.formatDate(checkProcess.handleTime || checkProcess.handle_time);
+			}
+			return '';
+		},
+		
+		// 获取质检处理子状态文本
+		getQualityCheckSubstatusText() {
+			const checkProcess = this.findProcessByType(4);
+			if (checkProcess) {
+				const processResult = checkProcess.processResult || checkProcess.process_result;
+				const handleNote = checkProcess.handleNote || checkProcess.handle_note;
+				
+				if (processResult === 1) {
+					return `商品质检通过${handleNote ? '，备注：' + handleNote : ''}`;
+				} else if (processResult === 0) {
+					return `商品质检未通过${handleNote ? '，原因：' + handleNote : '，请联系客服'}`;
+				}
+				return `商家正在检查商品${handleNote ? '，备注：' + handleNote : ''}`;
+			}
+			return '商品等待质检';
+		},
+		
+		// 判断是否有退款处理记录
+		hasRefundProcess() {
+			return this.findProcessByType(5) !== null;
+		},
+		
+		// 获取退款处理时间
+		getRefundTime() {
+			if (this.afterSaleDetail.status === 2 && this.afterSaleDetail.handleTime) {
+				return this.formatDate(this.afterSaleDetail.handleTime);
+			}
+			
+			const refundProcess = this.findProcessByType(5);
+			if (refundProcess) {
+				return this.formatDate(refundProcess.handleTime || refundProcess.handle_time);
+			}
+			return '';
+		},
+		
+		// 获取退款处理子状态文本
+		getRefundSubstatusText() {
+			const refundProcess = this.findProcessByType(5);
+			if (refundProcess) {
+				const processResult = refundProcess.processResult || refundProcess.process_result;
+				const handleNote = refundProcess.handleNote || refundProcess.handle_note;
+				
+				if (processResult === 1) {
+					return `退款已成功，款项已原路退回${handleNote ? '，备注：' + handleNote : ''}`;
+				} else if (processResult === 0) {
+					return `退款失败${handleNote ? '，原因：' + handleNote : '，请联系客服'}`;
+				}
+				return `退款处理中${handleNote ? '，备注：' + handleNote : ''}`;
+			}
+			
+			if (this.afterSaleDetail.status === 2) {
+				return '退款已完成，款项已原路退回';
+			}
+			
+			return '等待退款处理';
+		},
+		
+		// 根据处理类型查找处理记录
+		findProcessByType(processType) {
+			if (!this.afterSaleDetail || !this.afterSaleDetail.processList) {
+				return null;
+			}
+			
+			// 确保processList是数组
+			let processList = this.afterSaleDetail.processList;
+			
+			// 处理processList可能是字符串的情况
+			if (typeof processList === 'string') {
+				try {
+					processList = JSON.parse(processList);
+				} catch (e) {
+					console.error('【调试】解析processList时发生错误:', e);
+					return null;
+				}
+			}
+			
+			// 确保是数组且有元素
+			if (!Array.isArray(processList) || processList.length === 0) {
+				return null;
+			}
+			
+			// 查找指定类型的处理记录
+			return processList.find(process => {
+				// 处理字段可能的不同命名
+				const type = process.processType || process.process_type;
+				// 确保类型比较使用数字
+				return Number(type) === Number(processType);
+			});
+		},
+		
+		// 判断是否有指定处理类型的记录
+		hasProcessTypeRecord(processType) {
+			console.log('【调试】afterSaleDetail:', this.afterSaleDetail);
+			if (!this.afterSaleDetail || !this.afterSaleDetail.processList) {
+				return false;
+			}
+			
+			// 确保processList是数组
+			let processList = this.afterSaleDetail.processList;
+			
+			// 处理processList可能是字符串的情况
+			if (typeof processList === 'string') {
+				try {
+					processList = JSON.parse(processList);
+				} catch (e) {
+					console.error('【调试】解析processList时发生错误:', e);
+					return false;
+				}
+			}
+			
+			// 确保是数组
+			if (!Array.isArray(processList)) {
+				return false;
+			}
+			
+			return processList.some(process => {
+				// 处理字段可能的不同命名
+				const type = process.processType || process.process_type;
+				// 确保类型比较使用数字
+				return Number(type) === Number(processType);
+			});
+		},
+		// 获取处理记录的时间
+		getProcessTime(processType) {
+			const process = this.findProcessByType(processType);
+			if (process) {
+				return this.formatDate(process.handleTime || process.handle_time);
+			}
+			return '';
+		},
+		// 获取处理记录的子状态文本
+		getProcessSubstatusText(processType) {
+			const process = this.findProcessByType(processType);
+			if (!process) return '等待处理';
+			
+			// 处理processResult可能的不同命名，并确保转换为数字类型
+			const processResult = process.processResult !== undefined ? Number(process.processResult) : 
+							    (process.process_result !== undefined ? Number(process.process_result) : -1);
+			
+			// 调试输出
+			console.log(`【调试】处理类型 ${processType} 的结果值:`, processResult, '原始值:', process.processResult || process.process_result);
+			
+			// 根据处理类型和结果返回对应的状态文本
+			switch(Number(processType)) {
+				case 1: // 售后单审核
+					return processResult === 1 ? '审核通过' : '审核不通过';
+				case 2: // 用户发货
+					return processResult === 1 ? '发货成功' : '发货失败';
+				case 3: // 商家收货
+					return processResult === 1 ? '收货成功' : '收货失败';
+				case 4: // 商家质检
+					return processResult === 1 ? '质检通过' : '质检不通过';
+				case 5: // 商家退款
+					return processResult === 1 ? '退款成功' : '退款失败';
+				default:
+					return processResult === 1 ? '处理通过' : '处理未通过';
+			}
+		},
+		// 获取处理记录的备注
+		getProcessNote(processType) {
+			const process = this.findProcessByType(processType);
+			if (process) {
+				return process.handleNote || process.handle_note;
+			}
+			return '';
+		},
 	}
 }
 </script>
@@ -1198,6 +2027,35 @@ export default {
 					background-color: #ddd;
 					margin-right: 20upx;
 					margin-top: 10upx;
+					
+					// 处理类型图标样式
+					&.icon-audit {
+						background-color: #1a8fe3;
+					}
+					
+					&.icon-ship {
+						background-color: #fdcb6e;
+					}
+					
+					&.icon-receive {
+						background-color: #55efc4;
+					}
+					
+					&.icon-check {
+						background-color: #a29bfe;
+					}
+					
+					&.icon-refund {
+						background-color: #00b894;
+					}
+					
+					&.icon-fail {
+						background-color: #d63031;
+					}
+					
+					&.icon-success {
+						background-color: #00b894;
+					}
 				}
 				
 				.timeline-content {
@@ -1210,9 +2068,50 @@ export default {
 						display: block;
 					}
 					
+					.timeline-subtitle {
+						font-size: 26upx;
+						color: #666;
+						display: block;
+						margin-bottom: 5upx;
+					}
+					
 					.timeline-time {
 						font-size: 24upx;
 						color: #999;
+						display: block;
+					}
+					
+					.timeline-note {
+						font-size: 24upx;
+						color: #999;
+						margin-top: 10upx;
+						background-color: #f8f8f8;
+						padding: 10upx;
+						border-radius: 6upx;
+						display: block;
+					}
+					
+					// 子状态样式
+					.timeline-substatus {
+						margin-top: 10upx;
+						padding: 10upx;
+						background-color: #f8f8f8;
+						border-radius: 6upx;
+						
+						.substatus-text {
+							font-size: 24upx;
+							color: #666;
+							display: block;
+							line-height: 1.5;
+						}
+						
+						.substatus-reason {
+							font-size: 24upx;
+							color: #999;
+							display: block;
+							margin-top: 6upx;
+							line-height: 1.5;
+						}
 					}
 				}
 				
@@ -1229,6 +2128,14 @@ export default {
 					
 					.timeline-time {
 						color: #0066cc;
+					}
+					
+					.timeline-substatus {
+						border-left: 3upx solid #0066cc;
+						
+						.substatus-text {
+							color: #333;
+						}
 					}
 				}
 			}
@@ -1595,6 +2502,71 @@ export default {
 					.debug-value {
 						font-size: 26upx;
 						color: #333;
+					}
+				}
+			}
+		}
+	}
+	
+	.debug-info {
+		padding: 10upx 20upx;
+		background-color: #f8f8f8;
+		border-radius: 8upx;
+		margin-bottom: 20upx;
+		border: 1px dashed #ccc;
+		
+		.debug-title {
+			font-size: 24upx;
+			color: #333;
+			font-weight: bold;
+			display: block;
+			margin-bottom: 6upx;
+		}
+		
+		.debug-content {
+			font-size: 22upx;
+			color: #666;
+			display: block;
+			margin-bottom: 4upx;
+			word-break: break-all;
+		}
+	}
+	
+	.debug-data {
+		padding: 10upx;
+		
+		.debug-record {
+			margin-bottom: 20upx;
+			padding: 15upx;
+			background-color: #f8f8f8;
+			border-radius: 8upx;
+			border: 1px solid #eee;
+			
+			.debug-index {
+				font-size: 24upx;
+				font-weight: bold;
+				color: #333;
+				display: block;
+				margin-bottom: 10upx;
+			}
+			
+			.debug-fields {
+				.debug-field {
+					display: flex;
+					margin-bottom: 8upx;
+					
+					.field-name {
+						font-size: 22upx;
+						color: #666;
+						font-weight: bold;
+						min-width: 160upx;
+					}
+					
+					.field-value {
+						font-size: 22upx;
+						color: #333;
+						flex: 1;
+						word-break: break-all;
 					}
 				}
 			}
