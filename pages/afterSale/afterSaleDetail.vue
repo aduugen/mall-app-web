@@ -292,8 +292,7 @@
 	import {
 		fetchAfterSaleDetail,
 		cancelAfterSale,
-		checkReturnShipStatus,
-		submitReturnShipping
+		checkReturnShipStatus
 	} from '@/api/afterSale';
 	
 	export default {
@@ -314,20 +313,13 @@
 				statusText: '',        // 状态文本
 				statusDesc: '',        // 状态描述
 				
-				// 寄回商品相关数据
-				canReturnShip: false, // 是否可以寄回商品
+				// 寄回商品相关数据 - 保留canReturnShip和returnShipMessage用于判断是否显示"寄回商品"按钮
+				canReturnShip: false,  // 是否可以寄回商品
 				returnShipMessage: '', // 寄回商品提示信息
-				returnAddressInfo: {   // 初始化为空对象，而不是null
+				returnAddressInfo: {   // 收件人地址信息
 					address: '',
 					name: '',
 					phone: ''
-				}, 
-				returnShipForm: {
-					afterSaleId: null,
-					logisticsCompanyId: '',
-					logisticsNumber: '',
-					returnName: '',
-					returnPhone: ''
 				}
 			};
 		},
@@ -412,11 +404,21 @@
 					});
 			}
 		},
-		mounted() {
+		onLoad() {
 			// 获取afterSaleId参数
 			this.afterSaleId = this.$route.query.id;
+			
+			// 检查是否需要直接打开寄回商品表单
+			const returnShip = this.$route.query.returnShip;
+			
 			if (this.afterSaleId) {
-				this.loadAfterSaleDetail();
+				this.loadAfterSaleDetail()
+					.then(() => {
+						// 如果传入了returnShip参数，则自动打开寄回商品弹窗
+						if (returnShip === '1') {
+							this.showReturnShipModal();
+						}
+					});
 				// 检查是否可以寄回商品
 				this.checkCanReturnShip();
 			} else {
@@ -498,15 +500,6 @@
 							name: '',
 							phone: ''
 						};
-						
-						// 如果有订单信息和收件人信息，自动填充表单
-						if (this.orderInfo && this.orderInfo.receiverName) {
-							this.returnShipForm.returnName = this.orderInfo.receiverName;
-						}
-						if (this.orderInfo && this.orderInfo.receiverPhone) {
-							this.returnShipForm.returnPhone = this.orderInfo.receiverPhone;
-						}
-						this.returnShipForm.afterSaleId = this.afterSaleId;
 					}
 				}).catch(error => {
 					console.error('检查寄回状态失败:', error);
@@ -519,85 +512,9 @@
 			
 			// 显示寄回商品模态框
 			showReturnShipModal() {
-				// 使用uni.showModal原生弹窗替代uni-popup组件
-				uni.showModal({
-					title: '寄回商品',
-					content: '请联系客服获取退货地址，并填写物流信息',
-					confirmText: '确定',
-					cancelText: '取消',
-					success: (res) => {
-						if (res.confirm) {
-							// 用户点击确定
-							console.log('用户点击确定');
-						}
-					}
-				});
-			},
-			
-			// 关闭寄回商品模态框
-			closeReturnShipModal() {
-				// 由于使用uni.showModal，这个方法暂时不需要实现
-			},
-			
-			// 提交寄回物流信息
-			submitReturnShipping() {
-				// 表单验证
-				if (!this.returnShipForm.logisticsCompanyId) {
-					uni.showToast({
-						title: '请输入物流公司',
-						icon: 'none'
-					});
-					return;
-				}
-				
-				if (!this.returnShipForm.logisticsNumber) {
-					uni.showToast({
-						title: '请输入物流单号',
-						icon: 'none'
-					});
-					return;
-				}
-				
-				if (!this.returnShipForm.returnName) {
-					uni.showToast({
-						title: '请输入寄件人姓名',
-						icon: 'none'
-					});
-					return;
-				}
-				
-				if (!this.returnShipForm.returnPhone) {
-					uni.showToast({
-						title: '请输入寄件人电话',
-						icon: 'none'
-					});
-					return;
-				}
-				
-				// 提交物流信息
-				submitReturnShipping(this.returnShipForm).then(response => {
-					if (response.code === 200) {
-						uni.showToast({
-							title: '提交成功',
-							icon: 'success'
-						});
-						this.closeReturnShipModal();
-						// 刷新售后详情
-						this.loadAfterSaleDetail();
-						// 重新检查是否可以寄回商品
-						this.checkCanReturnShip();
-					} else {
-						uni.showToast({
-							title: response.message || '提交失败',
-							icon: 'none'
-						});
-					}
-				}).catch(error => {
-					console.error('提交物流信息失败:', error);
-					uni.showToast({
-						title: '提交失败，请稍后重试',
-						icon: 'none'
-					});
+				// 跳转到寄回商品页面
+				uni.navigateTo({
+					url: `/pages/afterSale/returnShipping?id=${this.afterSaleId}`
 				});
 			},
 			
@@ -976,7 +893,7 @@
 			// 图片加载错误处理
 			onImageError(e) {
 				console.log('图片加载错误:', e);
-			}
+			},
 		}
 	}
 </script>
@@ -1558,90 +1475,54 @@
 	}
 	
 	.popup-header {
-		padding: 24rpx;
-		border-bottom: 1px solid #f5f5f5;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		// 删除这部分样式
 	}
 	
 	.popup-title {
-		font-size: 32rpx;
-		font-weight: bold;
-		color: #333;
+		// 删除这部分样式
 	}
 	
 	.popup-close {
-		font-size: 36rpx;
-		color: #999;
-		padding: 10rpx;
+		// 删除这部分样式
 	}
 	
 	.popup-content {
-		padding: 30rpx;
+		// 删除这部分样式
 	}
 	
 	.address-info {
-		background: #f8f8f8;
-		padding: 20rpx;
-		border-radius: 8rpx;
-		margin-bottom: 30rpx;
+		// 删除这部分样式
 	}
 	
 	.address-label {
-		font-size: 28rpx;
-		color: #666;
-		margin-bottom: 10rpx;
-		display: block;
+		// 删除这部分样式
 	}
 	
 	.address-value {
-		font-size: 28rpx;
-		color: #333;
-		line-height: 1.5;
+		// 删除这部分样式
 	}
 	
 	.form-item {
-		margin-bottom: 24rpx;
+		// 删除这部分样式
 	}
 	
 	.form-label {
-		font-size: 28rpx;
-		color: #333;
-		margin-bottom: 12rpx;
-		display: block;
+		// 删除这部分样式
 	}
 	
 	.form-input {
-		width: 100%;
-		height: 80rpx;
-		border: 1px solid #ddd;
-		border-radius: 4rpx;
-		padding: 0 20rpx;
-		box-sizing: border-box;
-		font-size: 28rpx;
+		// 删除这部分样式
 	}
 	
 	.popup-footer {
-		padding: 0 30rpx;
-		margin-bottom: 30rpx;
+		// 删除这部分样式
 	}
 	
 	.submit-btn {
-		width: 100%;
-		height: 80rpx;
-		background: #003366;
-		color: #fff;
-		font-size: 30rpx;
-		border-radius: 40rpx;
-		display: flex;
-		justify-content: center;
-		align-items: center;
+		// 删除这部分样式
 	}
 	
 	.return-ship-popup {
-		background-color: #fff;
-		border-radius: 20rpx 20rpx 0 0;
-		padding-bottom: 30rpx;
+		// 删除这部分样式，它与寄回商品弹窗相关
 	}
 </style>

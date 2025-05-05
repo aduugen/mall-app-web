@@ -274,4 +274,32 @@ export function submitReturnShipping(data) {
 		method: 'post',
 		data: data
 	});
+}
+
+/**
+ * 获取寄回商品所需的信息，包含收件人信息和寄件人信息
+ * @param {number} afterSaleId - 售后单ID
+ */
+export function getReturnShippingInfo(afterSaleId) {
+	return request({
+		url: `/member/afterSale/getReturnShippingInfo`,
+		method: 'get',
+		params: { 
+			afterSaleId,
+			_t: Date.now() // 添加时间戳参数防止缓存
+		}
+	});
+}
+
+/**
+ * 获取常用物流公司列表
+ */
+export function getLogisticsCompanies() {
+	return request({
+		url: `/member/common/logisticsCompanies`,
+		method: 'get',
+		params: { 
+			_t: Date.now() // 添加时间戳参数防止缓存
+		}
+	});
 } 

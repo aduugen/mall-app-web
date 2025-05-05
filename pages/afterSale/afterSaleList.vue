@@ -115,7 +115,9 @@
 
 								<view class="i-action">
 									<view class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item.id)">取消申请</view>
-									<view class="action-btn ship" v-if="item.canReturnShip" @click.stop="gotoReturnShipping(item.id)">寄回商品</view>
+									<view class="btn-content" v-if="item.status === 1 && item.canReturnShip">
+										<button class="action-btn btn-return" @click.stop="returnGoods(item.id)">寄回商品</button>
+									</view>
 									<view class="action-btn">查看详情</view>
 								</view>
 							</view>
@@ -1283,24 +1285,11 @@
 				this.cacheAfterSaleList();
 				console.log('页面卸载，已更新售后列表缓存');
 			},
-			// 前往寄回商品页面 
-			gotoReturnShipping(afterSaleId) {
-				console.log('跳转到寄回商品页面，售后ID:', afterSaleId);
-				// 将afterSaleListNeedRefresh标记设置为true，以便在返回时刷新列表
-				uni.setStorageSync('afterSaleListNeedRefresh', true);
-				// 跳转到售后详情页面，并传递returnShip=1参数，表示直接打开寄回商品表单
+			// 寄回商品
+			returnGoods(id) {
+				// 修改此方法，使用导航到新页面
 				uni.navigateTo({
-					url: `/pages/afterSale/afterSaleDetail?id=${afterSaleId}&returnShip=1`,
-					success: () => {
-						console.log('成功跳转到寄回商品页面');
-					},
-					fail: (err) => {
-						console.error('跳转到寄回商品页面失败:', err);
-						uni.showToast({
-							title: '页面跳转失败',
-							icon: 'none'
-						});
-					}
+					url: `/pages/afterSale/returnShipping?id=${id}`
 				});
 			},
 			// 检查是否可以寄回商品（批量检查）
@@ -1479,7 +1468,7 @@
 				margin-bottom: 20rpx;
 				
 				.product-item {
-			display: flex;
+		 display: flex;
 					margin-bottom: 16rpx;
 					padding: 16rpx;
 					background: #f8f8f8;

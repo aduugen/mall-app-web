@@ -277,7 +277,15 @@
 		{
 			"path": "pages/afterSale/afterSaleDetail",
 			"style": {
-				"navigationBarTitleText": "售后详情"
+				"navigationBarTitleText": "售后详情",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/afterSale/returnShipping",
+			"style": {
+				"navigationBarTitleText": "寄回商品",
+				"navigationStyle": "custom"
 			}
 		},
 		{
