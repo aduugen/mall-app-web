@@ -242,4 +242,36 @@ export function checkOrderAfterSaleStatus(orderId) {
 			_t: Date.now() // 添加时间戳参数防止缓存
 		}
 	});
+}
+
+/**
+ * 检查售后单是否可以寄回商品
+ * @param {number} afterSaleId - 售后单ID
+ */
+export function checkReturnShipStatus(afterSaleId) {
+	return request({
+		url: `/member/afterSale/checkReturnShipStatus`,
+		method: 'get',
+		params: { 
+			afterSaleId,
+			_t: Date.now() // 添加时间戳参数防止缓存
+		}
+	});
+}
+
+/**
+ * 提交寄回物流信息
+ * @param {Object} data
+ * @param {number} data.afterSaleId - 售后单ID
+ * @param {string} data.logisticsCompanyId - 物流公司ID
+ * @param {string} data.logisticsNumber - 物流单号
+ * @param {string} data.returnName - 寄件人姓名
+ * @param {string} data.returnPhone - 寄件人电话
+ */
+export function submitReturnShipping(data) {
+	return request({
+		url: `/member/afterSale/submitReturnShipping`,
+		method: 'post',
+		data: data
+	});
 } 

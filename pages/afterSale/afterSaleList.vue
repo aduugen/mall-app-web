@@ -81,26 +81,10 @@
 											</view>
 											<view class="product-reason" v-if="product.returnReason">
 												退货原因: {{product.returnReason}}
-						</view>
-						
-									<!-- 商品项的凭证图片 -->
-									<view class="proof-images" v-if="getLimitedProductProofPics(product).length > 0">
-										<view class="image-label">凭证图片：</view>
-										<view class="image-list">
-											<image
-												v-for="(pic, picIndex) in getLimitedProductProofPics(product)" 
-												:key="picIndex"
-												class="proof-image"
-												:src="pic"
-												mode="aspectFill"
-												@click.stop="previewImage(pic, getLimitedProductProofPics(product))"
-											/>
-											<text v-if="getProductProofPics(product).length > 5" class="more-images">+{{getProductProofPics(product).length - 5}}</text>
+											</view>
 										</view>
 									</view>
-										</view>
-							</view>
-						</view>
+								</view>
 
 								<view class="i-info b-b">
 									<view class="info-item">
@@ -115,8 +99,8 @@
 										<text class="title">处理时间:</text>
 										<text class="content">{{formatDate(item.handleTime)}}</text>
 									</view>
-						</view>
-						
+								</view>
+								
 								<view class="certificate-images" v-if="item.proofPics && item.proofPics.length > 0">
 									<view class="certificate-title">凭证图片：</view>
 									<view class="image-list">
@@ -126,11 +110,12 @@
 										<view class="more-images" v-if="item.proofPics.length > 5">
 											+{{item.proofPics.length - 5}}张
 										</view>
-						</view>
-					</view>
+									</view>
+								</view>
 
 								<view class="i-action">
 									<view class="action-btn cancel" v-if="item.status === 0" @click.stop="cancelAfterSale(item.id)">取消申请</view>
+									<view class="action-btn ship" v-if="item.canReturnShip" @click.stop="gotoReturnShipping(item.id)">寄回商品</view>
 									<view class="action-btn">查看详情</view>
 								</view>
 							</view>
@@ -220,7 +205,7 @@
 						refreshing: false
 					}
 				],
-				isDebug: false, // 调试模式标志
+				isDebug: true, // 调试模式标志，改为默认开启
 				imageErrors: {}, // 记录图片加载错误
 				imageLoading: {}, // 记录图片加载状态
 				debugInfo: {}, // 存储调试信息
@@ -306,6 +291,8 @@
 			this.loadData(true, false)
 				.then(() => {
 					uni.hideLoading();
+					// 初始化售后列表后，检查每个售后单是否可以寄回商品
+					this.checkReturnShippingStatus();
 				})
 				.catch(() => {
 					uni.hideLoading();
@@ -719,6 +706,9 @@
 								// 缓存售后列表数据，供详情页面使用
 								this.cacheAfterSaleList();
 								
+								// 在数据加载完成后检查寄回商品状态
+								this.checkReturnShippingStatus();
+								
 								resolve(list);
 							} else {
 								// 请求失败
@@ -871,6 +861,9 @@
 						// 确保选项卡没有被改变
 						this.tabCurrentIndex = currentTabIndex;
 						
+						// 检查寄回商品状态
+						this.checkReturnShippingStatus();
+						
 						// 延迟关闭loading
 						setTimeout(() => {
 							uni.hideLoading();
@@ -917,7 +910,14 @@
 				
 				// 如果当前选项卡没有数据且不在加载中，则加载数据
 				if (currentTab.afterSaleList.length === 0 && currentTab.loadingType !== 'loading') {
-					this.loadData(true, true);
+					this.loadData(true, true)
+						.then(() => {
+							// 切换后检查寄回商品状态
+							this.checkReturnShippingStatus();
+						});
+				} else {
+					// 即使有数据，也检查一下寄回商品状态
+					this.checkReturnShippingStatus();
 				}
 			},
 			
@@ -1283,6 +1283,62 @@
 				this.cacheAfterSaleList();
 				console.log('页面卸载，已更新售后列表缓存');
 			},
+			// 前往寄回商品页面 
+			gotoReturnShipping(afterSaleId) {
+				console.log('跳转到寄回商品页面，售后ID:', afterSaleId);
+				// 将afterSaleListNeedRefresh标记设置为true，以便在返回时刷新列表
+				uni.setStorageSync('afterSaleListNeedRefresh', true);
+				// 跳转到售后详情页面，并传递returnShip=1参数，表示直接打开寄回商品表单
+				uni.navigateTo({
+					url: `/pages/afterSale/afterSaleDetail?id=${afterSaleId}&returnShip=1`,
+					success: () => {
+						console.log('成功跳转到寄回商品页面');
+					},
+					fail: (err) => {
+						console.error('跳转到寄回商品页面失败:', err);
+						uni.showToast({
+							title: '页面跳转失败',
+							icon: 'none'
+						});
+					}
+				});
+			},
+			// 检查是否可以寄回商品（批量检查）
+			checkReturnShippingStatus() {
+				// 遍历所有tab下的售后单列表
+				this.navList.forEach(tab => {
+					if (tab.afterSaleList && tab.afterSaleList.length > 0) {
+						tab.afterSaleList.forEach(item => {
+							// 初始化寄回商品状态为false
+							this.$set(item, 'canReturnShip', false);
+							
+							// 检查是否有process_type=1且process_result=1的处理记录
+							if (item.processList && Array.isArray(item.processList)) {
+								const hasValidProcess = item.processList.some(process => 
+									(process.processType === 1 || process.process_type === 1) && 
+									(process.processResult === 1 || process.process_result === 1)
+								);
+								if (hasValidProcess) {
+									this.$set(item, 'canReturnShip', true);
+									console.log(`售后单${item.id}可以寄回商品，已设置canReturnShip=true`);
+								}
+							}
+							
+							// 如果有returnShipStatus且值为0，表示待寄回商品状态
+							if (item.returnShipStatus !== undefined && item.returnShipStatus === 0) {
+								this.$set(item, 'canReturnShip', true);
+								console.log(`售后单${item.id}具有returnShipStatus=0，已设置canReturnShip=true`);
+							}
+							
+							// 如果状态是1（处理中）且没有寄回物流信息，则认为可以寄回商品
+							if (item.status === 1 && !item.returnLogistics) {
+								this.$set(item, 'canReturnShip', true);
+								console.log(`售后单${item.id}状态为处理中且无寄回物流信息，已设置canReturnShip=true`);
+							}
+						});
+					}
+				});
+			},
 		}
 	}
 </script>
@@ -1464,7 +1520,7 @@
 						}
 						
 						.product-price-qty {
-			display: flex;
+		 display: flex;
 							justify-content: space-between;
 							font-size: 26rpx;
 							color: #3366cc;
@@ -1477,37 +1533,6 @@
 							background: rgba(0, 0, 0, 0.03);
 							padding: 8rpx 12rpx;
 							border-radius: 4rpx;
-						}
-						
-						// 商品项的凭证图片
-						.proof-images {
-							margin-top: 8rpx;
-							.image-label {
-								font-size: 26rpx;
-								color: #666;
-								margin-bottom: 12rpx;
-							}
-							.image-list {
-								display: flex;
-								.proof-image {
-									width: 160rpx;
-									height: 160rpx;
-									margin-right: 16rpx;
-									border-radius: 8rpx;
-									overflow: hidden;
-									box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
-									image {
-										width: 100%;
-										height: 100%;
-										object-fit: cover;
-									}
-								}
-							}
-							.more-images {
-								font-size: 24rpx;
-								color: #999;
-								margin-left: 16rpx;
-							}
 						}
 					}
 				}
@@ -1602,6 +1627,15 @@
 						color: #999;
 						border: 1rpx solid #ddd;
 						margin-right: 16rpx;
+					}
+					
+					&.ship {
+						color: #fff;
+						background-color: #ff6600;
+						border: 1rpx solid #ff6600;
+						font-weight: 500;
+						margin-right: 16rpx;
+						box-shadow: 0 2rpx 8rpx rgba(255, 102, 0, 0.3);
 					}
 				}
 			}
